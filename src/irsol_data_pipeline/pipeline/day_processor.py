@@ -8,7 +8,7 @@ from typing import Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
-
+from irsol_data_pipeline.orchestration.decorators import task
 from irsol_data_pipeline.calibration.autocalibrate import calibrate_measurement
 from irsol_data_pipeline.correction.corrector import apply_correction
 from irsol_data_pipeline.io.dat_reader import load_measurement, read_zimpol_dat
@@ -76,6 +76,7 @@ class DayProcessingResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+@task(task_run_name="process-observation-day-{day.path}")
 def process_observation_day(
     day: ObservationDay,
     max_delta_policy: Optional[MaxDeltaPolicy] = None,
@@ -175,6 +176,7 @@ def process_observation_day(
     return result
 
 
+@task(task_run_name="process-measurement-{path}")
 def process_single_measurement(
     measurement_path: Path,
     processed_dir: Path,

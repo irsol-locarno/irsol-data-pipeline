@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from irsol_data_pipeline.orchestration.decorators import task
+
 
 from pydantic import BaseModel, ConfigDict
 
@@ -37,6 +39,7 @@ class ObservationDay(BaseModel):
         return self.path.name
 
 
+@task(task_run_name="discover-observation-days-for-{root.name}")
 def discover_observation_days(root: Path) -> list[ObservationDay]:
     """Scan the dataset root and discover all observation day folders.
 

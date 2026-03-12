@@ -17,7 +17,7 @@ from typing import Optional
 
 
 from loguru import logger
-from prefect import flow, task, unmapped
+from prefect import unmapped, flow, task
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.io.filesystem import ObservationDay
 from irsol_data_pipeline.pipeline.day_processor import (
@@ -34,7 +34,11 @@ def scan_dataset_task(root: Path) -> ScanResult:
     return scan_dataset(root)
 
 
-@task(name="process-observation-day", retries=0)
+@task(
+    name="process-observation-day",
+    task_run_name="process-observation-for-{day.path.name}",
+    retries=2,
+)
 def process_day_task(
     day: ObservationDay,
     max_delta_hours: float = 2.0,
@@ -49,7 +53,11 @@ def process_day_task(
     )
 
 
-@flow(name="dataset-scan")
+@flow(
+    name="dataset-scan",
+    flow_run_name="dataset-scan-for-{root}",
+    description="Scans the dataset and processes all days with pending measurements",
+)
 def dataset_scan_flow(
     root: Optional[str] = None,
     max_delta_hours: float = 2.0,
@@ -66,12 +74,6 @@ def dataset_scan_flow(
         List of DayProcessingResult for each processed day.
     """
     setup_logging()
-
-    logger.error("This is an error")
-    logger.trace("This is a trace")
-    logger.debug("This is a debug")
-    logger.warning("Thisi s a warning")
-    exit(0)
 
     logger.info(
         "Starting dataset scan flow", root=root, max_delta_hours=max_delta_hours
@@ -124,7 +126,11 @@ def dataset_scan_flow(
     return results
 
 
-@flow(name="day-processing")
+@flow(
+    name="day-processing",
+    flow_run_name="day-processing-for-{day_path}",
+    description="Processes a single observation day",
+)
 def day_processing_flow(
     day_path: str,
     max_delta_hours: float = 2.0,
