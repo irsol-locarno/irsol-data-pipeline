@@ -74,7 +74,7 @@ def discover_observation_days(root: Path) -> list[ObservationDay]:
                     )
                 )
 
-    return days
+    return sorted(days, key=lambda d: d.path)
 
 
 def discover_measurement_files(reduced_dir: Path) -> list[Path]:
@@ -105,7 +105,7 @@ def discover_measurement_files(reduced_dir: Path) -> list[Path]:
         if OBSERVATION_PATTERN.match(p.name):
             files.append(p)
 
-    return files
+    return sorted(files)
 
 
 def discover_flatfield_files(reduced_dir: Path) -> list[Path]:
@@ -125,7 +125,7 @@ def discover_flatfield_files(reduced_dir: Path) -> list[Path]:
         if p.is_file() and FLATFIELD_PATTERN.match(p.name):
             files.append(p)
 
-    return files
+    return sorted(files)
 
 
 def get_processed_stem(source_name: str) -> str:

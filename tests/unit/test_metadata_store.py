@@ -1,7 +1,7 @@
 """Tests for the metadata store (JSON read/write)."""
 
 import json
-
+import datetime
 
 from irsol_data_pipeline.io.metadata_store import (
     read_metadata,
@@ -17,6 +17,12 @@ class TestWriteProcessingMetadata:
             output,
             source_file="6302_m1.dat",
             flat_field_used="ff6302_m3.dat",
+            flat_field_timestamp=datetime.datetime(
+                2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc
+            ),
+            measurement_timestamp=datetime.datetime(
+                2024, 6, 1, 12, 14, tzinfo=datetime.timezone.utc
+            ),
             flat_field_time_delta_seconds=842.0,
             calibration_info={"pixel_scale": 0.01, "wavelength_offset": 6300.0},
         )
@@ -25,6 +31,8 @@ class TestWriteProcessingMetadata:
         data = json.loads(output.read_text())
         assert data["source_file"] == "6302_m1.dat"
         assert data["flat_field_used"] == "ff6302_m3.dat"
+        assert data["flat_field_timestamp"] == "2024-06-01T12:00:00+00:00"
+        assert data["measurement_timestamp"] == "2024-06-01T12:14:00+00:00"
         assert data["flat_field_time_delta_seconds"] == 842.0
         assert "processing_timestamp" in data
         assert "pipeline_version" in data
@@ -35,6 +43,12 @@ class TestWriteProcessingMetadata:
             output,
             source_file="test.dat",
             flat_field_used="ff.dat",
+            flat_field_timestamp=datetime.datetime(
+                2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc
+            ),
+            measurement_timestamp=datetime.datetime(
+                2024, 6, 1, 12, 14, tzinfo=datetime.timezone.utc
+            ),
             flat_field_time_delta_seconds=0,
             calibration_info={},
         )

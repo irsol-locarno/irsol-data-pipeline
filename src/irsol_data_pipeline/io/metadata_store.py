@@ -14,6 +14,8 @@ def write_processing_metadata(
     output_path: Union[Path, str],
     source_file: str,
     flat_field_used: str,
+    flat_field_timestamp: datetime.datetime,
+    measurement_timestamp: datetime.datetime,
     flat_field_time_delta_seconds: float,
     calibration_info: dict[str, Any],
     extra: dict[str, Any] | None = None,
@@ -24,6 +26,8 @@ def write_processing_metadata(
         output_path: Where to write the metadata JSON.
         source_file: Name of the source .dat file.
         flat_field_used: Name of the flat-field .dat file used.
+        flat_field_timestamp: Timestamp of the flat-field observation.
+        measurement_timestamp: Timestamp of the measurement observation.
         flat_field_time_delta_seconds: Time delta in seconds between
             measurement and flat-field.
         calibration_info: Wavelength calibration result dict.
@@ -38,6 +42,8 @@ def write_processing_metadata(
     data: dict[str, Any] = {
         "source_file": source_file,
         "flat_field_used": flat_field_used,
+        "flat_field_timestamp": flat_field_timestamp.isoformat(),
+        "measurement_timestamp": measurement_timestamp.isoformat(),
         "flat_field_time_delta_seconds": flat_field_time_delta_seconds,
         "auto_calibrated_wavelength": calibration_info,
         "processing_timestamp": datetime.datetime.now(

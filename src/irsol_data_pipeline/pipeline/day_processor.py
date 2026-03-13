@@ -11,7 +11,7 @@ from typing import Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
-from irsol_data_pipeline.orchestration.decorators import task
+from irsol_data_pipeline.orchestration.decorators import task, prefect_enabled
 from irsol_data_pipeline.calibration.autocalibrate import calibrate_measurement
 from irsol_data_pipeline.plotting import plot_profile
 from irsol_data_pipeline.correction.corrector import apply_correction
@@ -143,7 +143,7 @@ def process_observation_day(
         wavelengths=ff_cache.wavelengths,
     )
 
-    for meas_path in measurement_paths:
+    for meas_path in sorted(measurement_paths):
         if is_measurement_processed(day.processed_dir, meas_path.name):
             logger.debug("Skipping already processed", file=meas_path.name)
             result.skipped += 1
@@ -166,13 +166,33 @@ def process_observation_day(
 
             # Write error file
             stem = get_processed_stem(meas_path.name)
+            error_path = day.processed_dir / f"{stem}_error.json"
             write_error_metadata(
-                day.processed_dir / f"{stem}_error.json",
+                error_path,
                 source_file=meas_path.name,
                 error=str(e),
             )
+            if prefect_enabled():
+                from prefect.artifacts import create_table_artifact
+                import json
 
-    return result
+                with open(error_path) as f:
+                    error_content = json.load(f)
+
+                table_rows = []
+                for k, v in error_content.items():
+                    if isinstance(v, dict):
+                        for kk, vv in v.items():
+                            table_rows.append({"key": f"{k}.{kk}", "value": str(vv)})
+                    else:
+                        table_rows.append({"key": k, "value": str(v)})
+                create_table_artifact(
+                    table=table_rows,
+                    key=f"error_metadata/{meas_path}",
+                    description=f"Error for failed processed measurement {stem}",
+                )
+
+        return result
 
 
 def process_single_measurement(
@@ -319,13 +339,35 @@ def _process_single_measurement(
     )
 
     # 7. Save processing metadata
+    metadata_path = processed_dir / f"{stem}_metadata.json"
     write_processing_metadata(
-        processed_dir / f"{stem}_metadata.json",
+        metadata_path,
         source_file=meas_path.name,
+        flat_field_timestamp=ff_correction.timestamp,
+        measurement_timestamp=measurement.timestamp,
         flat_field_used=ff_correction.source_flatfield_path.name,
         flat_field_time_delta_seconds=ff_time_delta,
         calibration_info=calibration.model_dump(),
     )
+    if prefect_enabled():
+        from prefect.artifacts import create_table_artifact
+        import json
+
+        with open(metadata_path) as f:
+            metadata_content = json.load(f)
+
+        table_rows = []
+        for k, v in metadata_content.items():
+            if isinstance(v, dict):
+                for kk, vv in v.items():
+                    table_rows.append({"key": f"{k}.{kk}", "value": str(vv)})
+            else:
+                table_rows.append({"key": k, "value": str(v)})
+        create_table_artifact(
+            table=table_rows,
+            key=f"processing_metadata/{meas_path}",
+            description=f"Metadata for processed measurement {stem}",
+        )
 
     logger.info(
         "Plotting profiles for original and corrected data", file=meas_path.name
