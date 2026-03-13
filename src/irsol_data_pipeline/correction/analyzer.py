@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
-
+from loguru import logger
 import numpy as np
 from spectroflat import Analyser, Config, SmileConfig, SensorFlatConfig
 from spectroflat.smile import OffsetMap
@@ -88,6 +88,7 @@ def analyze_flatfield(
     else:
         rpath = None
 
+    logger.info("Starting flat-field analysis")
     analyser = Analyser(ff_data, config, rpath)  # type: ignore
     analyser.run()
 

@@ -7,10 +7,8 @@ from spectroflat.smile.interpolated_correction import SmileInterpolator
 from spectroflat.smile import OffsetMap
 
 from irsol_data_pipeline.core.types import StokesParameters
-from irsol_data_pipeline.orchestration.decorators import task
 
 
-@task(task_run_name="apply-smiling-correction")
 def apply_correction(
     stokes: StokesParameters,
     dust_flat: np.ndarray,

@@ -204,7 +204,6 @@ def process_single_measurement(
     )
 
 
-@task(task_run_name="plot/{title}", retries=3)
 def _plot_data(
     stokes: StokesParameters,
     calibration: CalibrationResult,
@@ -278,9 +277,15 @@ def _process_single_measurement(
 
     # 3. Apply flat-field correction
     corrected_stokes = apply_correction(
-        measurement.stokes,
+        stokes=measurement.stokes,
         dust_flat=ff_correction.dust_flat,
         offset_map=ff_correction.offset_map,
+    )
+
+    logger.info("Flat-field correction applied", file=meas_path.name)
+    logger.info(
+        "Running calibration with reference data",
+        refdata_dir=str(refdata_dir) if refdata_dir else "None",
     )
 
     # 4. Wavelength auto-calibration
@@ -322,6 +327,9 @@ def _process_single_measurement(
         calibration_info=calibration.model_dump(),
     )
 
+    logger.info(
+        "Plotting profiles for original and corrected data", file=meas_path.name
+    )
     # 8. Generate profile plots for the original and corrected data
     _plot_data(
         stokes=corrected_stokes,

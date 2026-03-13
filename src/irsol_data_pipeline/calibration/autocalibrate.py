@@ -16,7 +16,6 @@ from typing import Optional
 import numpy as np
 from scipy.signal import correlate
 from scipy.optimize import curve_fit
-from irsol_data_pipeline.orchestration.decorators import task
 
 from irsol_data_pipeline.core.calibration import CalibrationResult
 from irsol_data_pipeline.core.types import StokesParameters
@@ -28,7 +27,6 @@ V_STOKES_CUTOFF = 0.4
 _DEFAULT_REFDATA_DIR = Path(__file__).parent / "refdata"
 
 
-@task(task_run_name="calibrate")
 def calibrate_measurement(
     stokes: StokesParameters,
     refdata_dir: Optional[Path] = None,
