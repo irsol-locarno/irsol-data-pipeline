@@ -18,6 +18,7 @@ from typing import Optional
 
 from loguru import logger
 from prefect import unmapped, flow, task
+from prefect.task_runners import ThreadPoolTaskRunner
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.io.filesystem import ObservationDay
 from irsol_data_pipeline.pipeline.day_processor import (
@@ -28,7 +29,7 @@ from irsol_data_pipeline.pipeline.day_processor import (
 from irsol_data_pipeline.pipeline.scanner import ScanResult, scan_dataset
 
 
-@task(name="scan-dataset", retries=1)
+@task(name="scan-dataset", task_run_name="scan-dataset-for-{root}", retries=2)
 def scan_dataset_task(root: Path) -> ScanResult:
     """Prefect task: scan the dataset root."""
     return scan_dataset(root)
@@ -53,10 +54,15 @@ def process_day_task(
     )
 
 
+max_workers = os.cpu_count() or 1
+logger.info(f"Configuring ProcessPoolTaskRunner with {max_workers} workers")
+
+
 @flow(
     name="dataset-scan",
     flow_run_name="dataset-scan-for-{root}",
     description="Scans the dataset and processes all days with pending measurements",
+    task_runner=ThreadPoolTaskRunner(max_workers=max_workers),
 )
 def dataset_scan_flow(
     root: Optional[str] = None,

@@ -143,7 +143,6 @@ def process_observation_day(
         wavelengths=ff_cache.wavelengths,
     )
 
-    # Process each measurement
     for meas_path in measurement_paths:
         if is_measurement_processed(day.processed_dir, meas_path.name):
             logger.debug("Skipping already processed", file=meas_path.name)
@@ -176,7 +175,6 @@ def process_observation_day(
     return result
 
 
-@task(task_run_name="process-measurement-{path}")
 def process_single_measurement(
     measurement_path: Path,
     processed_dir: Path,
@@ -206,6 +204,7 @@ def process_single_measurement(
     )
 
 
+@task(task_run_name="process-measurement-{path}")
 def _process_single_measurement(
     meas_path: Path,
     processed_dir: Path,
