@@ -28,24 +28,12 @@ from irsol_data_pipeline.pipeline.day_processor import (
 from irsol_data_pipeline.pipeline.scanner import ScanResult, scan_dataset
 
 
-@task(name="scan-dataset", task_run_name="scan-dataset-for-{root}", retries=2)
+@task(
+    name="scan-dataset", task_run_name="find-observations-to-process/{root}", retries=2
+)
 def scan_dataset_task(root: Path) -> ScanResult:
     """Prefect task: scan the dataset root."""
     return scan_dataset(root)
-
-
-def process_day_task(
-    day: ObservationDay,
-    max_delta_hours: float = 2.0,
-    refdata_dir: Optional[Path] = None,
-) -> DayProcessingResult:
-    """Prefect task: process a single observation day."""
-    policy = MaxDeltaPolicy(default_max_delta=datetime.timedelta(hours=max_delta_hours))
-    return process_observation_day(
-        day=day,
-        max_delta_policy=policy,
-        refdata_dir=refdata_dir,
-    )
 
 
 @task(
@@ -172,9 +160,10 @@ def day_processing_flow(
 
     ref_path = Path(refdata_dir) if refdata_dir else None
 
-    result = process_day_task(
+    policy = MaxDeltaPolicy(default_max_delta=datetime.timedelta(hours=max_delta_hours))
+    result = process_observation_day(
         day=day,
-        max_delta_hours=max_delta_hours,
+        max_delta_policy=policy,
         refdata_dir=ref_path,
     )
 
