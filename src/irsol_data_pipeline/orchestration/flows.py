@@ -18,7 +18,6 @@ from typing import Optional
 
 from loguru import logger
 from prefect import unmapped, flow, task
-from prefect.task_runners import ThreadPoolTaskRunner
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.io.filesystem import ObservationDay
 from irsol_data_pipeline.pipeline.day_processor import (
@@ -27,11 +26,6 @@ from irsol_data_pipeline.pipeline.day_processor import (
     process_observation_day,
 )
 from irsol_data_pipeline.pipeline.scanner import ScanResult, scan_dataset
-
-
-max_workers = max(1, min(8, os.cpu_count() or 1))
-print(f"Configuring ProcessPoolTaskRunner with {max_workers} workers")
-task_worker = ThreadPoolTaskRunner(max_workers=max_workers)
 
 
 @task(name="scan-dataset", task_run_name="scan-dataset-for-{root}", retries=2)
@@ -59,11 +53,28 @@ def process_day_task(
     )
 
 
+@task(
+    name="run-day-processing-subflow",
+    task_run_name="run-day-processing-flow-for-{day_path}",
+    retries=2,
+)
+def run_day_processing_subflow_task(
+    day_path: str,
+    max_delta_hours: float = 2.0,
+    refdata_dir: Optional[str] = None,
+) -> DayProcessingResult:
+    """Prefect task: execute the day-processing flow as a sub-flow."""
+    return day_processing_flow(
+        day_path=day_path,
+        max_delta_hours=max_delta_hours,
+        refdata_dir=refdata_dir,
+    )
+
+
 @flow(
     name="dataset-scan",
     flow_run_name="dataset-scan-for-{root}",
     description="Scans the dataset and processes all days with pending measurements",
-    task_runner=task_worker,
 )
 def dataset_scan_flow(
     root: Optional[str] = None,
@@ -80,8 +91,6 @@ def dataset_scan_flow(
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging()
-
     logger.info(
         "Starting dataset scan flow", root=root, max_delta_hours=max_delta_hours
     )
@@ -93,8 +102,6 @@ def dataset_scan_flow(
             )
 
     dataset_root = Path(root)
-    ref_path = Path(refdata_dir) if refdata_dir else None
-
     # Scan
     scan_result = scan_dataset_task(dataset_root)
     logger.info(
@@ -107,17 +114,17 @@ def dataset_scan_flow(
         logger.info("No pending measurements found")
         return []
 
-    # Process each day with pending measurements
-    selected_observation_days = [
-        day
+    # Process each day with pending measurements via the day sub-flow.
+    selected_day_paths = [
+        str(day.path)
         for day in scan_result.observation_days
         if day.name in scan_result.pending_measurements
     ]
 
-    results = process_day_task.map(
-        selected_observation_days,
+    results = run_day_processing_subflow_task.map(
+        selected_day_paths,
         unmapped(max_delta_hours),
-        unmapped(ref_path),
+        unmapped(refdata_dir),
     ).result()
 
     # Summary
@@ -153,7 +160,6 @@ def day_processing_flow(
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging()
     logger.info(
         "Starting day processing flow",
         day_path=day_path,
@@ -189,6 +195,7 @@ def day_processing_flow(
 
 if __name__ == "__main__":
     # Example usage: run the dataset scan flow
+    setup_logging()
     dataset_scan_flow(
         root="/home/deldoc/Documents/code/irsol-data-pipeline/data",
         max_delta_hours=2.0,

@@ -76,7 +76,6 @@ class DayProcessingResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
-@task(task_run_name="process-observation-day-{day.path}")
 def process_observation_day(
     day: ObservationDay,
     max_delta_policy: Optional[MaxDeltaPolicy] = None,
