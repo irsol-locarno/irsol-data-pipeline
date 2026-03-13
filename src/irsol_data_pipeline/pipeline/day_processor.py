@@ -210,7 +210,7 @@ def process_observation_day(
                         table_rows.append({"key": k, "value": str(v)})
                 create_table_artifact(
                     table=table_rows,
-                    key=sanitize_artifact_title(f"error-metadata-{meas_path}"),
+                    key=sanitize_artifact_title(f"error-metadata-{meas_path.name}"),
                     description=f"Error for failed processed measurement {stem}",
                 )
 
@@ -388,7 +388,7 @@ def _process_single_measurement(
                 table_rows.append({"key": k, "value": str(v)})
         create_table_artifact(
             table=table_rows,
-            key=sanitize_artifact_title(f"processing-metadata-{meas_path}"),
+            key=sanitize_artifact_title(f"processing-metadata-{meas_path.name}"),
             description=f"Metadata for processed measurement {stem}",
         )
 
