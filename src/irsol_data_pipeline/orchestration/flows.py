@@ -29,6 +29,11 @@ from irsol_data_pipeline.pipeline.day_processor import (
 from irsol_data_pipeline.pipeline.scanner import ScanResult, scan_dataset
 
 
+max_workers = max(1, min(8, os.cpu_count() or 1))
+print(f"Configuring ProcessPoolTaskRunner with {max_workers} workers")
+task_worker = ThreadPoolTaskRunner(max_workers=max_workers)
+
+
 @task(name="scan-dataset", task_run_name="scan-dataset-for-{root}", retries=2)
 def scan_dataset_task(root: Path) -> ScanResult:
     """Prefect task: scan the dataset root."""
@@ -54,15 +59,11 @@ def process_day_task(
     )
 
 
-max_workers = os.cpu_count() or 1
-logger.info(f"Configuring ProcessPoolTaskRunner with {max_workers} workers")
-
-
 @flow(
     name="dataset-scan",
     flow_run_name="dataset-scan-for-{root}",
     description="Scans the dataset and processes all days with pending measurements",
-    task_runner=ThreadPoolTaskRunner(max_workers=max_workers),
+    task_runner=task_worker,
 )
 def dataset_scan_flow(
     root: Optional[str] = None,

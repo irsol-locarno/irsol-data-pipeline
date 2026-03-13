@@ -12,3 +12,4 @@ wheels/
 # Files that we don't want to track
 *.fits
 *.log
+data/

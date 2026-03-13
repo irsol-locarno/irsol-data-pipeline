@@ -204,7 +204,7 @@ def process_single_measurement(
     )
 
 
-@task(task_run_name="process-measurement-{path}")
+@task(task_run_name="process-measurement-{meas_path}")
 def _process_single_measurement(
     meas_path: Path,
     processed_dir: Path,
