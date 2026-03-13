@@ -230,7 +230,7 @@ def export_fits(
 ) -> None:
     """Export a .dat measurement file to FITS format."""
     _setup_logging(verbose)
-    from irsol_data_pipeline.fits.exporter import export_to_fits
+    from irsol_data_pipeline.io.fits.exporter import export_to_fits
 
     dat = Path(dat_path)
     if not dat.is_file():

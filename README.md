@@ -93,30 +93,68 @@ make prefect/reset
 
 `prefect/reset` resets the local Prefect database and removes local Prefect state.
 
+## Repository Structure
+
+Current repository layout (abridged):
+
+```text
+irsol-data-pipeline/
+├── data/                          # Local dataset root used in development
+├── documentation/                 # Documentation assets (screenshots, notes)
+├── entrypoints/                   # Runtime entry scripts (for deployments and ops)
+│   └── serve_pipeline.py
+├── src/irsol_data_pipeline/
+│   ├── cli/                       # Typer CLI commands
+│   ├── core/                      # Shared domain and scientific core logic
+│   │   ├── models.py              # Shared domain models/types used across modules
+│   │   ├── config.py              # Shared configuration models/defaults
+│   │   ├── correction/            # Flat-field correction analysis and application
+│   │   └── calibration/           # Wavelength auto-calibration logic
+│   ├── io/                        # File I/O and metadata persistence
+│   │   └── fits/                  # FITS export functionality
+│   ├── pipeline/                  # Day-level processing and cache/scanning orchestration
+│   ├── orchestration/             # Prefect flows, decorators, and logging bridge
+│   ├── plotting/                  # Plot generation for processed profiles
+│   └── logging_config.py
+├── tests/unit/                    # Unit tests
+├── pyproject.toml
+├── Makefile
+└── README.md
+```
+
+`entrypoints/` is intentionally small: it contains executable scripts that wire
+the package into runtime environments (for example, serving a Prefect
+deployment) without mixing deployment bootstrapping code into library modules.
+
 ## Architecture Overview
 
 The codebase is split into focused layers.
 
 ### Core functionalities
 
-- Domain models (`src/irsol_data_pipeline/core/`):
-	- `Measurement`, `FlatField`, `FlatFieldCorrection`
-	- `MeasurementMetadata`
-	- `StokesParameters`
-	- `CalibrationResult`
+- Shared domain models (`src/irsol_data_pipeline/core/models.py`):
+	- Central dataclasses/types such as `Measurement`, `FlatField`,
+	  `FlatFieldCorrection`, `MeasurementMetadata`, `StokesParameters`,
+	  `CalibrationResult`, and processing result/policy models used across the
+	  pipeline, I/O, and orchestration layers.
+- Shared configuration module (`src/irsol_data_pipeline/core/config.py`):
+	- Centralized configuration models/default values so CLI commands, pipeline
+	  steps, and orchestration flows consume a consistent configuration contract.
 - I/O (`src/irsol_data_pipeline/io/`):
 	- Read `.dat`/`.sav`/`.npz` (`dat_reader.py`)
 	- Write corrected data (`dat_writer.py`)
+	- Export FITS products (`io/fits/exporter.py`)
 	- Discover observation days/files (`filesystem.py`)
 	- Persist metadata/error JSON (`metadata_store.py`)
 	- Persist/load cached flat-field correction objects
 - Flat-field analysis and correction:
-	- Analyze flat-fields with `spectroflat` (`correction/analyzer.py`)
+	- Analyze flat-fields with `spectroflat`
+	  (`core/correction/analyzer.py`)
 	- Build and query correction cache (`pipeline/flatfield_cache.py`)
-	- Apply dust-flat and smile correction (`correction/corrector.py`)
+	- Apply dust-flat and smile correction (`core/correction/corrector.py`)
 - Wavelength auto-calibration:
 	- Cross-correlate with bundled reference spectra and fit line positions
-		(`calibration/autocalibrate.py`)
+		(`core/calibration/autocalibrate.py`)
 - Processing pipeline:
 	- Scan pending measurements (`pipeline/scanner.py`)
 	- Process one day / one measurement (`pipeline/day_processor.py`)

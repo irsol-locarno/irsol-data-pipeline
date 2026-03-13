@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -29,6 +30,9 @@ from irsol_data_pipeline.io.metadata_store import (
     write_processing_metadata,
 )
 from irsol_data_pipeline.orchestration.decorators import prefect_enabled, task
+from irsol_data_pipeline.orchestration.utils import (
+    sanitize_artifact_title,
+)
 from irsol_data_pipeline.pipeline.flatfield_cache import (
     FlatFieldCache,
     build_flatfield_cache,
@@ -102,8 +106,6 @@ def process_observation_day(
     if prefect_enabled():
         from prefect.artifacts import create_progress_artifact, update_progress_artifact
 
-        from irsol_data_pipeline.orchestration.utils import sanitize_artifact_title
-
         progress_id = create_progress_artifact(
             0.0,
             key=sanitize_artifact_title(f"progress-{day.name}"),
@@ -149,15 +151,9 @@ def process_observation_day(
                 error=str(e),
             )
             if prefect_enabled():
-                import json
-
                 from prefect.artifacts import create_table_artifact
 
-                from irsol_data_pipeline.orchestration.utils import (
-                    sanitize_artifact_title,
-                )
-
-                with open(error_path) as f:
+                with open(error_path, "r", encoding="utf-8") as f:
                     error_content = json.load(f)
 
                 table_rows = []
@@ -331,13 +327,9 @@ def _process_single_measurement(
         calibration_info=calibration.model_dump(),
     )
     if prefect_enabled():
-        import json
-
         from prefect.artifacts import create_table_artifact
 
-        from irsol_data_pipeline.orchestration.utils import sanitize_artifact_title
-
-        with open(metadata_path) as f:
+        with open(metadata_path, "r", encoding="utf-8") as f:
             metadata_content = json.load(f)
 
         table_rows = []
