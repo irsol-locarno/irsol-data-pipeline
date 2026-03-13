@@ -30,16 +30,13 @@ from irsol_data_pipeline.pipeline.day_processor import (
 from irsol_data_pipeline.pipeline.scanner import ScanResult, scan_dataset
 
 
-@task(
-    name="scan-dataset", task_run_name="find-observations-to-process/{root}", retries=2
-)
+@task(task_run_name="find-observations-to-process/{root}", retries=2)
 def scan_dataset_task(root: Path) -> ScanResult:
     """Prefect task: scan the dataset root."""
     return scan_dataset(root)
 
 
 @task(
-    name="run-day-processing-subflow",
     task_run_name="{day_path.name}",
     retries=2,
 )
@@ -57,7 +54,6 @@ def run_day_processing_subflow_task(
 
 
 @flow(
-    name="dataset-scan",
     flow_run_name="process-unprocessed-measurements/{root}",
     description="Scans the dataset and processes all days with pending measurements",
 )
@@ -65,6 +61,7 @@ def process_unprocessed_measurements(
     root: Optional[str] = None,
     max_delta_hours: float = 2.0,
     refdata_dir: Optional[str] = None,
+    max_concurrency: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
 ) -> list[DayProcessingResult]:
     """Scan the dataset and process all days with pending measurements.
 
@@ -72,6 +69,7 @@ def process_unprocessed_measurements(
         root: Dataset root path. Falls back to SOLAR_PIPELINE_ROOT env var.
         max_delta_hours: Maximum flat-field time delta in hours.
         refdata_dir: Path to wavelength calibration reference data.
+        max_concurrency: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
 
     Returns:
         List of DayProcessingResult for each processed day.
@@ -106,7 +104,13 @@ def process_unprocessed_measurements(
         if day.name in scan_result.pending_measurements
     ]
 
-    with ThreadPoolTaskRunner(max_workers=1) as runner:
+    logger.info(
+        "Submitting day processing tasks",
+        day_count=len(selected_day_paths),
+        max_concurrency=max_concurrency,
+    )
+
+    with ThreadPoolTaskRunner(max_workers=max_concurrency) as runner:
         result_futures = []
         for day_path in selected_day_paths:
             future = runner.submit(
@@ -136,7 +140,6 @@ def process_unprocessed_measurements(
 
 
 @flow(
-    name="day-processing",
     flow_run_name="process-unprocessed-daily-measurements/{day_path.name}",
     description="Processes a single observation day",
     retries=2,
