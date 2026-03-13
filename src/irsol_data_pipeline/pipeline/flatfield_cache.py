@@ -13,8 +13,8 @@ from typing import Optional
 from loguru import logger
 
 from irsol_data_pipeline.core.config import DEFAULT_MAX_DELTA
+from irsol_data_pipeline.core.correction.analyzer import analyze_flatfield
 from irsol_data_pipeline.core.models import FlatFieldCorrection
-from irsol_data_pipeline.correction.analyzer import analyze_flatfield
 from irsol_data_pipeline.io.dat_reader import load_flatfield, read_flatfield_si
 from irsol_data_pipeline.io.flatfield_correction_reader import read_flatfield_correction
 from irsol_data_pipeline.io.flatfield_correction_writer import (

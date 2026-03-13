@@ -7,7 +7,8 @@ from typing import Optional
 
 from loguru import logger
 
-from irsol_data_pipeline.calibration.autocalibrate import calibrate_measurement
+from irsol_data_pipeline.core.calibration.autocalibrate import calibrate_measurement
+from irsol_data_pipeline.core.correction.corrector import apply_correction
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
     DayProcessingResult,
@@ -15,7 +16,6 @@ from irsol_data_pipeline.core.models import (
     ObservationDay,
     StokesParameters,
 )
-from irsol_data_pipeline.correction.corrector import apply_correction
 from irsol_data_pipeline.io.dat_reader import load_measurement, read_zimpol_dat
 from irsol_data_pipeline.io.dat_writer import save_correction_data, write_corrected_dat
 from irsol_data_pipeline.io.filesystem import (

@@ -277,7 +277,7 @@ def plot_stokes(
 ) -> None:
     """Plot Stokes parameters (I, Q/I, U/I, V/I) from a measurement file."""
     _setup_logging(verbose)
-    from irsol_data_pipeline.calibration.autocalibrate import calibrate_measurement
+    from irsol_data_pipeline.core.calibration.autocalibrate import calibrate_measurement
     from irsol_data_pipeline.io.dat_reader import load_measurement
     from irsol_data_pipeline.plotting import plot_profile
 
