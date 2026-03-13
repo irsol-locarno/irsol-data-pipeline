@@ -100,7 +100,7 @@ class FlatFieldCache(BaseModel):
         return sum(len(v) for v in self._corrections.values())
 
 
-@task(task_run_name="analyze-flatfield-{path.name}", retries=2)
+@task(task_run_name="analyze-flatfield/{path.name}", retries=2)
 def _analyze_flatfield(path: Path) -> FlatFieldCorrection:
     """Helper function to analyze a single flat-field file for parallel processing."""
     ff = load_flatfield(path)
@@ -125,6 +125,7 @@ def _flatfield_correction_cache_path(
     return flatfield_path.parent.parent / "processed" / "_cache" / cache_filename
 
 
+@task(task_run_name="flat-field-correction/build", retries=2)
 def build_flatfield_cache(
     flatfield_paths: list[Path],
     max_delta: datetime.timedelta = DEFAULT_MAX_DELTA,

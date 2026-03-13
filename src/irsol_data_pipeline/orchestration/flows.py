@@ -34,11 +34,6 @@ def scan_dataset_task(root: Path) -> ScanResult:
     return scan_dataset(root)
 
 
-@task(
-    name="process-observation-day",
-    task_run_name="process-observation-for-{day.path.name}",
-    retries=2,
-)
 def process_day_task(
     day: ObservationDay,
     max_delta_hours: float = 2.0,
@@ -55,11 +50,11 @@ def process_day_task(
 
 @task(
     name="run-day-processing-subflow",
-    task_run_name="run-day-processing-flow-for-{day_path}",
+    task_run_name="{day_path.name}",
     retries=2,
 )
 def run_day_processing_subflow_task(
-    day_path: str,
+    day_path: Path,
     max_delta_hours: float = 2.0,
     refdata_dir: Optional[str] = None,
 ) -> DayProcessingResult:
@@ -116,7 +111,7 @@ def dataset_scan_flow(
 
     # Process each day with pending measurements via the day sub-flow.
     selected_day_paths = [
-        str(day.path)
+        day.path
         for day in scan_result.observation_days
         if day.name in scan_result.pending_measurements
     ]
@@ -142,11 +137,12 @@ def dataset_scan_flow(
 
 @flow(
     name="day-processing",
-    flow_run_name="day-processing-for-{day_path}",
+    flow_run_name="{day_path.name}",
     description="Processes a single observation day",
+    retries=2,
 )
 def day_processing_flow(
-    day_path: str,
+    day_path: Path,
     max_delta_hours: float = 2.0,
     refdata_dir: Optional[str] = None,
 ) -> DayProcessingResult:
@@ -197,6 +193,6 @@ if __name__ == "__main__":
     # Example usage: run the dataset scan flow
     setup_logging()
     dataset_scan_flow(
-        root="/home/deldoc/Documents/code/irsol-data-pipeline/data",
+        root="data",
         max_delta_hours=2.0,
     )
