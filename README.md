@@ -1,5 +1,15 @@
 # IRSOL Data Pipeline
 
+## Development status
+ - [x] Implement flat field correction
+ - [x] Implement wavelength auto-calibration
+ - [x] Implement per-measurement processing pipeline
+ - [x] Implement dataset scanning and orchestration with Prefect
+ - [ ] Robust CLI capabilities for local processing and debugging
+ - [ ] Correct export capabilities into `.fits` format, currently output is saved as `.npz` file but the final goal is to export into `.fits` format for compatibility with existing tools and workflows.
+ - [ ] Comprehensive unit and integration tests
+ - [ ] Documentation and usage examples
+
 ## Overview
 
 `irsol-data-pipeline` processes IRSOL ZIMPOL solar spectro-polarimetric measurements.
@@ -65,6 +75,12 @@ uv run solar-pipeline export-fits /path/to/file.dat
 uv run solar-pipeline plot-stokes /path/to/file.dat --calibrate
 ```
 
+You can also run the Typer app module directly:
+
+```bash
+uv run python -m irsol_data_pipeline.cli.main --help
+```
+
 Optional Make targets:
 
 ```bash
@@ -120,6 +136,20 @@ Per day, the processing behavior is:
 5. Write outputs: corrected data, correction payload, metadata, and per-file
 	 error JSON when a measurement fails.
 
+### Output files
+
+For a source measurement `6302_m1.dat`, the pipeline writes into `processed/`:
+
+- `6302_m1_corrected.dat.npz`: corrected Stokes arrays in NumPy NPZ format
+- `6302_m1_flat_field_correction_data.pkl`: serialized flat-field correction payload
+- `6302_m1_metadata.json`: processing metadata and calibration summary
+- `6302_m1_profile_corrected.png`: plot of corrected Stokes profiles
+- `6302_m1_profile_original.png`: plot of original Stokes profiles
+- `6302_m1_error.json`: written only if processing fails
+
+Note: corrected output uses an NPZ container with a `.dat` stem
+(`*_corrected.dat.npz`) for compatibility with existing naming conventions.
+
 ```mermaid
 flowchart TD
 		A[Dataset Root] --> B[Discovery Scan]
@@ -170,7 +200,7 @@ In another python module, enable Prefect and serve the flow as a deployment:
 # serve_pipeline.py
 from irsol_data_pipeline.orchestration.flows import process_unprocessed_measurements as f
 
-f.serve(name='irsol-process-unprocessed')"
+f.serve(name="irsol-process-unprocessed")
 ```
 
 Then serve the pipeline:

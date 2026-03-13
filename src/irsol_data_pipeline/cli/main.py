@@ -325,15 +325,4 @@ def plot_stokes(
 
 
 if __name__ == "__main__":
-    plot_stokes(
-        "/home/deldoc/Documents/code/irsol-data-pipeline/data/2024/240713/processed/4227_m3_corrected.dat.npz",
-        output=None,
-    )
-    # process_measurement(
-    #     "/home/deldoc/Documents/code/irsol-data-pipeline/data/2024/240713/processed/4227_m3_corrected.dat.npz",
-    #     output_dir=None,
-    #     flatfield_dir=None,
-    #     max_delta_hours=2.0,
-    #     refdata_dir=None,
-    #     verbose=True,
-    # )
+    app()

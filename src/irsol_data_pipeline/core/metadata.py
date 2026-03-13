@@ -8,6 +8,7 @@ need to work with raw indices.
 from __future__ import annotations
 
 import datetime
+import re
 from typing import Optional
 
 import numpy as np
@@ -132,22 +133,38 @@ def _parse_zimpol_datetime(dt_str: str) -> datetime.datetime:
 
     Format is typically ``"2024-07-13T10:22:00+01"`` (with timezone offset).
     """
-    # Handle the "+01" style offset that ZIMPOL uses
-    if "+" in dt_str:
-        parts = dt_str.split("+")
-        base = parts[0]
-        offset_str = parts[1]
-        # offset_str can be "01", "1", "0100", etc.
-        try:
-            offset_hours = (
-                int(offset_str[:2]) if len(offset_str) >= 2 else int(offset_str)
-            )
-        except ValueError:
-            offset_hours = 0
-        parsed = datetime.datetime.fromisoformat(base)
-        parsed = parsed - datetime.timedelta(hours=offset_hours)
+    value = dt_str.strip()
+    if not value:
+        raise ValueError("Empty datetime string")
+
+    # Accept common ZIMPOL timezone variants: +H, +HH, +HHMM, +HH:MM, and Z.
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+
+    m = re.search(r"([+-])(\d{1,4})(:?\d{2})?$", value)
+    if m:
+        sign, hour_digits, minute_part = m.groups()
+        if minute_part is not None and minute_part.startswith(":"):
+            minutes = minute_part[1:]
+            hours = hour_digits.zfill(2)
+        elif minute_part is not None:
+            hours = hour_digits.zfill(2)
+            minutes = minute_part
+        elif len(hour_digits) <= 2:
+            hours = hour_digits.zfill(2)
+            minutes = "00"
+        else:
+            hours = hour_digits[:2]
+            minutes = hour_digits[2:].ljust(2, "0")[:2]
+
+        value = f"{value[: m.start()]}{sign}{hours}:{minutes}"
+
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"Invalid ZIMPOL datetime string: {dt_str!r}") from exc
+
+    if parsed.tzinfo is None:
         return parsed.replace(tzinfo=datetime.timezone.utc)
-    else:
-        return datetime.datetime.fromisoformat(dt_str).replace(
-            tzinfo=datetime.timezone.utc
-        )
+
+    return parsed.astimezone(datetime.timezone.utc)
