@@ -145,10 +145,11 @@ def process_observation_day(
 
     if prefect_enabled():
         from prefect.artifacts import create_progress_artifact, update_progress_artifact
+        from irsol_data_pipeline.orchestration.utils import sanitize_artifact_title
 
         progress_id = create_progress_artifact(
             0.0,
-            key=f"progress-{day.name.lower().strip().replace(' ', '-')}",
+            key=sanitize_artifact_title(f"progress-{day.name}"),
             description=f"Processing progress for {day.name}",
         )
 
@@ -192,6 +193,9 @@ def process_observation_day(
             )
             if prefect_enabled():
                 from prefect.artifacts import create_table_artifact
+                from irsol_data_pipeline.orchestration.utils import (
+                    sanitize_artifact_title,
+                )
                 import json
 
                 with open(error_path) as f:
@@ -206,7 +210,7 @@ def process_observation_day(
                         table_rows.append({"key": k, "value": str(v)})
                 create_table_artifact(
                     table=table_rows,
-                    key=f"error-metadata-{str(meas_path).lower().strip().replace(' ', '-').replace('/', '-')}",
+                    key=sanitize_artifact_title(f"error-metadata-{meas_path}"),
                     description=f"Error for failed processed measurement {stem}",
                 )
 
@@ -369,6 +373,7 @@ def _process_single_measurement(
     )
     if prefect_enabled():
         from prefect.artifacts import create_table_artifact
+        from irsol_data_pipeline.orchestration.utils import sanitize_artifact_title
         import json
 
         with open(metadata_path) as f:
@@ -383,7 +388,7 @@ def _process_single_measurement(
                 table_rows.append({"key": k, "value": str(v)})
         create_table_artifact(
             table=table_rows,
-            key=f"processing-metadata-{str(meas_path).lower().strip().replace(' ', '-').replace('/', '-')}",
+            key=sanitize_artifact_title(f"processing-metadata-{meas_path}"),
             description=f"Metadata for processed measurement {stem}",
         )
 
