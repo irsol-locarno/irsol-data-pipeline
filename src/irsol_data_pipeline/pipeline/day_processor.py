@@ -143,7 +143,25 @@ def process_observation_day(
         wavelengths=ff_cache.wavelengths,
     )
 
-    for meas_path in sorted(measurement_paths):
+    if prefect_enabled():
+        from prefect.artifacts import create_progress_artifact, update_progress_artifact
+
+        progress_id = create_progress_artifact(
+            0.0,
+            key=f"progress/{day.name}",
+            description=f"Processing progress for {day.name}",
+        )
+
+        def update_progress(processed: int):
+            percent = (processed + 1) / len(measurement_paths) * 100
+            update_progress_artifact(artifact_id=progress_id, progress=percent)
+    else:
+
+        def update_progress(processed: int):
+            pass  # No-op if not using Prefect
+
+    for meas_i, meas_path in enumerate(sorted(measurement_paths)):
+        update_progress(meas_i)
         if is_measurement_processed(day.processed_dir, meas_path.name):
             logger.debug("Skipping already processed", file=meas_path.name)
             result.skipped += 1

@@ -103,7 +103,7 @@ def run_day_processing_subflow_task(
 
 
 @flow(
-    flow_run_name="process-unprocessed-measurements/{root}",
+    flow_run_name="process-unprocessed-measurements/{root.name}",
     description="Scans the dataset and processes all days with pending measurements",
 )
 def process_unprocessed_measurements(
