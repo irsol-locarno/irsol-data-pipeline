@@ -224,3 +224,5 @@ Notes:
 5. Inspect run logs and artifacts:
 - The scan summary is published as a markdown artifact.
 - Each day processing run reports processed/skipped/failed counts.
+
+![Prefect dashboard showing deployment and run logs](./documentation/assets/prefect-dashboard.png)
