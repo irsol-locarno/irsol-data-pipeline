@@ -10,6 +10,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from irsol_data_pipeline.orchestration.decorators import task
 from irsol_data_pipeline.calibration.autocalibrate import calibrate_measurement
+from irsol_data_pipeline.plotting import plot_profile
 from irsol_data_pipeline.correction.corrector import apply_correction
 from irsol_data_pipeline.io.dat_reader import load_measurement, read_zimpol_dat
 from irsol_data_pipeline.io.dat_writer import write_corrected_dat, save_correction_data
@@ -290,6 +291,24 @@ def _process_single_measurement(
         flat_field_used=ff_correction.source_flatfield_path.name,
         flat_field_time_delta_seconds=ff_time_delta,
         calibration_info=calibration.model_dump(),
+    )
+
+    # 8. Generate profile plots for the original and corrected data
+    wavelength_offset = calibration.wavelength_offset
+    pixel_scale = calibration.pixel_scale
+    plot_profile(
+        corrected_stokes,
+        title=f"{stem} - Corrected",
+        filename_save=processed_dir / f"{stem}_corrected_profile.png",
+        a0=wavelength_offset,
+        a1=pixel_scale,
+    )
+    plot_profile(
+        measurement.stokes,
+        title=f"{stem} - Original",
+        filename_save=processed_dir / f"{stem}_original_profile.png",
+        a0=wavelength_offset,
+        a1=pixel_scale,
     )
 
     logger.success("Measurement processed", file=meas_path.name)
