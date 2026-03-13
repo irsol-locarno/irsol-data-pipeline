@@ -240,15 +240,3 @@ def process_daily_unprocessed_measurements(
     )
 
     return result
-
-
-if __name__ == "__main__":
-    # Example usage: run the dataset scan flow
-    process_unprocessed_measurements.serve(
-        name="run-process-unprocessed-measurements",
-        parameters={"root": "/home/deldon/code/irsol-data-pipeline/data"},
-    )
-    # process_unprocessed_measurements(
-    #     root="data",
-    #     max_delta_hours=2.0,
-    # )

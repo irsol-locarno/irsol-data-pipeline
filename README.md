@@ -86,7 +86,12 @@ Optional Make targets:
 ```bash
 make lint
 make test
+make prefect/dashboard
+make prefect/serve-pipeline
+make prefect/reset
 ```
+
+`prefect/reset` resets the local Prefect database and removes local Prefect state.
 
 ## Architecture Overview
 
@@ -183,43 +188,39 @@ flowchart TD
 
 ## Prefect Usage
 
-### Create a deployment by serving a flow
+### Recommended startup flow (Makefile)
 
-The main flow is
-`irsol_data_pipeline.orchestration.flows.process_unprocessed_measurements`.
+Use the Make targets to start the local Prefect server/dashboard and serve the
+pipeline deployment from the repository entrypoint.
 
-Start a local Prefect server (if not already running):
+1. Start the Prefect server and dashboard:
 
 ```bash
-uv run prefect server start
+make prefect/dashboard
 ```
 
-In another python module, enable Prefect and serve the flow as a deployment:
+2. In another terminal, serve the pipeline deployment:
 
-```py
-# serve_pipeline.py
-from irsol_data_pipeline.orchestration.flows import process_unprocessed_measurements as f
-
-f.serve(name="irsol-process-unprocessed")
-```
-
-Then serve the pipeline:
 ```bash
-PREFECT_ENABLED=1 SOLAR_PIPELINE_ROOT=/data/mdata/pdata/irsol/zimpol uv run serve_pipeline.py
+make prefect/serve-pipeline
 ```
+
+This target runs `entrypoints/serve_pipeline.py`, which serves
+`process_unprocessed_measurements` as deployment
+`run-process-unprocessed-measurements`.
 
 Notes:
 
-- `PREFECT_ENABLED=1` activates Prefect decorators used in shared modules.
-- `serve(...)` creates the deployment and keeps a worker process running.
+- `make prefect/serve-pipeline` sets `PREFECT_ENABLED=true` so Prefect-aware decorators are active.
+- The default deployment parameter root is `<repo>/data` (configured in `entrypoints/serve_pipeline.py`).
+- If needed, reset local Prefect state with `make prefect/reset`.
 
-### Invoking a flow via the UI
+### Invoking from the dashboard
 
-1. Open the Prefect UI (default): `http://127.0.0.1:4200`.
-2. Go to `Deployments` and select `irsol-process-unprocessed`.
+1. Open the Prefect UI: `http://127.0.0.1:4200`.
+2. Go to `Deployments` and select `run-process-unprocessed-measurements`.
 3. Click `Run` / `Quick Run`.
-4. Optionally adjust parameters (for example `root`, `max_delta_hours`,
-	 `refdata_dir`, `max_concurrency`).
+4. Optionally adjust parameters (`root`, `max_delta_hours`, `refdata_dir`, `max_concurrency`).
 5. Inspect run logs and artifacts:
-	 - The scan summary is published as a markdown artifact.
-	 - Each day processing run reports processed/skipped/failed counts.
+- The scan summary is published as a markdown artifact.
+- Each day processing run reports processed/skipped/failed counts.
