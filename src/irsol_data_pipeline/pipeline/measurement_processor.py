@@ -94,130 +94,129 @@ def _process_single_measurement(
 
     Raises on failure so the caller can handle error recording.
     """
-    logger.info("Processing measurement", file=meas_path.name)
-    stem = get_processed_stem(meas_path.name)
+    with logger.contextualize(file=meas_path.name):
+        logger.info("Processing measurement")
+        stem = get_processed_stem(meas_path.name)
 
-    # 1. Load measurement
-    stokes, info = dat_io.read(meas_path)
-    measurement_metadata = MeasurementMetadata.from_info_array(info)
-    measurement = Measurement(
-        source_path=meas_path,
-        metadata=measurement_metadata,
-        stokes=stokes,
-    )
+        # 1. Load measurement
+        stokes, info = dat_io.read(meas_path)
+        measurement_metadata = MeasurementMetadata.from_info_array(info)
+        measurement = Measurement(
+            source_path=meas_path,
+            metadata=measurement_metadata,
+            stokes=stokes,
+        )
 
-    # 2. Find closest flat-field
-    max_delta = max_delta_policy.get_max_delta(
-        wavelength=measurement.wavelength,
-        instrument=measurement.metadata.instrument,
-        telescope=measurement.metadata.telescope_name,
-    )
+        # 2. Find closest flat-field
+        max_delta = max_delta_policy.get_max_delta(
+            wavelength=measurement.wavelength,
+            instrument=measurement.metadata.instrument,
+            telescope=measurement.metadata.telescope_name,
+        )
 
-    ff_correction = ff_cache.find_best_correction(
-        wavelength=measurement.wavelength,
-        timestamp=measurement.timestamp,
-        max_delta=max_delta,
-    )
+        ff_correction = ff_cache.find_best_correction(
+            wavelength=measurement.wavelength,
+            timestamp=measurement.timestamp,
+            max_delta=max_delta,
+        )
 
-    if ff_correction is None:
-        raise FlatFieldAssociationNotFoundException(measurement, max_delta)
+        if ff_correction is None:
+            raise FlatFieldAssociationNotFoundException(measurement, max_delta)
 
-    ff_time_delta = abs(
-        (ff_correction.timestamp - measurement.timestamp).total_seconds()
-    )
-    logger.info(
-        "Using flat-field correction",
-        flat_field=ff_correction.source_flatfield_path.name,
-        delta_seconds=ff_time_delta,
-    )
+        ff_time_delta = abs(
+            (ff_correction.timestamp - measurement.timestamp).total_seconds()
+        )
+        logger.info(
+            "Using flat-field correction",
+            flat_field=ff_correction.source_flatfield_path.name,
+            delta_seconds=ff_time_delta,
+        )
 
-    # 3. Apply flat-field correction
-    logger.info("Applying flat-field correction", file=meas_path.name)
-    corrected_stokes = apply_correction(
-        stokes=measurement.stokes,
-        dust_flat=ff_correction.dust_flat,
-        offset_map=ff_correction.offset_map,
-    )
+        # 3. Apply flat-field correction
+        logger.info("Applying flat-field correction")
+        corrected_stokes = apply_correction(
+            stokes=measurement.stokes,
+            dust_flat=ff_correction.dust_flat,
+            offset_map=ff_correction.offset_map,
+        )
 
-    logger.info("Flat-field correction applied", file=meas_path.name)
+        logger.info("Flat-field correction applied")
 
-    # 4. Wavelength auto-calibration
-    calibration = calibrate_measurement(corrected_stokes)
-    logger.info(
-        "Wavelength calibration complete",
-        pixel_scale=calibration.pixel_scale,
-        wavelength_offset=calibration.wavelength_offset,
-        reference_file=calibration.reference_file,
-    )
+        # 4. Wavelength auto-calibration
+        calibration = calibrate_measurement(corrected_stokes)
+        logger.info(
+            "Wavelength calibration complete",
+            pixel_scale=calibration.pixel_scale,
+            wavelength_offset=calibration.wavelength_offset,
+            reference_file=calibration.reference_file,
+        )
 
-    # 5. Save corrected data
-    # TODO: regenerate info array with calibration results if needed.
-    write_stokes_fits(
-        processed_output_path(
+        # 5. Save corrected data
+        # TODO: regenerate info array with calibration results if needed.
+        write_stokes_fits(
+            processed_output_path(
+                processed_dir,
+                meas_path.name,
+                kind="corrected_fits",
+            ),
+            corrected_stokes,
+            measurement_metadata,
+            calibration=calibration,
+        )
+
+        # 6. Save flat-field correction data (pickle)
+        flatfield_io.write(
+            processed_output_path(
+                processed_dir,
+                meas_path.name,
+                kind="flatfield_correction_data",
+            ),
+            ff_correction,
+        )
+
+        # 7. Save processing metadata
+        metadata_path = processed_output_path(
             processed_dir,
             meas_path.name,
-            kind="corrected_fits",
-        ),
-        corrected_stokes,
-        measurement_metadata,
-        calibration=calibration,
-    )
+            kind="metadata_json",
+        )
+        processing_metadata_io.write(
+            metadata_path,
+            source_file=meas_path.name,
+            flat_field_timestamp=ff_correction.timestamp,
+            measurement_timestamp=measurement.timestamp,
+            flat_field_used=ff_correction.source_flatfield_path.name,
+            flat_field_time_delta_seconds=ff_time_delta,
+            calibration_info=calibration.model_dump(),
+        )
 
-    # 6. Save flat-field correction data (pickle)
-    flatfield_io.write(
-        processed_output_path(
-            processed_dir,
-            meas_path.name,
-            kind="flatfield_correction_data",
-        ),
-        ff_correction,
-    )
+        create_prefect_json_report(
+            metadata_path,
+            title=f"Metadata for processed measurement {stem}",
+            key=f"processing-metadata-{stem}",
+        )
 
-    # 7. Save processing metadata
-    metadata_path = processed_output_path(
-        processed_dir,
-        meas_path.name,
-        kind="metadata_json",
-    )
-    processing_metadata_io.write(
-        metadata_path,
-        source_file=meas_path.name,
-        flat_field_timestamp=ff_correction.timestamp,
-        measurement_timestamp=measurement.timestamp,
-        flat_field_used=ff_correction.source_flatfield_path.name,
-        flat_field_time_delta_seconds=ff_time_delta,
-        calibration_info=calibration.model_dump(),
-    )
+        logger.info("Plotting profiles for original and corrected data")
+        # 8. Generate profile plots for original and corrected data
+        _plot_data(
+            stokes=corrected_stokes,
+            calibration=calibration,
+            title=f"{stem} - Corrected",
+            filename_save=processed_output_path(
+                processed_dir,
+                meas_path.name,
+                kind="profile_corrected_png",
+            ),
+        )
+        _plot_data(
+            stokes=measurement.stokes,
+            calibration=calibration,
+            title=f"{stem} - Original",
+            filename_save=processed_output_path(
+                processed_dir,
+                meas_path.name,
+                kind="profile_original_png",
+            ),
+        )
 
-    create_prefect_json_report(
-        metadata_path,
-        title=f"Metadata for processed measurement {stem}",
-        key=f"processing-metadata-{stem}",
-    )
-
-    logger.info(
-        "Plotting profiles for original and corrected data", file=meas_path.name
-    )
-    # 8. Generate profile plots for original and corrected data
-    _plot_data(
-        stokes=corrected_stokes,
-        calibration=calibration,
-        title=f"{stem} - Corrected",
-        filename_save=processed_output_path(
-            processed_dir,
-            meas_path.name,
-            kind="profile_corrected_png",
-        ),
-    )
-    _plot_data(
-        stokes=measurement.stokes,
-        calibration=calibration,
-        title=f"{stem} - Original",
-        filename_save=processed_output_path(
-            processed_dir,
-            meas_path.name,
-            kind="profile_original_png",
-        ),
-    )
-
-    logger.success("Measurement processed", file=meas_path.name)
+        logger.success("Measurement processed")

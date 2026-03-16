@@ -14,8 +14,9 @@ def read_metadata(path: Path) -> dict[str, Any]:
     Returns:
         Parsed dict.
     """
-    logger.debug("Reading metadata JSON", path=path)
-    with path.open() as f:
-        data = json.load(f)
-    logger.debug("Metadata JSON loaded", path=path)
-    return data
+    with logger.contextualize(path=path):
+        logger.debug("Reading metadata JSON")
+        with path.open() as f:
+            data = json.load(f)
+        logger.debug("Metadata JSON loaded")
+        return data

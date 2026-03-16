@@ -26,8 +26,9 @@ def write_correction_data(
     """
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    logger.debug("Writing flat-field correction pickle", path=path)
-    with open(path, "wb") as f:
-        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-    logger.debug("Flat-field correction pickle written", path=path)
+    with logger.contextualize(path=path):
+        logger.debug("Writing flat-field correction pickle")
+        with open(path, "wb") as f:
+            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        logger.debug("Flat-field correction pickle written")
     return path

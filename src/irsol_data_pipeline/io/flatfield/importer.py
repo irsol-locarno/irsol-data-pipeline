@@ -20,17 +20,18 @@ def load_correction_data(path: Path) -> FlatFieldCorrection:
     Returns:
         Deserialized FlatFieldCorrection.
     """
-    logger.debug("Loading flat-field correction pickle", path=path)
-    with open(path, "rb") as f:
-        try:
-            flatfield_correction = pickle.load(f)
-        except pickle.UnpicklingError as e:
+    with logger.contextualize(path=path):
+        logger.debug("Loading flat-field correction pickle")
+        with open(path, "rb") as f:
+            try:
+                flatfield_correction = pickle.load(f)
+            except pickle.UnpicklingError as e:
+                raise FlatfieldCorrectionImportError(
+                    f"Failed to unpickle FlatFieldCorrection from {path}: {e}"
+                )
+        if not isinstance(flatfield_correction, FlatFieldCorrection):
             raise FlatfieldCorrectionImportError(
-                f"Failed to unpickle FlatFieldCorrection from {path}: {e}"
+                f"Expected FlatFieldCorrection object in {path}, got {type(flatfield_correction)}"
             )
-    if not isinstance(flatfield_correction, FlatFieldCorrection):
-        raise FlatfieldCorrectionImportError(
-            f"Expected FlatFieldCorrection object in {path}, got {type(flatfield_correction)}"
-        )
-    logger.debug("Loaded flat-field correction pickle", path=path)
-    return flatfield_correction
+        logger.debug("Loaded flat-field correction pickle")
+        return flatfield_correction

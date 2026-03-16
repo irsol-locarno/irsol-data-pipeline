@@ -25,31 +25,31 @@ class ImportedFitsMeasurement:
 
 def load_fits_measurement(fits_path: Path) -> ImportedFitsMeasurement:
     """Load Stokes profiles and optional wavelength calibration from FITS."""
-    logger.debug("Loading FITS measurement", path=fits_path)
-    with fits.open(fits_path) as hdul:
-        si_hdu = _get_hdu(hdul, "Stokes I", 1)
-        sq_hdu = _get_hdu(hdul, "Stokes Q/I", 2)
-        su_hdu = _get_hdu(hdul, "Stokes U/I", 3)
-        sv_hdu = _get_hdu(hdul, "Stokes V/I", 4)
+    with logger.contextualize(path=fits_path):
+        logger.debug("Loading FITS measurement")
+        with fits.open(fits_path) as hdul:
+            si_hdu = _get_hdu(hdul, "Stokes I", 1)
+            sq_hdu = _get_hdu(hdul, "Stokes Q/I", 2)
+            su_hdu = _get_hdu(hdul, "Stokes U/I", 3)
+            sv_hdu = _get_hdu(hdul, "Stokes V/I", 4)
 
-        header = si_hdu.header.copy()
-        stokes = StokesParameters(
-            i=_to_spatial_spectral(si_hdu.data),
-            q=_to_spatial_spectral(sq_hdu.data),
-            u=_to_spatial_spectral(su_hdu.data),
-            v=_to_spatial_spectral(sv_hdu.data),
+            header = si_hdu.header.copy()
+            stokes = StokesParameters(
+                i=_to_spatial_spectral(si_hdu.data),
+                q=_to_spatial_spectral(sq_hdu.data),
+                u=_to_spatial_spectral(su_hdu.data),
+                v=_to_spatial_spectral(sv_hdu.data),
+            )
+            calibration = _extract_calibration(header)
+
+        logger.debug(
+            "Loaded FITS measurement",
+            has_calibration=calibration is not None,
+            shape_i=stokes.i.shape,
+            shape_q=stokes.q.shape,
+            shape_u=stokes.u.shape,
+            shape_v=stokes.v.shape,
         )
-        calibration = _extract_calibration(header)
-
-    logger.debug(
-        "Loaded FITS measurement",
-        path=fits_path,
-        has_calibration=calibration is not None,
-        shape_i=stokes.i.shape,
-        shape_q=stokes.q.shape,
-        shape_u=stokes.u.shape,
-        shape_v=stokes.v.shape,
-    )
 
     return ImportedFitsMeasurement(
         stokes=stokes,

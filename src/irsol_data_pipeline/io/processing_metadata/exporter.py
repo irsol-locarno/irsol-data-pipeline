@@ -38,28 +38,29 @@ def write_processing_metadata(
     Returns:
         Path to the written file.
     """
-    logger.debug("Writing processing metadata JSON", path=output_path)
+    with logger.contextualize(path=output_path):
+        logger.debug("Writing processing metadata JSON")
 
-    data: dict[str, Any] = {
-        "source_file": source_file,
-        "flat_field_used": flat_field_used,
-        "flat_field_timestamp": flat_field_timestamp.isoformat(),
-        "measurement_timestamp": measurement_timestamp.isoformat(),
-        "flat_field_time_delta_seconds": flat_field_time_delta_seconds,
-        "auto_calibrated_wavelength": calibration_info,
-        "processing_timestamp": datetime.datetime.now(
-            datetime.timezone.utc
-        ).isoformat(),
-        "pipeline_version": pipeline_version,
-    }
-    if extra:
-        data.update(extra)
+        data: dict[str, Any] = {
+            "source_file": source_file,
+            "flat_field_used": flat_field_used,
+            "flat_field_timestamp": flat_field_timestamp.isoformat(),
+            "measurement_timestamp": measurement_timestamp.isoformat(),
+            "flat_field_time_delta_seconds": flat_field_time_delta_seconds,
+            "auto_calibrated_wavelength": calibration_info,
+            "processing_timestamp": datetime.datetime.now(
+                datetime.timezone.utc
+            ).isoformat(),
+            "pipeline_version": pipeline_version,
+        }
+        if extra:
+            data.update(extra)
 
-    with output_path.open("w") as f:
-        json.dump(data, f, indent=2, default=str)
+        with output_path.open("w") as f:
+            json.dump(data, f, indent=2, default=str)
 
-    logger.debug("Processing metadata JSON written", path=output_path)
-    return output_path
+        logger.debug("Processing metadata JSON written")
+        return output_path
 
 
 def write_error_metadata(
@@ -77,19 +78,20 @@ def write_error_metadata(
     Returns:
         Path to the written file.
     """
-    logger.debug("Writing processing error JSON", path=output_path)
+    with logger.contextualize(path=output_path):
+        logger.debug("Writing processing error JSON")
 
-    data = {
-        "source_file": source_file,
-        "error": error,
-        "processing_timestamp": datetime.datetime.now(
-            datetime.timezone.utc
-        ).isoformat(),
-        "pipeline_version": pipeline_version,
-    }
+        data = {
+            "source_file": source_file,
+            "error": error,
+            "processing_timestamp": datetime.datetime.now(
+                datetime.timezone.utc
+            ).isoformat(),
+            "pipeline_version": pipeline_version,
+        }
 
-    with output_path.open("w") as f:
-        json.dump(data, f, indent=2)
+        with output_path.open("w") as f:
+            json.dump(data, f, indent=2)
 
-    logger.debug("Processing error JSON written", path=output_path)
-    return output_path
+        logger.debug("Processing error JSON written")
+        return output_path

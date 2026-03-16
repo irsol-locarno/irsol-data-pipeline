@@ -56,23 +56,23 @@ def write_stokes_fits(
     Returns:
         The path written to.
     """
-    logger.debug(
-        "Writing Stokes FITS",
-        output_path=output_path,
-        has_calibration=calibration is not None,
-        shape_i=stokes.i.shape,
-        shape_q=stokes.q.shape,
-        shape_u=stokes.u.shape,
-        shape_v=stokes.v.shape,
-    )
+    with logger.contextualize(output_path=output_path):
+        logger.debug(
+            "Writing Stokes FITS",
+            has_calibration=calibration is not None,
+            shape_i=stokes.i.shape,
+            shape_q=stokes.q.shape,
+            shape_u=stokes.u.shape,
+            shape_v=stokes.v.shape,
+        )
 
-    hdu_list = _build_fits_hdu_list(
-        stokes=stokes,
-        info=info,
-        calibration=calibration,
-    )
-    hdu_list.writeto(str(output_path), overwrite=True)
-    logger.debug("Stokes FITS written", output_path=output_path)
+        hdu_list = _build_fits_hdu_list(
+            stokes=stokes,
+            info=info,
+            calibration=calibration,
+        )
+        hdu_list.writeto(str(output_path), overwrite=True)
+        logger.debug("Stokes FITS written")
     return output_path
 
 

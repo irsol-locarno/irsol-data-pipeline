@@ -133,27 +133,24 @@ def build_flatfield_cache(
     # identify if the flatfields have already been computed and cached, and if so, load them instead of recomputing
     remaining_flatfields = []
     for flatfield_path in flatfield_paths:
-        cache_path = flatfield_correction_cache_path(flatfield_path)
-        if allow_cached_data and cache_path.is_file():
-            try:
-                correction = flatfield_io.read(cache_path)
-                cache.add_correction(correction)
-                logger.debug(
-                    "Loaded cached flat-field correction", file=flatfield_path.name
-                )
-                continue
-            except FileNotFoundError:
-                logger.debug(
-                    "Flat field correction cache does not exist, will analyze and cache results",
-                    file=flatfield_path.name,
-                )
-            except Exception as err:
-                logger.warning(
-                    "Failed to load cached correction, will re-analyze",
-                    file=flatfield_path.name,
-                    error=str(err),
-                )
-        remaining_flatfields.append(flatfield_path)
+        with logger.contextualize(file=flatfield_path.name):
+            cache_path = flatfield_correction_cache_path(flatfield_path)
+            if allow_cached_data and cache_path.is_file():
+                try:
+                    correction = flatfield_io.read(cache_path)
+                    cache.add_correction(correction)
+                    logger.debug("Loaded cached flat-field correction")
+                    continue
+                except FileNotFoundError:
+                    logger.debug(
+                        "Flat field correction cache does not exist, will analyze and cache results",
+                    )
+                except Exception as err:
+                    logger.warning(
+                        "Failed to load cached correction, will re-analyze",
+                        error=str(err),
+                    )
+            remaining_flatfields.append(flatfield_path)
 
     if not remaining_flatfields:
         logger.info("All flat-field corrections loaded from cache, no analysis needed")
@@ -165,17 +162,17 @@ def build_flatfield_cache(
         to_compute=len(remaining_flatfields),
     )
     for ff_path in remaining_flatfields:
-        try:
-            correction = _analyze_flatfield(ff_path)
-            flatfield_io.write(flatfield_correction_cache_path(ff_path), correction)
-        except Exception:
-            logger.exception("Failed to analyze flat-field", file=ff_path.name)
-        else:
-            cache.add_correction(correction)
-            logger.success(
-                "Cached flat-field correction",
-                file=ff_path.name,
-                wavelength=correction.wavelength,
-            )
+        with logger.contextualize(file=ff_path.name):
+            try:
+                correction = _analyze_flatfield(ff_path)
+                flatfield_io.write(flatfield_correction_cache_path(ff_path), correction)
+            except Exception:
+                logger.exception("Failed to analyze flat-field")
+            else:
+                cache.add_correction(correction)
+                logger.success(
+                    "Cached flat-field correction",
+                    wavelength=correction.wavelength,
+                )
 
     return cache

@@ -54,77 +54,78 @@ def process_observation_day(
     Returns:
         DayProcessingResult summary.
     """
-
     max_delta_policy = max_delta_policy or MaxDeltaPolicy()
 
-    result = DayProcessingResult(day_name=day.name)
+    with logger.contextualize(day=day.name, reduced_dir=day.reduced_dir):
+        result = DayProcessingResult(day_name=day.name)
 
-    # Ensure processed directory exists
-    day.processed_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure processed directory exists
+        day.processed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Discover files
-    measurement_paths = discover_measurement_files(day.reduced_dir)
-    if not measurement_paths:
-        logger.info("No measurements found", reduced_dir=str(day.reduced_dir))
+        # Discover files
+        measurement_paths = discover_measurement_files(day.reduced_dir)
+        if not measurement_paths:
+            logger.info("No measurements found")
+            return result
+
+        flatfield_paths = discover_flatfield_files(day.reduced_dir)
+        # Build flat-field cache (analyzed once, reused for all measurements)
+        logger.info(
+            "Building flat-field cache",
+            flatfield_count=len(flatfield_paths),
+        )
+        ff_cache = build_flatfield_cache(
+            flatfield_paths=flatfield_paths,
+            max_delta=max_delta_policy.default_max_delta,
+        )
+        logger.info(
+            "Flat-field cache ready",
+            corrections=len(ff_cache),
+            wavelengths=ff_cache.wavelengths,
+        )
+
+        update_progress = create_prefect_progress_callback(
+            name=day.name, total=len(measurement_paths)
+        )
+
+        for meas_i, meas_path in enumerate(sorted(measurement_paths)):
+            update_progress(meas_i)
+            if is_measurement_processed(day.processed_dir, meas_path.name):
+                logger.debug("Skipping already processed", file=meas_path.name)
+                result.skipped += 1
+                continue
+
+            with logger.contextualize(file=meas_path.name):
+                try:
+                    process_single_measurement(
+                        measurement_path=meas_path,
+                        processed_dir=day.processed_dir,
+                        ff_cache=ff_cache,
+                        max_delta_policy=max_delta_policy,
+                    )
+                    result.processed += 1
+                except Exception as e:
+                    error_msg = f"{meas_path.name}: {e}"
+                    logger.exception("Failed to process measurement")
+                    result.failed += 1
+                    result.errors.append(error_msg)
+
+                    # Write error file
+                    stem = get_processed_stem(meas_path.name)
+                    error_path = processed_output_path(
+                        day.processed_dir,
+                        meas_path.name,
+                        kind="error_json",
+                    )
+                    processing_metadata_io.write_error(
+                        error_path,
+                        source_file=meas_path.name,
+                        error=str(e),
+                    )
+                    create_prefect_json_report(
+                        error_path,
+                        title=f"Error for failed processed measurement {stem}",
+                        key=f"error-metadata-{meas_path.name}",
+                    )
+
         return result
-
-    flatfield_paths = discover_flatfield_files(day.reduced_dir)
-    # Build flat-field cache (analyzed once, reused for all measurements)
-    logger.info(
-        "Building flat-field cache",
-        flatfield_count=len(flatfield_paths),
-    )
-    ff_cache = build_flatfield_cache(
-        flatfield_paths=flatfield_paths,
-        max_delta=max_delta_policy.default_max_delta,
-    )
-    logger.info(
-        "Flat-field cache ready",
-        corrections=len(ff_cache),
-        wavelengths=ff_cache.wavelengths,
-    )
-
-    update_progress = create_prefect_progress_callback(
-        name=day.name, total=len(measurement_paths)
-    )
-
-    for meas_i, meas_path in enumerate(sorted(measurement_paths)):
-        update_progress(meas_i)
-        if is_measurement_processed(day.processed_dir, meas_path.name):
-            logger.debug("Skipping already processed", file=meas_path.name)
-            result.skipped += 1
-            continue
-
-        try:
-            process_single_measurement(
-                measurement_path=meas_path,
-                processed_dir=day.processed_dir,
-                ff_cache=ff_cache,
-                max_delta_policy=max_delta_policy,
-            )
-            result.processed += 1
-        except Exception as e:
-            error_msg = f"{meas_path.name}: {e}"
-            logger.exception("Failed to process measurement", file=meas_path.name)
-            result.failed += 1
-            result.errors.append(error_msg)
-
-            # Write error file
-            stem = get_processed_stem(meas_path.name)
-            error_path = processed_output_path(
-                day.processed_dir,
-                meas_path.name,
-                kind="error_json",
-            )
-            processing_metadata_io.write_error(
-                error_path,
-                source_file=meas_path.name,
-                error=str(e),
-            )
-            create_prefect_json_report(
-                error_path,
-                title=f"Error for failed processed measurement {stem}",
-                key=f"error-metadata-{meas_path.name}",
-            )
-
-    return result

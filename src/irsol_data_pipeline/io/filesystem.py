@@ -114,33 +114,34 @@ def discover_observation_days(root: Path) -> list[ObservationDay]:
     Returns:
         Sorted list of ObservationDay objects.
     """
-    logger.debug("Scanning observation days", root=root)
-    days: list[ObservationDay] = []
+    with logger.contextualize(root=root):
+        logger.debug("Scanning observation days")
+        days: list[ObservationDay] = []
 
-    if not root.is_dir():
-        logger.debug("Observation root does not exist", root=root)
-        return days
+        if not root.is_dir():
+            logger.debug("Observation root does not exist")
+            return days
 
-    for year_dir in sorted(root.iterdir()):
-        if not year_dir.is_dir():
-            continue
-        for day_dir in sorted(year_dir.iterdir()):
-            if not day_dir.is_dir():
+        for year_dir in sorted(root.iterdir()):
+            if not year_dir.is_dir():
                 continue
-            reduced = day_dir / REDUCED_DIRNAME
-            if reduced.is_dir():
-                days.append(
-                    ObservationDay(
-                        path=day_dir,
-                        raw_dir=day_dir / RAW_DIRNAME,
-                        reduced_dir=reduced,
-                        processed_dir=day_dir / PROCESSED_DIRNAME,
+            for day_dir in sorted(year_dir.iterdir()):
+                if not day_dir.is_dir():
+                    continue
+                reduced = day_dir / REDUCED_DIRNAME
+                if reduced.is_dir():
+                    days.append(
+                        ObservationDay(
+                            path=day_dir,
+                            raw_dir=day_dir / RAW_DIRNAME,
+                            reduced_dir=reduced,
+                            processed_dir=day_dir / PROCESSED_DIRNAME,
+                        )
                     )
-                )
 
-    days_sorted = sorted(days, key=lambda d: d.path)
-    logger.debug("Discovered observation days", root=root, count=len(days_sorted))
-    return days_sorted
+        days_sorted = sorted(days, key=lambda d: d.path)
+        logger.debug("Discovered observation days", count=len(days_sorted))
+        return days_sorted
 
 
 def discover_measurement_files(reduced_dir: Path) -> list[Path]:
@@ -154,32 +155,32 @@ def discover_measurement_files(reduced_dir: Path) -> list[Path]:
     Returns:
         Sorted list of measurement file paths.
     """
-    logger.debug("Scanning measurement files", reduced_dir=reduced_dir)
-    if not reduced_dir.is_dir():
-        logger.debug("Reduced directory does not exist", reduced_dir=reduced_dir)
-        return []
+    with logger.contextualize(reduced_dir=reduced_dir):
+        logger.debug("Scanning measurement files")
+        if not reduced_dir.is_dir():
+            logger.debug("Reduced directory does not exist")
+            return []
 
-    files: list[Path] = []
-    for p in sorted(reduced_dir.iterdir()):
-        if not p.is_file() or not p.name.endswith(".dat"):
-            continue
-        # Skip flat-field files
-        if FLATFIELD_PATTERN.match(p.name):
-            continue
-        # Skip calibration and dark files
-        if any(p.name.lower().startswith(prefix) for prefix in IGNORED_PREFIXES):
-            continue
-        # Must match observation pattern
-        if OBSERVATION_PATTERN.match(p.name):
-            files.append(p)
+        files: list[Path] = []
+        for p in sorted(reduced_dir.iterdir()):
+            if not p.is_file() or not p.name.endswith(".dat"):
+                continue
+            # Skip flat-field files
+            if FLATFIELD_PATTERN.match(p.name):
+                continue
+            # Skip calibration and dark files
+            if any(p.name.lower().startswith(prefix) for prefix in IGNORED_PREFIXES):
+                continue
+            # Must match observation pattern
+            if OBSERVATION_PATTERN.match(p.name):
+                files.append(p)
 
-    files_sorted = sorted(files)
-    logger.debug(
-        "Discovered measurement files",
-        reduced_dir=reduced_dir,
-        count=len(files_sorted),
-    )
-    return files_sorted
+        files_sorted = sorted(files)
+        logger.debug(
+            "Discovered measurement files",
+            count=len(files_sorted),
+        )
+        return files_sorted
 
 
 def discover_flatfield_files(reduced_dir: Path) -> list[Path]:
@@ -191,23 +192,23 @@ def discover_flatfield_files(reduced_dir: Path) -> list[Path]:
     Returns:
         Sorted list of flat-field file paths.
     """
-    logger.debug("Scanning flat-field files", reduced_dir=reduced_dir)
-    if not reduced_dir.is_dir():
-        logger.debug("Reduced directory does not exist", reduced_dir=reduced_dir)
-        return []
+    with logger.contextualize(reduced_dir=reduced_dir):
+        logger.debug("Scanning flat-field files")
+        if not reduced_dir.is_dir():
+            logger.debug("Reduced directory does not exist")
+            return []
 
-    files: list[Path] = []
-    for p in sorted(reduced_dir.iterdir()):
-        if p.is_file() and FLATFIELD_PATTERN.match(p.name):
-            files.append(p)
+        files: list[Path] = []
+        for p in sorted(reduced_dir.iterdir()):
+            if p.is_file() and FLATFIELD_PATTERN.match(p.name):
+                files.append(p)
 
-    files_sorted = sorted(files)
-    logger.debug(
-        "Discovered flat-field files",
-        reduced_dir=reduced_dir,
-        count=len(files_sorted),
-    )
-    return files_sorted
+        files_sorted = sorted(files)
+        logger.debug(
+            "Discovered flat-field files",
+            count=len(files_sorted),
+        )
+        return files_sorted
 
 
 def get_processed_stem(source_name: str) -> str:
@@ -238,23 +239,22 @@ def is_measurement_processed(processed_dir: Path, source_name: str) -> bool:
     Returns:
         True if already processed.
     """
-    corrected_fits = processed_output_path(
-        processed_dir,
-        source_name,
-        kind="corrected_fits",
-    )
-    error = processed_output_path(
-        processed_dir,
-        source_name,
-        kind="error_json",
-    )
-    is_processed = corrected_fits.exists() or error.exists()
-    logger.debug(
-        "Checked processed state",
-        source_name=source_name,
-        processed_dir=processed_dir,
-        has_corrected_fits=corrected_fits.exists(),
-        has_error_json=error.exists(),
-        is_processed=is_processed,
-    )
-    return is_processed
+    with logger.contextualize(processed_dir=processed_dir, source_name=source_name):
+        corrected_fits = processed_output_path(
+            processed_dir,
+            source_name,
+            kind="corrected_fits",
+        )
+        error = processed_output_path(
+            processed_dir,
+            source_name,
+            kind="error_json",
+        )
+        is_processed = corrected_fits.exists() or error.exists()
+        logger.debug(
+            "Checked processed state",
+            has_corrected_fits=corrected_fits.exists(),
+            has_error_json=error.exists(),
+            is_processed=is_processed,
+        )
+        return is_processed
