@@ -144,10 +144,16 @@ def build_flatfield_cache(
                     "Loaded cached flat-field correction", file=flatfield_path.name
                 )
                 continue
-            except Exception:
+            except FileNotFoundError:
+                logger.debug(
+                    "Flat field correction cache does not exist, will analyze and cache results",
+                    file=flatfield_path.name,
+                )
+            except Exception as err:
                 logger.warning(
                     "Failed to load cached correction, will re-analyze",
                     file=flatfield_path.name,
+                    error=str(err),
                 )
         remaining_flatfields.append(flatfield_path)
 
