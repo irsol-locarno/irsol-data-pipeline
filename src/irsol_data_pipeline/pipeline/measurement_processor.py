@@ -80,7 +80,11 @@ def _plot_data(
     )
 
 
-@task(task_run_name="process-measurement/{meas_path.name}")
+@task(
+    task_run_name="process-measurement/{meas_path.name}",
+    retries=2,
+    retry_delay_seconds=10,
+)
 def _process_single_measurement(
     meas_path: Path,
     processed_dir: Path,
