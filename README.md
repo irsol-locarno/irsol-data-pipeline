@@ -96,7 +96,11 @@ irsol-data-pipeline/
 │   │   └── calibration/           # Wavelength auto-calibration logic
 │   ├── io/                        # File I/O and metadata persistence
 │   │   └── fits/                  # FITS export functionality
-│   ├── pipeline/                  # Day-level processing and cache/scanning orchestration
+│   ├── pipeline/                  # Processing orchestration and reusable pipeline steps
+│   │   ├── day_processor.py       # Observation-day orchestration over pending measurements
+│   │   ├── measurement_processor.py # Single-measurement correction/calibration pipeline
+│   │   ├── flatfield_cache.py     # Flat-field correction cache build/query
+│   │   └── scanner.py             # Dataset/day/measurement discovery helpers
 │   ├── orchestration/             # Prefect flows, decorators, and logging bridge
 │   ├── plotting/                  # Plot generation for processed profiles
 │   └── logging_config.py
@@ -141,7 +145,8 @@ The codebase is split into focused layers.
 		(`core/calibration/autocalibrate.py`)
 - Processing pipeline:
 	- Scan pending measurements (`pipeline/scanner.py`)
-	- Process one day / one measurement (`pipeline/day_processor.py`)
+	- Process one observation day (`pipeline/day_processor.py`)
+	- Process one measurement (`pipeline/measurement_processor.py`)
 - Orchestration:
 	- Prefect flows for dataset-wide and per-day processing
 		(`orchestration/flows.py`)

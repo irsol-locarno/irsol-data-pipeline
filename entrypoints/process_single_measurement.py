@@ -15,8 +15,10 @@ from irsol_data_pipeline.io.filesystem import (
     processed_output_path,
 )
 from irsol_data_pipeline.logging_config import setup_logging
-from irsol_data_pipeline.pipeline.day_processor import process_single_measurement
 from irsol_data_pipeline.pipeline.flatfield_cache import build_flatfield_cache
+from irsol_data_pipeline.pipeline.measurement_processor import (
+    process_single_measurement,
+)
 
 
 def _parse_args() -> argparse.Namespace:
