@@ -1,14 +1,15 @@
-"""FITS export for reduced and processed measurement files.
+"""FITS export helpers for processed Stokes measurements.
 
-Converts .dat measurement data to FITS format with proper WCS headers,
-SOLARNET-compliant metadata, and multi-extension HDU structure.
+Serializes in-memory ``StokesParameters`` + ``MeasurementMetadata`` into a
+multi-extension FITS product with WCS, observatory metadata, and optional
+wavelength calibration header values.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 from astropy import units as u
@@ -23,7 +24,6 @@ from irsol_data_pipeline.core.models import (
     MeasurementMetadata,
     StokesParameters,
 )
-from irsol_data_pipeline.io.dat_reader import read_zimpol_dat
 
 IRSOL_LOCATION = EarthLocation(
     lat=46.176906 * u.Unit("deg"),
@@ -38,49 +38,10 @@ GREGOR_LOCATION = EarthLocation(
 )
 
 
-def export_to_fits(
-    dat_path: Union[Path, str],
-    output_path: Optional[Union[Path, str]] = None,
-    calibration: Optional[CalibrationResult] = None,
-) -> Optional[Path]:
-    """Export a measurement file to FITS format.
-
-    Reads the measurement and writes a multi-extension FITS file with
-    SOLARNET-compliant headers.
-
-    Works with reduced `.dat`/`.sav` files.
-
-    Args:
-        dat_path: Path to the input .dat file.
-        output_path: Where to write the .fits file. If None, the FITS
-            content is built but not written (dry run).
-        calibration: Optional precomputed wavelength calibration metadata.
-
-    Returns:
-        Path to the written FITS file, or None if no output_path given.
-    """
-    dat_path = Path(dat_path)
-
-    stokes, info = read_zimpol_dat(dat_path)
-    hdu_list = build_fits_hdu_list(
-        stokes=stokes,
-        info=info,
-        calibration=calibration,
-    )
-
-    if output_path is not None:
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        hdu_list.writeto(str(out), overwrite=True)
-        return out
-
-    return None
-
-
 def write_stokes_fits(
-    output_path: Union[Path, str],
+    output_path: Path,
     stokes: StokesParameters,
-    info: np.ndarray,
+    info: MeasurementMetadata,
     calibration: Optional[CalibrationResult] = None,
 ) -> Path:
     """Write processed Stokes data to a FITS file.
@@ -88,7 +49,7 @@ def write_stokes_fits(
     Args:
         output_path: Where to write the `.fits` file.
         stokes: Stokes data to serialize.
-        info: Raw ZIMPOL info array used to derive FITS metadata.
+        info: Measurement metadata used to derive FITS headers.
         calibration: Optional precomputed wavelength calibration.
 
     Returns:
@@ -97,7 +58,7 @@ def write_stokes_fits(
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    hdu_list = build_fits_hdu_list(
+    hdu_list = _build_fits_hdu_list(
         stokes=stokes,
         info=info,
         calibration=calibration,
@@ -106,9 +67,9 @@ def write_stokes_fits(
     return out
 
 
-def build_fits_hdu_list(
+def _build_fits_hdu_list(
     stokes: StokesParameters,
-    info: np.ndarray,
+    info: MeasurementMetadata,
     calibration: Optional[CalibrationResult] = None,
 ) -> fits.HDUList:
     """Build a FITS HDU list from Stokes data and raw info metadata.
@@ -116,9 +77,8 @@ def build_fits_hdu_list(
     Calibration metadata is only included when an explicit calibration
     object is provided.
     """
-    metadata = MeasurementMetadata.from_info_array(info)
     a1, a0, a1_err, a0_err = _calibration_values(calibration)
-    return _build_hdu_list(stokes, metadata, a1, a0, a1_err, a0_err)
+    return _build_hdu_list(stokes, info, a1, a0, a1_err, a0_err)
 
 
 def _calibration_values(

@@ -3,8 +3,7 @@
 from pathlib import Path
 
 from irsol_data_pipeline.core.models import ObservationDay
-from irsol_data_pipeline.orchestration.flows import _build_scan_report_markdown
-from irsol_data_pipeline.pipeline.scanner import ScanResult
+from irsol_data_pipeline.pipeline.scanner import ScanResult, build_scan_report_markdown
 
 
 def _make_day(day_name: str) -> ObservationDay:
@@ -30,7 +29,7 @@ def test_build_scan_report_markdown_with_pending_measurements():
         total_pending=2,
     )
 
-    report = _build_scan_report_markdown(Path("/dataset"), scan_result)
+    report = build_scan_report_markdown(Path("/dataset"), scan_result)
 
     assert "Already processed: `3`" in report
     assert "Still to process: `2`" in report
@@ -45,7 +44,7 @@ def test_build_scan_report_markdown_without_pending_measurements():
         total_pending=0,
     )
 
-    report = _build_scan_report_markdown(Path("/dataset"), scan_result)
+    report = build_scan_report_markdown(Path("/dataset"), scan_result)
 
     assert "Already processed: `4`" in report
     assert "Still to process: `0`" in report

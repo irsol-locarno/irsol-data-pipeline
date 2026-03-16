@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Optional
 
@@ -13,15 +12,17 @@ from irsol_data_pipeline.core.correction.corrector import apply_correction
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
     MaxDeltaPolicy,
+    Measurement,
+    MeasurementMetadata,
     StokesParameters,
 )
-from irsol_data_pipeline.io.dat_reader import load_measurement, read_zimpol_dat
-from irsol_data_pipeline.io.dat_writer import save_correction_data
+from irsol_data_pipeline.io import dat as dat_io
+from irsol_data_pipeline.io import flatfield as flatfield_io
 from irsol_data_pipeline.io.filesystem import get_processed_stem, processed_output_path
 from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 from irsol_data_pipeline.io.metadata_store import write_processing_metadata
-from irsol_data_pipeline.orchestration.decorators import prefect_enabled, task
-from irsol_data_pipeline.orchestration.utils import sanitize_artifact_title
+from irsol_data_pipeline.orchestration.decorators import task
+from irsol_data_pipeline.orchestration.utils import create_prefect_json_report
 from irsol_data_pipeline.pipeline.flatfield_cache import FlatFieldCache
 from irsol_data_pipeline.plotting import plot_profile
 
@@ -95,7 +96,13 @@ def _process_single_measurement(
     stem = get_processed_stem(meas_path.name)
 
     # 1. Load measurement
-    measurement = load_measurement(meas_path)
+    stokes, info = dat_io.read(meas_path)
+    measurement_metadata = MeasurementMetadata.from_info_array(info)
+    measurement = Measurement(
+        source_path=meas_path,
+        metadata=measurement_metadata,
+        stokes=stokes,
+    )
 
     # 2. Find closest flat-field
     max_delta = max_delta_policy.get_max_delta(
@@ -145,7 +152,6 @@ def _process_single_measurement(
     )
 
     # 5. Save corrected data
-    _, info_raw = read_zimpol_dat(meas_path)
     # TODO: regenerate info array with calibration results if needed.
     write_stokes_fits(
         processed_output_path(
@@ -154,23 +160,18 @@ def _process_single_measurement(
             kind="corrected_fits",
         ),
         corrected_stokes,
-        info_raw,
+        measurement_metadata,
         calibration=calibration,
     )
 
     # 6. Save flat-field correction data (pickle)
-    save_correction_data(
+    flatfield_io.write(
         processed_output_path(
             processed_dir,
             meas_path.name,
             kind="flatfield_correction_data",
         ),
-        {
-            "dust_flat": ff_correction.dust_flat,
-            "offset_map": ff_correction.offset_map,
-            "desmiled": ff_correction.desmiled,
-            "source_flatfield": ff_correction.source_flatfield_path.name,
-        },
+        ff_correction,
     )
 
     # 7. Save processing metadata
@@ -188,24 +189,12 @@ def _process_single_measurement(
         flat_field_time_delta_seconds=ff_time_delta,
         calibration_info=calibration.model_dump(),
     )
-    if prefect_enabled():
-        from prefect.artifacts import create_table_artifact
 
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            metadata_content = json.load(f)
-
-        table_rows = []
-        for k, v in metadata_content.items():
-            if isinstance(v, dict):
-                for kk, vv in v.items():
-                    table_rows.append({"key": f"{k}.{kk}", "value": str(vv)})
-            else:
-                table_rows.append({"key": k, "value": str(v)})
-        create_table_artifact(
-            table=table_rows,
-            key=sanitize_artifact_title(f"processing-metadata-{meas_path.name}"),
-            description=f"Metadata for processed measurement {stem}",
-        )
+    create_prefect_json_report(
+        metadata_path,
+        title=f"Metadata for processed measurement {stem}",
+        key=f"processing-metadata-{stem}",
+    )
 
     logger.info(
         "Plotting profiles for original and corrected data", file=meas_path.name

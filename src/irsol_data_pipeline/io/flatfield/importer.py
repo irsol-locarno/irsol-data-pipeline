@@ -1,13 +1,22 @@
+"""Load ``FlatFieldCorrection`` payloads serialized as pickle files."""
+
+from __future__ import annotations
+
 import pickle
 from pathlib import Path
-from typing import Union
 
 from irsol_data_pipeline.core.models import FlatFieldCorrection
 
 
-def read_flatfield_correction(output_path: Union[Path, str]) -> FlatFieldCorrection:
-    """Reads the FlatFieldCorrection from a file using pickle."""
-    path = Path(output_path)
+def load_correction_data(path: Path) -> FlatFieldCorrection:
+    """Load a pickled correction data file.
+
+    Args:
+        path: Path to the pickle file.
+
+    Returns:
+        Deserialized FlatFieldCorrection.
+    """
     with open(path, "rb") as f:
         try:
             flatfield_correction = pickle.load(f)

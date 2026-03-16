@@ -2,37 +2,56 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import cast
 
 import numpy as np
+import pytest
 from astropy.io import fits
 
-from irsol_data_pipeline.core.models import CalibrationResult, StokesParameters
+from irsol_data_pipeline.core.models import (
+    CalibrationResult,
+    MeasurementMetadata,
+    StokesParameters,
+)
 from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 
 
-def _make_info_array() -> np.ndarray:
-    return np.array(
-        [
-            ["measurement.wavelength", "6302"],
-            ["measurement.datetime", "2024-07-13T10:22:00+01"],
-            ["measurement.telescope name", "IRSOL"],
-            ["measurement.instrument", "ZIMPOL"],
-            ["measurement.name", "map_01"],
-            ["measurement.type", "science"],
-            ["measurement.id", "m1"],
-            ["measurement.observer", "Test Observer"],
-            ["measurement.project", "Test Project"],
-            ["measurement.camera.identity", "Cam-1"],
-            ["measurement.camera.CCD", "CCD-1"],
-            ["measurement.integration time", "0.5"],
-            ["measurement.images", "1 1"],
-        ],
-        dtype=object,
+@pytest.fixture
+def measurement_metadata() -> MeasurementMetadata:
+    return MeasurementMetadata(
+        wavelength=6302,
+        datetime_start=datetime.datetime(
+            2024, 7, 13, 10, 22, tzinfo=datetime.timezone(datetime.timedelta(hours=1))
+        ),
+        datetime_end=datetime.datetime(
+            2024, 7, 13, 10, 32, tzinfo=datetime.timezone(datetime.timedelta(hours=1))
+        ),
+        telescope_name="IRSOL",
+        instrument="ZIMPOL",
+        measurement_name="map_01",
+        measurement_type="science",
+        measurement_id="m1",
+        observer="Test Observer",
+        project="Test Project",
+        camera_identity="Cam-1",
+        camera_ccd="CCD-1",
+        camera_temperature=None,
+        integration_time=0.5,
+        images="1 1",
+        solar_p0=None,
+        solar_disc_coordinates=None,
+        derotator_position_angle=None,
+        derotator_offset=None,
+        derotator_coordinate_system=None,
+        spectrograph_slit=None,
+        reduction_outfname=None,
     )
 
 
-def test_write_stokes_fits_writes_processed_measurement(tmp_path):
+def test_write_stokes_fits_writes_processed_measurement(
+    tmp_path, measurement_metadata: MeasurementMetadata
+):
     output_path = tmp_path / "6302_m1_corrected.fits"
     stokes = StokesParameters(
         i=np.arange(20, dtype=float).reshape(4, 5) + 10.0,
@@ -51,7 +70,7 @@ def test_write_stokes_fits_writes_processed_measurement(tmp_path):
     result = write_stokes_fits(
         output_path=output_path,
         stokes=stokes,
-        info=_make_info_array(),
+        info=measurement_metadata,
         calibration=calibration,
     )
 
@@ -67,7 +86,9 @@ def test_write_stokes_fits_writes_processed_measurement(tmp_path):
         assert stokes_i_hdu.data.shape == (5, 4, 1)
 
 
-def test_write_stokes_fits_omits_calibration_metadata_when_not_provided(tmp_path):
+def test_write_stokes_fits_omits_calibration_metadata_when_not_provided(
+    tmp_path, measurement_metadata: MeasurementMetadata
+):
     output_path = tmp_path / "6302_m2_corrected.fits"
     stokes = StokesParameters(
         i=np.arange(20, dtype=float).reshape(4, 5) + 10.0,
@@ -79,7 +100,7 @@ def test_write_stokes_fits_omits_calibration_metadata_when_not_provided(tmp_path
     write_stokes_fits(
         output_path=output_path,
         stokes=stokes,
-        info=_make_info_array(),
+        info=measurement_metadata,
     )
 
     with fits.open(output_path) as hdul:

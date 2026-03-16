@@ -14,13 +14,10 @@ from loguru import logger
 
 from irsol_data_pipeline.core.config import DEFAULT_MAX_DELTA
 from irsol_data_pipeline.core.correction.analyzer import analyze_flatfield
-from irsol_data_pipeline.core.models import FlatFieldCorrection
-from irsol_data_pipeline.io.dat_reader import load_flatfield, read_flatfield_si
+from irsol_data_pipeline.core.models import FlatFieldCorrection, MeasurementMetadata
+from irsol_data_pipeline.io import dat as dat_io
+from irsol_data_pipeline.io import flatfield as flatfield_io
 from irsol_data_pipeline.io.filesystem import flatfield_correction_cache_path
-from irsol_data_pipeline.io.flatfield_correction_reader import read_flatfield_correction
-from irsol_data_pipeline.io.flatfield_correction_writer import (
-    write_flatfield_correction,
-)
 from irsol_data_pipeline.orchestration.decorators import task
 
 
@@ -99,16 +96,18 @@ class FlatFieldCache:
 def _analyze_flatfield(path: Path) -> FlatFieldCorrection:
     """Helper function to analyze a single flat-field file for parallel
     processing."""
-    ff = load_flatfield(path)
-    ff_si = read_flatfield_si(path)
-    dust_flat, offset_map, desmiled = analyze_flatfield(ff_si)
+
+    stokes, info = dat_io.read(path)
+    metadata = MeasurementMetadata.from_info_array(info)
+
+    dust_flat, offset_map, desmiled = analyze_flatfield(stokes.i)
     correction = FlatFieldCorrection(
         source_flatfield_path=path,
         dust_flat=dust_flat,
         offset_map=offset_map,
         desmiled=desmiled,
-        timestamp=ff.metadata.datetime_start,
-        wavelength=ff.metadata.wavelength,
+        timestamp=metadata.datetime_start,
+        wavelength=metadata.wavelength,
     )
     return correction
 
@@ -137,7 +136,7 @@ def build_flatfield_cache(
         cache_path = flatfield_correction_cache_path(flatfield_path)
         if allow_cached_data and cache_path.is_file():
             try:
-                correction = read_flatfield_correction(cache_path)
+                correction = flatfield_io.read(cache_path)
                 cache.add_correction(correction)
                 logger.debug(
                     "Loaded cached flat-field correction", file=flatfield_path.name
@@ -168,9 +167,7 @@ def build_flatfield_cache(
     for ff_path in remaining_flatfields:
         try:
             correction = _analyze_flatfield(ff_path)
-            write_flatfield_correction(
-                correction, flatfield_correction_cache_path(ff_path)
-            )
+            flatfield_io.write(flatfield_correction_cache_path(ff_path), correction)
         except Exception:
             logger.exception("Failed to analyze flat-field", file=ff_path.name)
         else:

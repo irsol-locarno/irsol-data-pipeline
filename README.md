@@ -99,7 +99,11 @@ irsol-data-pipeline/
 │   │   ├── correction/            # Flat-field correction analysis and application
 │   │   └── calibration/           # Wavelength auto-calibration logic
 │   ├── io/                        # File I/O and metadata persistence
-│   │   └── fits/                  # FITS export functionality
+│   │   ├── dat/                   # ZIMPOL .dat/.sav loader (Stokes + info array)
+│   │   ├── fits/                  # FITS exporter/importer for processed measurements
+│   │   ├── flatfield/             # Flat-field correction pickle reader/writer
+│   │   ├── filesystem.py          # Dataset discovery + canonical output paths
+│   │   └── metadata_store.py      # JSON metadata and error persistence
 │   ├── pipeline/                  # Processing orchestration and reusable pipeline steps
 │   │   ├── day_processor.py       # Observation-day orchestration over pending measurements
 │   │   ├── measurement_processor.py # Single-measurement correction/calibration pipeline
@@ -133,12 +137,19 @@ The codebase is split into focused layers.
 	- Centralized configuration models/default values so pipeline
 	  steps and orchestration flows consume a consistent configuration contract.
 - I/O (`src/irsol_data_pipeline/io/`):
-	- Read `.dat`/`.sav` (`dat_reader.py`)
-	- Persist correction cache payloads (`dat_writer.py`)
-	- Export FITS products (`io/fits/exporter.py`)
-	- Discover observation days/files (`filesystem.py`)
-	- Persist metadata/error JSON (`metadata_store.py`)
-	- Persist/load cached flat-field correction objects
+	- Read ZIMPOL `.dat`/`.sav` files into `StokesParameters` + raw `info`
+	  arrays (`io/dat/importer.py`, exposed as `io.dat.read`)
+	- Write processed Stokes data to multi-extension FITS with optional
+	  calibration metadata (`io/fits/exporter.py`, exposed as `io.fits.write`)
+	- Read processed FITS back into typed structures for plotting/inspection
+	  (`io/fits/importer.py`, exposed as `io.fits.read`)
+	- Persist and load `FlatFieldCorrection` payloads as pickle files
+	  (`io/flatfield/exporter.py`, `io/flatfield/importer.py`, exposed as
+	  `io.flatfield.write` / `io.flatfield.read`)
+	- Discover observation days/files and build canonical output/cache paths
+	  (`filesystem.py`)
+	- Persist processing metadata and per-measurement errors as JSON
+	  (`metadata_store.py`)
 - Flat-field analysis and correction:
 	- Analyze flat-fields with `spectroflat`
 	  (`core/correction/analyzer.py`)
