@@ -24,48 +24,34 @@ def plot(
     a0: Optional[float] = None,
     a1: Optional[float] = None,
 ):
-    """Plot the Stokes profiles, similar as it is done in the ZIMPOL sw. Here
-    the script assumes that si, sq, su, sv are 2D arrays of the same shape:
-    si.shape = (n_spatial_points, n_wavelengths) the same for sq, su, sv.
+    """Plot the four Stokes components for a measurement.
 
-    Parameters:
-    -----------
-        data: StokesParametes to be plotted.
-        vrange_sq : list or tuple, optional
-            Two-element list or tuple specifying the vmin and vmax for Stokes Q/I plot.
-            If False, it will be set automatically.
-        vrange_su : list or tuple, optional
-            Two-element list or tuple specifying the vmin and vmax for Stokes U/I plot.
-            If False, it will be set automatically.
-        vrange_sv : list or tuple, optional
-            Two-element list or tuple specifying the vmin and vmax for Stokes V/I plot.
-            If False, it will be set automatically.
-        title : str, optional
-            Title for the entire figure.
-        filename_save : str, optional
-            If provided, the figure will be saved to this filename.
-        show : bool, optional
-            If True, the plot will be displayed. If False, it will not be shown.
-        pix_low : list, optional
-            List of lower pixel indices to highlight on the plots, which indicate the
-            location of the spatial average.
-        pix_high : list, optional
-            List of higher pixel indices to highlight on the plots, which indicate the
-            location of the spatial average.
-        pix_quiet_low : list, optional
-            List of lower pixel indices to highlight quiet Sun regions on the plots.
-        pix_quiet_high : list, optional
-            List of higher pixel indices to highlight quiet Sun regions on the plots.
-        alpha_px : float, optional
-            Transparency of the shaded areas defined by pix_low and pix_high
-        colors_lines : list, optional
-            List of colors to use for highlighting the pixel ranges.
-        a0 : float, optional
-            Wavelength offset in Angstroms. When both a0 and a1 are provided,
-            the x-axis is displayed in Angstroms instead of pixels.
-        a1 : float, optional
-            Wavelength dispersion in Angstroms/pixel. When both a0 and a1 are
-            provided, the x-axis is displayed in Angstroms instead of pixels.
+    The function expects 2D Stokes arrays with shape
+    ``(n_spatial_points, n_wavelengths)`` for all components.
+
+    Args:
+        data: Stokes parameters to plot.
+        vrange_si: Optional ``[vmin, vmax]`` range for the Stokes I panel.
+            When False, matplotlib chooses the range automatically.
+        vrange_sq: Optional ``[vmin, vmax]`` range for the Stokes Q/I panel.
+            When False, a narrow range around the mean is derived automatically.
+        vrange_su: Optional ``[vmin, vmax]`` range for the Stokes U/I panel.
+            When False, a narrow range around the mean is derived automatically.
+        vrange_sv: Optional ``[vmin, vmax]`` range for the Stokes V/I panel.
+            When False, a narrow range around the mean is derived automatically.
+        title: Optional figure title.
+        filename_save: Output path passed to ``matplotlib.pyplot.savefig``.
+        pix_low: Optional lower pixel bounds for highlighted spatial regions.
+        pix_high: Optional upper pixel bounds for highlighted spatial regions.
+        pix_quiet_low: Optional lower pixel bounds for quiet-Sun guide lines.
+        pix_quiet_high: Optional upper pixel bounds for quiet-Sun guide lines.
+        alpha_px: Transparency used for highlighted spatial regions.
+        colors_lines: Colors used for highlighted spatial regions.
+        a0: Wavelength offset in Angstrom. When both ``a0`` and ``a1`` are
+            provided, the x-axis is displayed in Angstrom instead of pixels.
+        a1: Wavelength dispersion in Angstrom per pixel. When both ``a0`` and
+            ``a1`` are provided, the x-axis is displayed in Angstrom instead of
+            pixels.
     """
 
     si, sq, su, sv = data

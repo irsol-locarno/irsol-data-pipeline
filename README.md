@@ -19,6 +19,10 @@ and writes processed outputs plus metadata.
 
 The project is operated through Prefect flows (scan and process multiple observation days).
 
+The codebase also exposes lightweight local entrypoints for serving the Prefect
+deployment, processing a single measurement, and plotting an existing FITS
+product.
+
 Expected dataset layout:
 
 ```text
@@ -177,6 +181,10 @@ For a source measurement `6302_m1.dat`, the pipeline writes into `processed/`:
 - `6302_m1_profile_original.png`: plot of original Stokes profiles
 - `6302_m1_error.json`: written only if processing fails
 
+Flat-field analysis cache files are stored separately under
+`processed/_cache/` as `ff<wavelength>_m<id>_correction_cache.pkl` and are
+reused on subsequent runs when available.
+
 ```mermaid
 flowchart TD
 		A[Dataset Root] --> B[Discovery Scan]
@@ -228,8 +236,7 @@ make prefect/serve-pipeline
 ```
 
 This target runs `entrypoints/serve_pipeline.py`, which serves
-`process_unprocessed_measurements` as deployment
-`run-process-unprocessed-measurements`.
+`process_unprocessed_measurements` as deployment `run-processing-pipeline`.
 
 Notes:
 
@@ -240,9 +247,9 @@ Notes:
 ### Invoking from the dashboard
 
 1. Open the Prefect UI: `http://127.0.0.1:4200`.
-2. Go to `Deployments` and select `run-process-unprocessed-measurements`.
+2. Go to `Deployments` and select `run-processing-pipeline`.
 3. Click `Run` / `Quick Run`.
-4. Optionally adjust parameters (`root`, `max_delta_hours`, `refdata_dir`, `max_concurrency`).
+4. Optionally adjust parameters (`root`, `max_delta_hours`, `max_concurrent_days_to_process`).
 5. Inspect run logs and artifacts:
 - The scan summary is published as a markdown artifact.
 - Each day processing run reports processed/skipped/failed counts.
@@ -281,6 +288,11 @@ Optional arguments:
 uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat \
 	--flatfield-dir /path/to/reduced \
 	--output-dir /path/to/processed \
-	--refdata-dir /path/to/refdata \
-	--max-delta-hours 2.0
+	--max-delta-hours 2.0 \
+	--verbose
 ```
+
+Notes:
+
+- `--flatfield-dir` defaults to the measurement's parent `reduced/` directory.
+- `--output-dir` defaults to the sibling `processed/` directory for the measurement.

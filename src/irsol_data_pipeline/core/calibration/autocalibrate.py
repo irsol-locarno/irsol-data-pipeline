@@ -31,8 +31,8 @@ def calibrate_measurement(
 
     Args:
         stokes: Stokes parameters from the measurement.
-        refdata_dir: Directory containing .npy reference data files.
-            Uses the bundled refdata if None.
+        refdata_dir: Directory containing bundled or user-supplied ``.npy``
+            reference data files.
 
     Returns:
         CalibrationResult with fitted pixel scale and offset.
