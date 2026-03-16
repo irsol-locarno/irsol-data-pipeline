@@ -49,12 +49,6 @@ def _parse_args() -> argparse.Namespace:
         help="Maximum allowed hours between measurement and flat-field",
     )
     parser.add_argument(
-        "--refdata-dir",
-        type=Path,
-        default=None,
-        help="Optional reference-data directory for wavelength calibration",
-    )
-    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -102,7 +96,6 @@ def main() -> None:
         processed_dir=output_dir,
         ff_cache=ff_cache,
         max_delta_policy=max_delta_policy,
-        refdata_dir=args.refdata_dir,
     )
 
     logger.info("Measurement processed: {}", measurement_path)

@@ -31,7 +31,6 @@ def process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: Optional[MaxDeltaPolicy] = None,
-    refdata_dir: Optional[Path] = None,
 ) -> None:
     """Process a single measurement.
 
@@ -40,7 +39,6 @@ def process_single_measurement(
         processed_dir: Output directory for processed files.
         ff_cache: Prebuilt flat-field correction cache.
         max_delta_policy: Policy for flat-field time thresholds.
-        refdata_dir: Directory with calibration reference data.
     """
     max_delta_policy = max_delta_policy or MaxDeltaPolicy()
 
@@ -51,7 +49,6 @@ def process_single_measurement(
         processed_dir=processed_dir,
         ff_cache=ff_cache,
         max_delta_policy=max_delta_policy,
-        refdata_dir=refdata_dir,
     )
 
 
@@ -89,7 +86,6 @@ def _process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: MaxDeltaPolicy,
-    refdata_dir: Optional[Path],
 ) -> None:
     """Internal: process one measurement.
 
@@ -138,13 +134,9 @@ def _process_single_measurement(
     )
 
     logger.info("Flat-field correction applied", file=meas_path.name)
-    logger.info(
-        "Running calibration with reference data",
-        refdata_dir=str(refdata_dir) if refdata_dir else "None",
-    )
 
     # 4. Wavelength auto-calibration
-    calibration = calibrate_measurement(corrected_stokes, refdata_dir=refdata_dir)
+    calibration = calibrate_measurement(corrected_stokes)
     logger.info(
         "Wavelength calibration complete",
         pixel_scale=calibration.pixel_scale,

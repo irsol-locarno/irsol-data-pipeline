@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 from loguru import logger
@@ -37,7 +36,6 @@ from irsol_data_pipeline.pipeline.measurement_processor import (
 def process_observation_day(
     day: ObservationDay,
     max_delta_policy: Optional[MaxDeltaPolicy] = None,
-    refdata_dir: Optional[Path] = None,
 ) -> DayProcessingResult:
     """Process all unprocessed measurements for a single observation day.
 
@@ -54,7 +52,6 @@ def process_observation_day(
     Args:
         day: ObservationDay to process.
         max_delta_policy: Policy for flat-field time matching thresholds.
-        refdata_dir: Directory with wavelength calibration reference data.
 
     Returns:
         DayProcessingResult summary.
@@ -106,7 +103,6 @@ def process_observation_day(
                 processed_dir=day.processed_dir,
                 ff_cache=ff_cache,
                 max_delta_policy=max_delta_policy,
-                refdata_dir=refdata_dir,
             )
             result.processed += 1
         except Exception as e:

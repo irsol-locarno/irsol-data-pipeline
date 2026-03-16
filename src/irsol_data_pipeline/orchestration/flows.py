@@ -13,7 +13,6 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 from prefect import flow, task
@@ -60,13 +59,11 @@ def scan_dataset_task(root: Path) -> ScanResult:
 def run_day_processing_subflow_task(
     day_path: Path,
     max_delta_hours: float = 2.0,
-    refdata_dir: Optional[str] = None,
 ) -> DayProcessingResult:
     """Prefect task: execute the day-processing flow as a sub-flow."""
     return process_daily_unprocessed_measurements(
         day_path=day_path,
         max_delta_hours=max_delta_hours,
-        refdata_dir=refdata_dir,
     )
 
 
@@ -77,7 +74,6 @@ def run_day_processing_subflow_task(
 def process_unprocessed_measurements(
     root: str,
     max_delta_hours: float = 2.0,
-    refdata_dir: Optional[str] = None,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
 ) -> list[DayProcessingResult]:
     """Scan the dataset and process all days with pending measurements.
@@ -85,7 +81,6 @@ def process_unprocessed_measurements(
     Args:
         root: Dataset root path.
         max_delta_hours: Maximum flat-field time delta in hours.
-        refdata_dir: Path to wavelength calibration reference data.
         max_concurrent_days_to_process: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
 
     Returns:
@@ -130,7 +125,6 @@ def process_unprocessed_measurements(
                 {
                     "day_path": day_path,
                     "max_delta_hours": max_delta_hours,
-                    "refdata_dir": refdata_dir,
                 },
             )
             result_futures.append(future)
@@ -158,14 +152,12 @@ def process_unprocessed_measurements(
 def process_daily_unprocessed_measurements(
     day_path: Path,
     max_delta_hours: float = 2.0,
-    refdata_dir: Optional[str] = None,
 ) -> DayProcessingResult:
     """Process a single observation day.
 
     Args:
         day_path: Path to the observation day directory.
         max_delta_hours: Maximum flat-field time delta in hours.
-        refdata_dir: Path to wavelength calibration reference data.
 
     Returns:
         DayProcessingResult summary.
@@ -185,13 +177,10 @@ def process_daily_unprocessed_measurements(
         processed_dir=processed_dir_for_day(path),
     )
 
-    ref_path = Path(refdata_dir) if refdata_dir else None
-
     policy = MaxDeltaPolicy(default_max_delta=datetime.timedelta(hours=max_delta_hours))
     result = process_observation_day(
         day=day,
         max_delta_policy=policy,
-        refdata_dir=ref_path,
     )
 
     logger.success(
