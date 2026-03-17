@@ -11,7 +11,7 @@ from pathlib import Path
 from loguru import logger
 
 from irsol_data_pipeline.core.models import ScanResult
-from irsol_data_pipeline.io.filesystem import (
+from irsol_data_pipeline.pipeline.filesystem import (
     discover_measurement_files,
     discover_observation_days,
     is_measurement_processed,

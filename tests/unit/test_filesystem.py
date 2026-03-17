@@ -12,7 +12,7 @@ from irsol_data_pipeline.core.config import (
     RAW_DIRNAME,
     REDUCED_DIRNAME,
 )
-from irsol_data_pipeline.io.filesystem import (
+from irsol_data_pipeline.pipeline.filesystem import (
     FLATFIELD_PATTERN,
     OBSERVATION_PATTERN,
     discover_flatfield_files,

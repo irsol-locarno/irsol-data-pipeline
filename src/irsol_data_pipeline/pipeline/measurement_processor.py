@@ -20,11 +20,14 @@ from irsol_data_pipeline.exceptions import FlatFieldAssociationNotFoundException
 from irsol_data_pipeline.io import dat as dat_io
 from irsol_data_pipeline.io import flatfield as flatfield_io
 from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
-from irsol_data_pipeline.io.filesystem import get_processed_stem, processed_output_path
 from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 from irsol_data_pipeline.orchestration.decorators import task
 from irsol_data_pipeline.orchestration.retry import retry_condition_except_on_exceptions
 from irsol_data_pipeline.orchestration.utils import create_prefect_json_report
+from irsol_data_pipeline.pipeline.filesystem import (
+    get_processed_stem,
+    processed_output_path,
+)
 from irsol_data_pipeline.pipeline.flatfield_cache import FlatFieldCache
 from irsol_data_pipeline.plotting import plot_profile
 

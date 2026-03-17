@@ -124,20 +124,26 @@ def discover_observation_days(root: Path) -> list[ObservationDay]:
 
         for year_dir in sorted(root.iterdir()):
             if not year_dir.is_dir():
+                logger.warning("Skipping non-directory in root", path=year_dir)
                 continue
             for day_dir in sorted(year_dir.iterdir()):
                 if not day_dir.is_dir():
+                    logger.warning("Skipping non-directory in year", path=day_dir)
                     continue
                 reduced = day_dir / REDUCED_DIRNAME
-                if reduced.is_dir():
-                    days.append(
-                        ObservationDay(
-                            path=day_dir,
-                            raw_dir=day_dir / RAW_DIRNAME,
-                            reduced_dir=reduced,
-                            processed_dir=day_dir / PROCESSED_DIRNAME,
-                        )
+                if not reduced.is_dir():
+                    logger.warning(
+                        "Skipping day without reduced directory", path=day_dir
                     )
+                    continue
+                days.append(
+                    ObservationDay(
+                        path=day_dir,
+                        raw_dir=day_dir / RAW_DIRNAME,
+                        reduced_dir=reduced,
+                        processed_dir=day_dir / PROCESSED_DIRNAME,
+                    )
+                )
 
         days_sorted = sorted(days, key=lambda d: d.path)
         logger.debug("Discovered observation days", count=len(days_sorted))

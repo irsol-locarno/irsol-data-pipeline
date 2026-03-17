@@ -24,15 +24,15 @@ from irsol_data_pipeline.core.models import (
     MaxDeltaPolicy,
     ObservationDay,
 )
-from irsol_data_pipeline.io.filesystem import (
-    processed_dir_for_day,
-    raw_dir_for_day,
-    reduced_dir_for_day,
-)
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.orchestration.utils import create_prefect_markdown_report
 from irsol_data_pipeline.pipeline.day_processor import (
     process_observation_day,
+)
+from irsol_data_pipeline.pipeline.filesystem import (
+    processed_dir_for_day,
+    raw_dir_for_day,
+    reduced_dir_for_day,
 )
 from irsol_data_pipeline.pipeline.scanner import (
     ScanResult,
