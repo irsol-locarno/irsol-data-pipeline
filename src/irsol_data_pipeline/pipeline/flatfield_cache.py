@@ -100,6 +100,19 @@ def _analyze_flatfield(path: Path) -> FlatFieldCorrection:
     stokes, info = dat_io.read(path)
     metadata = MeasurementMetadata.from_info_array(info)
 
+    import json
+    from pathlib import Path
+    from tempfile import NamedTemporaryFile
+
+    from irsol_data_pipeline.orchestration.utils import create_prefect_json_report
+
+    with NamedTemporaryFile(suffix=".json") as f:
+        with open(f.name, "w") as json_file:
+            json.dump(metadata.model_dump(), json_file, default=str)
+        create_prefect_json_report(
+            path=Path(f.name), title="FF metadata", key=f"ff-{path}"
+        )
+
     dust_flat, offset_map, desmiled = analyze_flatfield(stokes.i)
     correction = FlatFieldCorrection(
         source_flatfield_path=path,

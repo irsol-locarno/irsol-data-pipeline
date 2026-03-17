@@ -23,7 +23,6 @@ from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
 from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 from irsol_data_pipeline.orchestration.decorators import task
 from irsol_data_pipeline.orchestration.retry import retry_condition_except_on_exceptions
-from irsol_data_pipeline.orchestration.utils import create_prefect_json_report
 from irsol_data_pipeline.pipeline.filesystem import (
     get_processed_stem,
     processed_output_path,
@@ -104,6 +103,19 @@ def _process_single_measurement(
         # 1. Load measurement
         stokes, info = dat_io.read(meas_path)
         measurement_metadata = MeasurementMetadata.from_info_array(info)
+        import json
+        from pathlib import Path
+        from tempfile import NamedTemporaryFile
+
+        from irsol_data_pipeline.orchestration.utils import create_prefect_json_report
+
+        with NamedTemporaryFile(suffix=".json") as f:
+            with open(f.name, "w") as json_file:
+                json.dump(measurement_metadata.model_dump(), json_file, default=str)
+            create_prefect_json_report(
+                path=Path(f.name), title="meas metadata", key=f"meas-{meas_path}"
+            )
+
         measurement = Measurement(
             source_path=meas_path,
             metadata=measurement_metadata,
