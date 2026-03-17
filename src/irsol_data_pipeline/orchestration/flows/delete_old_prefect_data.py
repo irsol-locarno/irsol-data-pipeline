@@ -11,11 +11,14 @@ import datetime
 from uuid import UUID
 
 import typer
+from loguru import logger
 from prefect import flow, task
 from prefect.client.orchestration import get_client
 from prefect.server.schemas.filters import FlowRunFilter, FlowRunFilterEndTime
 from prefect.server.schemas.sorting import FlowRunSort
 from prefect.task_runners import ThreadPoolTaskRunner
+
+from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 
 app = typer.Typer()
 
@@ -24,6 +27,7 @@ app = typer.Typer()
 async def delete_flow_run_id(flow_run_id: UUID) -> UUID:
     """Delete a Prefect flow run by its ID."""
     async with get_client() as client:
+        logger.info("Deleting flow run", flow_run_id=flow_run_id)
         await client.delete_flow_run(flow_run_id=flow_run_id)
     return flow_run_id
 
@@ -40,6 +44,9 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
     """
     now = datetime.datetime.now(datetime.timezone.utc)
     cutoff = now - dt
+    logger.info(
+        "Retrieving all flows finished before cutoff time", cutoff=cutoff.isoformat()
+    )
     async with get_client() as client:
         old_flow_runs = await client.read_flow_runs(
             sort=FlowRunSort.START_TIME_ASC,
@@ -54,13 +61,14 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
     task_runner=ThreadPoolTaskRunner(max_workers=4),
     flow_run_name="delete-flow-runs-older-than-{hours}-hours",
 )
-async def delete_flow_runs_older_than(hours: float, interactive: bool):
+async def delete_flow_runs_older_than(hours: float, interactive: bool = True):
     """Delete Prefect flow runs older than a retention duration.
 
     Args:
         hours: Retention duration in hours. Runs older than `now - hours` are deleted.
         interactive: If True, show IDs and require confirmation before delete.
     """
+    setup_logging()
     dt = datetime.timedelta(hours=hours)
     old_flow_run_ids = await retrieve_old_flow_ids(dt)
     if not old_flow_run_ids:
