@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from irsol_data_pipeline.core.config import DEFAULT_MAX_DELTA
 
@@ -56,6 +56,10 @@ class FlatField(BaseModel):
     def timestamp(self) -> datetime.datetime:
         return self.metadata.datetime_start
 
+    @property
+    def name(self) -> str:
+        return self.metadata.name
+
 
 class FlatFieldCorrection(BaseModel):
     """A computed flat-field correction ready to be applied.
@@ -94,7 +98,114 @@ class Measurement(BaseModel):
 
     @property
     def name(self) -> str:
-        return self.source_path.stem
+        return self.metadata.name
+
+
+def _parse_yes_no(value: object) -> Optional[bool]:
+    """Parse a yes/no string into a boolean."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if not normalized:
+            return None
+        if normalized in {"yes", "true", "1"}:
+            return True
+        if normalized in {"no", "false", "0"}:
+            return False
+    raise ValueError(f"Cannot parse boolean flag from value: {value!r}")
+
+
+class ReductionInfo(BaseModel):
+    """Metadata from ``reduction.*`` keys in the info array."""
+
+    model_config = ConfigDict(frozen=True)
+
+    software: Optional[str] = None
+    status: Optional[bool] = None
+    file: Optional[str] = None
+    number_of_files: Optional[int] = None
+    file_dc_used: Optional[str] = None
+    dcfit: Optional[str] = None
+    demodulation_matrix: Optional[str] = None
+    order_of_rows: list[int] = Field(default_factory=list)
+    mode: Optional[str] = None
+    tcu_method: Optional[str] = None
+    pixels_replaced: Optional[str] = None
+    outfname: Optional[str] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _coerce_status(cls, v: object) -> Optional[bool]:
+        return _parse_yes_no(v)
+
+    @field_validator("order_of_rows", mode="before")
+    @classmethod
+    def _coerce_order_of_rows(cls, v: object) -> object:
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split() if x.strip()]
+        return v
+
+
+class CalibrationInfo(BaseModel):
+    """Metadata from ``calibration.*`` keys in the info array."""
+
+    model_config = ConfigDict(frozen=True)
+
+    software: Optional[str] = None
+    file: Optional[str] = None
+    status: Optional[bool] = None
+    description: Optional[str] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _coerce_status(cls, v: object) -> Optional[bool]:
+        return _parse_yes_no(v)
+
+
+class CameraInfo(BaseModel):
+    """Metadata from ``measurement.camera.*`` keys."""
+
+    model_config = ConfigDict(frozen=True)
+
+    identity: Optional[str] = None
+    ccd: Optional[str] = None
+    temperature: Optional[float] = None
+    position: Optional[str] = None
+
+
+class SpectrographInfo(BaseModel):
+    """Metadata from ``measurement.spectrograph.*`` keys."""
+
+    model_config = ConfigDict(frozen=True)
+
+    alpha: Optional[float] = None
+    grtwl: Optional[float] = None
+    order: Optional[int] = None
+    slit: Optional[float] = None
+
+
+class DerotatorInfo(BaseModel):
+    """Metadata from ``measurement.derotator.*`` keys."""
+
+    model_config = ConfigDict(frozen=True)
+
+    coordinate_system: Optional[int] = None
+    position_angle: Optional[float] = None
+    offset: Optional[float] = None
+
+
+class TCUInfo(BaseModel):
+    """Metadata from ``measurement.TCU.*`` keys."""
+
+    model_config = ConfigDict(frozen=True)
+
+    mode: Optional[int] = None
+    retarder_name: Optional[str] = None
+    retarder_wl_parameter: Optional[str] = None
+    positions: Optional[str] = None
 
 
 class MeasurementMetadata(BaseModel):
@@ -102,97 +213,142 @@ class MeasurementMetadata(BaseModel):
 
     All fields are extracted once at construction time so that
     downstream code never touches the raw byte array.
+
+    Sub-models group logically related keys:
+    - ``reduction``: reduction pipeline metadata
+    - ``calibration``: calibration metadata
+    - ``camera``: camera hardware metadata
+    - ``spectrograph``: spectrograph settings
+    - ``derotator``: derotator settings
+    - ``tcu``: TCU (calibration unit) settings
     """
 
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        frozen=True, arbitrary_types_allowed=True, populate_by_name=True
+    )
 
-    wavelength: int
-    datetime_start: datetime.datetime
-    datetime_end: Optional[datetime.datetime]
+    # --- measurement core ---
+    file: Optional[str] = None
     telescope_name: str
+    instrument_post_focus: Optional[str] = None
     instrument: str
-    measurement_name: str
-    measurement_type: str
-    measurement_id: str
-    observer: str
-    project: str
-    camera_identity: str
-    camera_ccd: str
-    camera_temperature: Optional[float]
-    integration_time: Optional[float]
-    images: str
-    solar_p0: Optional[float]
-    solar_disc_coordinates: Optional[str]
-    derotator_position_angle: Optional[float]
-    derotator_offset: Optional[float]
-    derotator_coordinate_system: Optional[str]
-    spectrograph_slit: Optional[str]
-    reduction_outfname: Optional[str]
+    modulator_type: Optional[str] = None
+    project: str = ""
+    observer: str = ""
+    wavelength: int
+    name: str
+    datetime_start: datetime.datetime = Field(validation_alias="datetime")
+    datetime_end: Optional[datetime.datetime] = None
+    type: str
+    id: int
+    sequence_length: Optional[int] = None
+    sub_sequence_length: Optional[int] = None
+    sub_sequence_name: Optional[str] = None
+    stokes_vector: Optional[str] = None
+    integration_time: Optional[float] = None
+    images: list[int] = Field(default_factory=list)
+    image_type: Optional[str] = None
+    image_type_x: Optional[str] = None
+    image_type_y: Optional[str] = None
+    guiding_status: Optional[int] = None
+    pig_intensity: Optional[int] = None
+    solar_disc_coordinates: Optional[str] = None
+    solar_p0: Optional[float] = Field(default=None, validation_alias="sun_p0")
+    limbguider_status: Optional[int] = None
+    polcomp_status: Optional[int] = None
+
+    # --- sub-models ---
+    camera: CameraInfo = Field(default_factory=CameraInfo)
+    spectrograph: SpectrographInfo = Field(default_factory=SpectrographInfo)
+    derotator: DerotatorInfo = Field(default_factory=DerotatorInfo)
+    tcu: TCUInfo = Field(default_factory=TCUInfo)
+    reduction: ReductionInfo = Field(default_factory=ReductionInfo)
+    calibration: CalibrationInfo = Field(default_factory=CalibrationInfo)
+
+    # --- top-level flags outside the groups above ---
+    flatfield_status: Optional[bool] = None
+    global_noise: Optional[str] = None
+    global_mean: Optional[str] = None
 
     # Keep the raw decoded dict for any field we haven't explicitly modeled.
     _raw: dict[str, str] = PrivateAttr(default_factory=dict)
 
+    @field_validator("flatfield_status", mode="before")
+    @classmethod
+    def _coerce_flatfield_status(cls, v: object) -> Optional[bool]:
+        return _parse_yes_no(v)
+
+    @field_validator("datetime_start", "datetime_end", mode="before")
+    @classmethod
+    def _coerce_datetime(cls, v: object) -> Optional[datetime.datetime]:
+        if v is None:
+            return None
+        if isinstance(v, datetime.datetime):
+            return v
+        if isinstance(v, str):
+            return _parse_zimpol_datetime(v)
+        raise ValueError(f"Cannot parse datetime from value: {v!r}")
+
+    @field_validator("images", mode="before")
+    @classmethod
+    def _coerce_images(cls, v: object) -> object:
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split() if x.strip()]
+        return v
+
     @staticmethod
     def from_info_array(info: np.ndarray) -> "MeasurementMetadata":
-        """Build metadata from a ZIMPOL info Nx2 byte array."""
+        """Build metadata from a ZIMPOL info Nx2 byte array.
+
+        Raw keys are routed to sub-models based on their dot-separated
+        prefix (e.g. ``"measurement.camera.identity"`` populates the
+        ``camera`` sub-model).  Each suffix is normalised to a Python
+        field name (dots/spaces/hyphens → underscores, lowercased) and
+        the resulting sub-dicts are validated via ``model_validate``.
+        """
         raw = _decode_info(info)
 
-        def _get(key: str) -> Optional[str]:
-            return raw.get(key)
+        # Prefixes that map to sub-models (longer prefixes checked first)
+        _prefix_to_submodel: list[tuple[str, str, type[BaseModel]]] = [
+            ("measurement.camera.", "camera", CameraInfo),
+            ("measurement.spectrograph.", "spectrograph", SpectrographInfo),
+            ("measurement.derotator.", "derotator", DerotatorInfo),
+            ("measurement.TCU.", "tcu", TCUInfo),
+            ("reduction.", "reduction", ReductionInfo),
+            ("calibration.", "calibration", CalibrationInfo),
+        ]
 
-        def _get_required(key: str) -> str:
-            try:
-                return raw[key]
-            except KeyError as err:
-                raise KeyError(
-                    f"Required metadata key '{key}' not found in info array"
-                ) from err
+        sub_dicts: dict[str, dict[str, str]] = {
+            name: {} for _, name, _ in _prefix_to_submodel
+        }
+        top_level: dict[str, object] = {}
 
-        def _parse_datetime(key: str) -> Optional[datetime.datetime]:
-            v = raw.get(key)
-            if v is None:
-                return None
-            return _parse_zimpol_datetime(v)
+        for raw_key, raw_value in raw.items():
+            value = raw_value.strip() if isinstance(raw_value, str) else raw_value
+            if isinstance(value, str) and not value:
+                continue
 
-        def _parse_float(key: str) -> Optional[float]:
-            v = raw.get(key)
-            if v is None:
-                return None
-            try:
-                return float(v)
-            except (ValueError, TypeError):
-                return None
+            matched = False
+            for prefix, group_name, _ in _prefix_to_submodel:
+                if raw_key.startswith(prefix):
+                    suffix = raw_key[len(prefix) :]
+                    sub_dicts[group_name][_normalize_key(suffix)] = value
+                    matched = True
+                    break
 
-        wavelength = int(_get_required("measurement.wavelength"))
-        datetime_start = _parse_zimpol_datetime(_get_required("measurement.datetime"))
+            if not matched:
+                if raw_key.startswith("measurement."):
+                    suffix = raw_key[len("measurement.") :]
+                else:
+                    suffix = raw_key
+                top_level[_normalize_key(suffix)] = value
 
-        instance = MeasurementMetadata(
-            wavelength=wavelength,
-            datetime_start=datetime_start,
-            datetime_end=_parse_datetime("measurement.datetime.end"),
-            telescope_name=_get_required("measurement.telescope name"),
-            instrument=_get_required("measurement.instrument"),
-            measurement_name=_get_required("measurement.name"),
-            measurement_type=_get_required("measurement.type"),
-            measurement_id=_get_required("measurement.id"),
-            observer=raw.get("measurement.observer", ""),
-            project=raw.get("measurement.project", ""),
-            camera_identity=raw.get("measurement.camera.identity", ""),
-            camera_ccd=raw.get("measurement.camera.CCD", ""),
-            camera_temperature=_parse_float("measurement.camera.temperature"),
-            integration_time=_parse_float("measurement.integration time"),
-            images=raw.get("measurement.images", ""),
-            solar_p0=_parse_float("measurement.sun.p0"),
-            solar_disc_coordinates=_get("measurement.solar_disc.coordinates"),
-            derotator_position_angle=_parse_float(
-                "measurement.derotator.position_angle"
-            ),
-            derotator_offset=_parse_float("measurement.derotator.offset"),
-            derotator_coordinate_system=_get("measurement.derotator.coordinate_system"),
-            spectrograph_slit=_get("measurement.spectrograph.slit"),
-            reduction_outfname=_get("reduction.outfname"),
-        )
-        instance._raw = raw
+        # Build sub-models via model_validate
+        for _prefix, group_name, model_cls in _prefix_to_submodel:
+            top_level[group_name] = model_cls.model_validate(sub_dicts[group_name])
+
+        instance = MeasurementMetadata.model_validate(top_level)
+        object.__setattr__(instance, "_raw", raw)
         return instance
 
     def get_raw(self, key: str) -> Optional[str]:
@@ -210,6 +366,16 @@ def _decode_info(info: np.ndarray) -> dict[str, str]:
         v = value.decode("UTF-8") if isinstance(value, bytes) else str(value)
         result[k] = v
     return result
+
+
+def _normalize_key(suffix: str) -> str:
+    """Normalize a raw info-array key suffix to a Python field name.
+
+    Dots, spaces and hyphens are replaced with underscores and the result is
+    lowercased so that raw keys like ``"TCU.retarder.wl_parameter"`` become
+    ``"tcu_retarder_wl_parameter"``.
+    """
+    return suffix.replace(".", "_").replace(" ", "_").replace("-", "_").lower()
 
 
 def _parse_zimpol_datetime(dt_str: str) -> datetime.datetime:

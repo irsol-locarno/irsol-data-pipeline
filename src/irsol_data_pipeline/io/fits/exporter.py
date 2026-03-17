@@ -220,8 +220,8 @@ def _fill_primary_header(header: fits.Header, metadata: MeasurementMetadata) -> 
     header["PIXSIZEX"] = (22.5, "[micrometer], CCD pixel size x")
     header["PIXSIZEY"] = (90, "[micrometer], CCD pixel size y")
 
-    if metadata.camera_temperature is not None:
-        header["CAMTEMP"] = (metadata.camera_temperature, "Camera temp in celsius")
+    if metadata.camera.temperature is not None:
+        header["CAMTEMP"] = (metadata.camera.temperature, "Camera temp in celsius")
     if metadata.solar_p0 is not None:
         header["SOLAR_P0"] = (metadata.solar_p0, "Sun-Earth angle")
 
@@ -286,10 +286,10 @@ def _fill_data_header(
             gcrs.cartesian.z.to_value(u.Unit("m")),
             "[m] IRSOL location (ITRS)",
         )
-        slit = metadata.spectrograph_slit
-        if slit and slit != "-1":
+        slit = metadata.spectrograph.slit
+        if slit is not None and slit != -1:
             header["SLIT_WID"] = (
-                round(7.9 * float(slit), 3),
+                round(7.9 * slit, 3),
                 f"[arcsec] ({slit} mm), slit width",
             )
         else:
@@ -316,19 +316,16 @@ def _fill_data_header(
         y_scaling = 1.3
 
     header["INSTRUME"] = (metadata.instrument, "Observing instrument")
-    header["DATATYPE"] = (metadata.measurement_type, "Type of measurement")
-    header["POINT_ID"] = (metadata.measurement_id, "Measurement ID")
+    header["DATATYPE"] = (metadata.type, "Type of measurement")
+    header["POINT_ID"] = (metadata.id, "Measurement ID")
     header["OBSERVER"] = (metadata.observer, None)
     header["PROJECT"] = (metadata.project, None)
-    header["MEASNAME"] = (metadata.measurement_name, "Name of measurement")
+    header["MEASNAME"] = (metadata.name, "Name of measurement")
 
     # Exposure info
     if metadata.images:
-        try:
-            nsumexp = sum(int(i) for i in metadata.images.split() if i)
-            header["NSUMEXP"] = (nsumexp, "Number of summed exposures")
-        except ValueError:
-            pass
+        nsumexp = sum(metadata.images)
+        header["NSUMEXP"] = (nsumexp, "Number of summed exposures")
     if metadata.integration_time is not None:
         header["TEXPOSUR"] = (metadata.integration_time, "[s] single exposure time")
         nsumexp_value = header.get("NSUMEXP")
@@ -338,8 +335,8 @@ def _fill_data_header(
                 "[s] total exposure time",
             )
 
-    header["CAMERA"] = (metadata.camera_identity, "Camera identity")
-    header["CCD"] = (metadata.camera_ccd, "Camera sensor identity")
+    header["CAMERA"] = (metadata.camera.identity, "Camera identity")
+    header["CCD"] = (metadata.camera.ccd, "Camera sensor identity")
     header["WAVELNTH"] = (metadata.wavelength, "Guideline Wavelength in Angstrom")
 
     # Data statistics
@@ -393,14 +390,14 @@ def _fill_data_header(
     header["VELOSYS"] = (0.0, "[m/s] Reference velocity")
 
     # Polarization
-    if metadata.derotator_position_angle is not None:
-        derot_offset = metadata.derotator_offset or 0.0
+    if metadata.derotator.position_angle is not None:
+        derot_offset = metadata.derotator.offset or 0.0
         header["POLCCONV"] = (
             "(+HPLT,-HPLN,+HPRZ)",
             "Reference system for Stokes vectors",
         )
         header["POLCANGL"] = (
-            90 + metadata.derotator_position_angle + derot_offset,
+            90 + metadata.derotator.position_angle + derot_offset,
             "[deg] angle between +Q and solar north",
         )
 
@@ -409,9 +406,9 @@ def _fill_data_header(
     sun_p0_rad = -sun_p0 * (np.pi / 180)
 
     x_scaling = 1.0
-    if metadata.derotator_position_angle is not None:
-        angle = metadata.derotator_position_angle * (np.pi / 180) + (np.pi / 2)
-        if metadata.derotator_coordinate_system == "0":
+    if metadata.derotator.position_angle is not None:
+        angle = metadata.derotator.position_angle * (np.pi / 180) + (np.pi / 2)
+        if metadata.derotator.coordinate_system == 0:
             angle = angle - sun_p0_rad
     else:
         angle = 0.0
@@ -503,6 +500,6 @@ def _make_title(metadata: MeasurementMetadata) -> str:
     """Generate a FITS filename from metadata."""
     try:
         time_str = metadata.datetime_start.strftime("%Y%m%d_%H%M%S")
-        return f"{time_str}_{metadata.measurement_name}.fits"
+        return f"{time_str}_{metadata.name}.fits"
     except Exception:
         return "measurement.fits"

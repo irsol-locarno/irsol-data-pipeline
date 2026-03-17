@@ -3,7 +3,6 @@
 import datetime
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from irsol_data_pipeline.core.models import (
@@ -15,69 +14,44 @@ from irsol_data_pipeline.core.models import (
 )
 
 
-def _make_info_array(entries: dict[str, str]) -> np.ndarray:
-    rows = []
-    for k, v in entries.items():
-        rows.append([k.encode("UTF-8"), v.encode("UTF-8")])
-    return np.array(rows, dtype=object)
-
-
-@pytest.fixture
-def sample_metadata():
-    info = _make_info_array(
-        {
-            "measurement.wavelength": "6302",
-            "measurement.datetime": "2024-07-13T10:22:00+01",
-            "measurement.telescope name": "IRSOL",
-            "measurement.instrument": "ZIMPOL",
-            "measurement.name": "6302_m1",
-            "measurement.type": "observation",
-            "measurement.id": "123",
-        }
-    )
-    return MeasurementMetadata.from_info_array(info)
-
-
-@pytest.fixture
-def sample_stokes():
-    return StokesParameters(
-        i=np.ones((50, 200)),
-        q=np.zeros((50, 200)),
-        u=np.zeros((50, 200)),
-        v=np.zeros((50, 200)),
-    )
-
-
 class TestStokesParameters:
-    def test_creation(self, sample_stokes):
+    def test_creation(self, sample_stokes: StokesParameters):
         assert sample_stokes.i.shape == (50, 200)
         assert sample_stokes.q.shape == (50, 200)
 
-    def test_unpacking(self, sample_stokes):
+    def test_unpacking(self, sample_stokes: StokesParameters):
         i, q, u, v = sample_stokes
         assert i.shape == (50, 200)
 
 
 class TestMeasurement:
-    def test_properties(self, sample_metadata, sample_stokes):
+    def test_properties(
+        self,
+        sample_measurement_metadata: MeasurementMetadata,
+        sample_stokes: StokesParameters,
+    ):
         m = Measurement(
-            source_path=Path("/data/6302_m1.dat"),
-            metadata=sample_metadata,
+            source_path=Path("/data/5886_m13.dat"),
+            metadata=sample_measurement_metadata,
             stokes=sample_stokes,
         )
-        assert m.wavelength == 6302
-        assert m.name == "6302_m1"
+        assert m.wavelength == 5886
+        assert m.name == "5886_m13"
         assert isinstance(m.timestamp, datetime.datetime)
 
 
 class TestFlatField:
-    def test_properties(self, sample_metadata, sample_stokes):
+    def test_properties(
+        self,
+        sample_measurement_metadata: MeasurementMetadata,
+        sample_stokes: StokesParameters,
+    ):
         ff = FlatField(
-            source_path=Path("/data/ff6302_m1.dat"),
-            metadata=sample_metadata,
+            source_path=Path("/data/ff5886_m13.dat"),
+            metadata=sample_measurement_metadata,
             stokes=sample_stokes,
         )
-        assert ff.wavelength == 6302
+        assert ff.wavelength == 5886
         assert isinstance(ff.timestamp, datetime.datetime)
 
 
