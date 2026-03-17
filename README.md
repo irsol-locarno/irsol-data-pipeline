@@ -270,7 +270,7 @@ make prefect/serve-maintenance-pipeline
 ```
 
 This target runs `entrypoints/serve_prefect_maintenance.py`, which serves
-**`delete-old-prefect-data`** — deletes flow runs older than the configured
+**`delete-old-prefect-flow-runs`** — deletes flow runs older than the configured
 retention window. Scheduled to run automatically every day at **00:00**.
 
 ### Why maintenance deployments are necessary
@@ -301,13 +301,13 @@ make prefect/dashboard
 make prefect/serve-maintenance-pipeline
 ```
 
-Once served, the `delete-old-prefect-data` deployment runs automatically at
+Once served, the `delete-old-prefect-flow-runs` deployment runs automatically at
 midnight every day. No additional action is needed for routine cleanup.
 
 To trigger an immediate run:
 
 3. In the Prefect UI (`http://127.0.0.1:4200`), go to `Deployments` and select
-`delete-old-prefect-data`, then click `Run` / `Quick Run`.
+`delete-old-prefect-flow-runs`, then click `Run` / `Quick Run`.
 
 4. Override parameters when needed:
 - `hours`: retention window in hours (default: `672`, i.e. 4 weeks). Flow runs
@@ -331,7 +331,7 @@ Notes:
 |---|---|---|
 | `run-flat-field-correction-pipeline` | Daily at 01:00 (`0 1 * * *`) | Process all pending measurements across all days |
 | `run-daily-flat-field-correction-pipeline` | On demand only | Process a single observation day |
-| `delete-old-prefect-data` | Daily at 00:00 (`0 0 * * *`) | Prune Prefect flow-run history older than 4 weeks |
+| `delete-old-prefect-flow-runs` | Daily at 00:00 (`0 0 * * *`) | Prune Prefect flow-run history older than 4 weeks |
 
 Schedules are active only while the corresponding serve process is running. Both
 processing and maintenance serve processes must be kept alive (for example in
