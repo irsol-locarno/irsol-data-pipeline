@@ -52,15 +52,16 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
 
 @flow(
     task_runner=ThreadPoolTaskRunner(max_workers=4),
-    flow_run_name="delete-flow-runs-older-than-{dt}",
+    flow_run_name="delete-flow-runs-older-than-{hours}-hours",
 )
-async def delete_flow_runs_older_than(dt: datetime.timedelta, interactive: bool):
+async def delete_flow_runs_older_than(hours: float, interactive: bool):
     """Delete Prefect flow runs older than a retention duration.
 
     Args:
-        dt: Retention duration. Runs older than `now - dt` are deleted.
+        hours: Retention duration in hours. Runs older than `now - hours` are deleted.
         interactive: If True, show IDs and require confirmation before delete.
     """
+    dt = datetime.timedelta(hours=hours)
     old_flow_run_ids = await retrieve_old_flow_ids(dt)
     if not old_flow_run_ids:
         typer.echo("No flow runs found older than the specified cutoff.")

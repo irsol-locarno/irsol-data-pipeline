@@ -254,8 +254,14 @@ make prefect/serve-flat-field-correction-pipeline
 ```
 
 This target runs `entrypoints/serve_flat_field_correction_pipeline.py`, which
-serves `process_unprocessed_measurements` as deployment
-`run-flat-field-correction-pipeline` and serves `process_daily_unprocessed_measurements` as deployment `run-daily-flat-field-correction-pipeline`.
+serves two deployments:
+
+- **`run-flat-field-correction-pipeline`** — scans the dataset root and
+  processes all pending measurements across all days. Scheduled to run
+  automatically every day at **01:00**.
+- **`run-daily-flat-field-correction-pipeline`** — processes a single
+  observation day directory on demand (no automatic schedule; triggered
+  manually or by another flow).
 
 3. In another terminal, serve the maintenance deployment:
 
@@ -264,7 +270,8 @@ make prefect/serve-maintenance-pipeline
 ```
 
 This target runs `entrypoints/serve_prefect_maintenance.py`, which serves
-`delete_flow_runs_older_than` as deployment `delete-old-prefect-data`.
+**`delete-old-prefect-data`** — deletes flow runs older than the configured
+retention window. Scheduled to run automatically every day at **00:00**.
 
 ### Why maintenance deployments are necessary
 
@@ -274,10 +281,11 @@ UI slower, increase disk usage, and add noise when troubleshooting recent runs.
 
 The maintenance deployment provides a controlled and repeatable cleanup path:
 
-- It deletes runs older than a retention window.
-- It avoids manual ad-hoc database operations.
-- It can be triggered on demand from the same deployment interface as the
-	processing pipeline.
+- It deletes runs older than a configurable retention window (default: `672` hours / 4 weeks, controlled via the `hours` parameter).
+- It runs on a daily cron schedule (`0 0 * * *`, midnight) so history is pruned
+  without manual intervention.
+- It avoids ad-hoc database operations.
+- It can also be triggered manually on demand from the Prefect UI.
 
 ### How to run maintenance deployments
 
@@ -293,9 +301,20 @@ make prefect/dashboard
 make prefect/serve-maintenance-pipeline
 ```
 
-3. In the Prefect UI, go to `Deployments` and select
-`delete-old-prefect-data`.
+Once served, the `delete-old-prefect-data` deployment runs automatically at
+midnight every day. No additional action is needed for routine cleanup.
 
+To trigger an immediate run:
+
+3. In the Prefect UI (`http://127.0.0.1:4200`), go to `Deployments` and select
+`delete-old-prefect-data`, then click `Run` / `Quick Run`.
+
+4. Override parameters when needed:
+- `hours`: retention window in hours (default: `672`, i.e. 4 weeks). Flow runs
+  that ended more than `hours` hours ago are deleted.
+- `interactive`: set `true` to add a confirmation prompt before deletion
+  (useful when running the CLI directly); `false` is the default for the
+  scheduled deployment.
 
 Notes:
 
@@ -305,7 +324,18 @@ Notes:
 - The default processing deployment parameter root is `<repo>/data` (configured
 	in `entrypoints/serve_flat_field_correction_pipeline.py`).
 - If needed, reset local Prefect state with `make prefect/reset`.
-- The maintenance flows will run automatically on schedule.
+
+### Automatic scheduling summary
+
+| Deployment | Schedule | Purpose |
+|---|---|---|
+| `run-flat-field-correction-pipeline` | Daily at 01:00 (`0 1 * * *`) | Process all pending measurements across all days |
+| `run-daily-flat-field-correction-pipeline` | On demand only | Process a single observation day |
+| `delete-old-prefect-data` | Daily at 00:00 (`0 0 * * *`) | Prune Prefect flow-run history older than 4 weeks |
+
+Schedules are active only while the corresponding serve process is running. Both
+processing and maintenance serve processes must be kept alive (for example in
+detached terminal sessions or as system services) for scheduled runs to execute.
 
 ### Invoking from the dashboard
 
