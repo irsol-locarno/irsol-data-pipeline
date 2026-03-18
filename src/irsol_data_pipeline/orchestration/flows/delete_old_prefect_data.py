@@ -61,7 +61,7 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
     task_runner=ThreadPoolTaskRunner(max_workers=4),
     flow_run_name="delete-flow-runs-older-than-{hours}-hours",
 )
-async def delete_flow_runs_older_than(hours: float, interactive: bool = True):
+async def delete_flow_runs_older_than(hours: float, interactive: bool = True) -> bool:
     """Delete Prefect flow runs older than a retention duration.
 
     Args:
@@ -73,7 +73,7 @@ async def delete_flow_runs_older_than(hours: float, interactive: bool = True):
     old_flow_run_ids = await retrieve_old_flow_ids(dt)
     if not old_flow_run_ids:
         typer.echo("No flow runs found older than the specified cutoff.")
-        raise typer.Exit()
+        return False
     if interactive:
         typer.echo(
             f"Found {len(old_flow_run_ids)} flow run(s) older than {dt} to delete:"
@@ -85,6 +85,7 @@ async def delete_flow_runs_older_than(hours: float, interactive: bool = True):
         )
     delete_flow_run_id.map(old_flow_run_ids).result()
     typer.echo("Deletion completed")
+    return True
 
 
 @app.command()
@@ -106,8 +107,11 @@ def main(
         hours: Retention window in hours.
         no_interactive: Disable confirmation prompt when set.
     """
-    dt = datetime.timedelta(hours=hours)
-    asyncio.run(delete_flow_runs_older_than(dt, interactive=not no_interactive))
+    result = asyncio.run(
+        delete_flow_runs_older_than(hours, interactive=not no_interactive)
+    )
+    if not result:
+        raise typer.Exit()
 
 
 if __name__ == "__main__":
