@@ -17,7 +17,7 @@ def main():
         parameters={"root": str(root_path / "data")},
         description="Run the flat field correction pipeline on all unprocessed measurements.",
         cron="0 1 * * *",  # Daily at 1am
-        tags=["flat-field-correction"],
+        tags=["flat-field-correction", "top-level-pipeline"],
     )
 
     process_daily_unprocessed_measurement_deployment = process_daily_unprocessed_measurements.to_deployment(

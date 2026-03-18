@@ -18,8 +18,8 @@ def main():
         name="run-slit-image-pipeline",
         parameters={"root": str(root_path / "data")},
         description="Generate slit preview images for all unprocessed measurements.",
-        cron="0 2 * * *",  # Daily at 2am (after flat-field correction at 1am)
-        tags=["slit-images"],
+        cron="0 4 * * *",  # Daily at 4am
+        tags=["slit-images", "top-level-pipeline"],
     )
 
     generate_daily_slit_images_deployment = generate_daily_slit_images.to_deployment(
