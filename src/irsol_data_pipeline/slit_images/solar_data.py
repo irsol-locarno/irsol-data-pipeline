@@ -11,11 +11,13 @@ from pathlib import Path
 from typing import Optional
 
 import astropy.units as u
+import drms
 import requests
 import sunpy.map
 from astropy.io import fits
 from loguru import logger
 
+from irsol_data_pipeline.orchestration.decorators import task
 from irsol_data_pipeline.slit_images.config import (
     DRMS_KEYS,
     JSOC_BASE_URL,
@@ -24,6 +26,69 @@ from irsol_data_pipeline.slit_images.config import (
 )
 
 
+@task(task_run_name="fetch-sdo-maps-for-wavelength-{wavelength}")
+def _fetch_sdo_map_for_product_wavelength(
+    keys_df,
+    segs_df,
+    series: str,
+    segment: str,
+    wavelength: int,
+    mid_time: datetime.datetime,
+    time_fmt: str,
+    cache_dir: Optional[Path],
+) -> tuple[Optional[str], Optional[sunpy.map.Map]]:
+    """Fetch a single SDO map for one product/wavelength combination."""
+    best = _find_closest_record(
+        keys_df, segs_df, segment, wavelength, mid_time, time_fmt
+    )
+    if best is None:
+        logger.warning("No SDO data for {} at wavelength {}", series, wavelength)
+        return (None, None)
+
+    index, data_time, metadata = best
+    slug = segs_df[segment][index]
+    url = JSOC_BASE_URL + slug
+
+    smap = _download_and_load_map(
+        series, wavelength, data_time, url, metadata, cache_dir
+    )
+    return (data_time, smap)
+
+
+@task(task_run_name="fetch-sdo-maps-for-observation/{series}")
+def _fetch_sdo_maps_for_product(
+    client,
+    series: str,
+    wavelengths: list[int],
+    segment: str,
+    time_fmt: str,
+    time_range: str,
+    mid_time: datetime.datetime,
+    cache_dir: Optional[Path],
+) -> list[tuple[Optional[str], Optional[sunpy.map.Map]]]:
+    """Fetch SDO maps for all wavelengths of a single data product."""
+    query = _query_drms(client, series, time_range, segment)
+    if query is None:
+        return [(None, None)] * len(wavelengths)
+
+    keys_df, segs_df = query
+
+    return [
+        _fetch_sdo_map_for_product_wavelength(
+            keys_df,
+            segs_df,
+            series,
+            segment,
+            wavelength,
+            mid_time,
+            time_fmt,
+            cache_dir,
+        )
+        for wavelength in wavelengths
+    ]
+
+
+@task(task_run_name="fetch-sdo-maps/{start_time}-{end_time}")
 def fetch_sdo_maps(
     start_time: datetime.datetime,
     end_time: datetime.datetime,
@@ -49,7 +114,6 @@ def fetch_sdo_maps(
     Raises:
         RuntimeError: If the DRMS client cannot connect to JSOC.
     """
-    import drms
 
     mid_time = start_time + (end_time - start_time) / 2
     logger.info("Fetching SDO data for mid-time: {}", mid_time)
@@ -67,33 +131,18 @@ def fetch_sdo_maps(
     results: list[tuple[Optional[str], Optional[sunpy.map.Map]]] = []
 
     for series, wavelengths, segment, time_fmt in SDO_DATA_PRODUCTS:
-        query = _query_drms(client, series, time_range, segment)
-        if query is None:
-            for _ in wavelengths:
-                results.append((None, None))
-            continue
-
-        keys_df, segs_df = query
-
-        for wavelength in wavelengths:
-            best = _find_closest_record(
-                keys_df, segs_df, segment, wavelength, mid_time, time_fmt
+        results.extend(
+            _fetch_sdo_maps_for_product(
+                client,
+                series,
+                wavelengths,
+                segment,
+                time_fmt,
+                time_range,
+                mid_time,
+                cache_dir,
             )
-            if best is None:
-                logger.warning(
-                    "No SDO data for {} at wavelength {}", series, wavelength
-                )
-                results.append((None, None))
-                continue
-
-            index, data_time, metadata = best
-            slug = segs_df[segment][index]
-            url = JSOC_BASE_URL + slug
-
-            smap = _download_and_load_map(
-                series, wavelength, data_time, url, metadata, cache_dir
-            )
-            results.append((data_time, smap))
+        )
 
     return results
 
@@ -223,6 +272,6 @@ def _download_and_load_map(
     smap = sunpy.map.Map(data, header)
 
     if is_hmi:
-        smap = smap.rotate(angle=180 * u.deg)
+        smap = smap.rotate(angle=180 * u.Unit("deg"))
 
     return smap

@@ -21,6 +21,7 @@ from irsol_data_pipeline.exceptions import SlitImageGenerationError
 from irsol_data_pipeline.io import dat as dat_io
 from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
 from irsol_data_pipeline.orchestration.decorators import task
+from irsol_data_pipeline.orchestration.utils import create_image_artifact
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_measurement_files,
     is_slit_preview_generated,
@@ -101,6 +102,7 @@ def _generate_slit_image_task(
 
         try:
             # 1. Load measurement metadata
+            logger.info("Loading measurement metadata")
             stokes, info = dat_io.read(meas_path)
             metadata = MeasurementMetadata.from_info_array(info)
 
@@ -110,6 +112,7 @@ def _generate_slit_image_task(
                 )
 
             # 2. Compute slit geometry
+            logger.info("Computing slit geometry")
             slit_geometry = compute_slit_geometry(
                 metadata=metadata,
                 use_limbguider=use_limbguider,
@@ -118,6 +121,7 @@ def _generate_slit_image_task(
             )
 
             # 3. Fetch SDO images
+            logger.info("Fetching SDO data")
             maps = fetch_sdo_maps(
                 start_time=slit_geometry.start_time,
                 end_time=slit_geometry.end_time,
@@ -132,11 +136,17 @@ def _generate_slit_image_task(
                 )
 
             # 4. Render the 6-panel image
+            logger.info("Rendering slit preview image")
             processed_dir.mkdir(parents=True, exist_ok=True)
             render_slit_preview(
                 maps=maps,
                 slit=slit_geometry,
                 output_path=output_path,
+            )
+            create_image_artifact(
+                output_path,
+                title=f"Slit preview for {meas_path.name}",
+                key=f"slit_preview_{meas_path.name}",
             )
 
             logger.success("Slit preview generated: {}", output_path)

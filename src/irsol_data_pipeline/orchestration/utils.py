@@ -71,3 +71,14 @@ def create_prefect_json_report(path: Path, title: str, key: str):
             key=sanitize_artifact_title(key),
             description=title,
         )
+
+
+def create_image_artifact(path: Path, title: str, key: str):
+    if prefect_enabled():
+        from prefect.artifacts import create_image_artifact
+
+        create_image_artifact(
+            image_url=f"file://{path}",
+            key=sanitize_artifact_title(key),
+            description=title,
+        )
