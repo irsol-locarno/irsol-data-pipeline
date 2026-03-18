@@ -9,12 +9,10 @@ wavelength auto-calibration, and exports corrected Stokes (I, Q, U, V) data as F
 Key domain terms: **Stokes parameters**, **flat-field correction**, **smile correction**,
 **wavelength auto-calibration**, **ZIMPOL**, **observation day**.
 
-## Build and Test
+## Tools at your disposal
 
-```bash
-make lint    # uv run pre-commit run --all-files (ruff-check, ruff-format, isort, docformatter)
-make test    # uv run pytest --cov=src --cov-report=html --cov-report=term --cov-report=xml:coverage.xml
-```
+* Run all unit tests with: `make test`
+* Run linters and formatters with: `make lint`
 
 ## Code Style
 
