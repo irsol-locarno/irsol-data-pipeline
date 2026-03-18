@@ -2,8 +2,6 @@ name: unit-tests
 
 on:
   pull_request:
-  push:
-    branches: [master]
 
 jobs:
   test:
@@ -30,8 +28,9 @@ jobs:
       - name: Run tests
         run: make test
 
-      - name: Upload HTML report
-        uses: actions/upload-artifact@v4
+      - name: Get Coverage
+        uses: orgoro/coverage@v3.2
         with:
-          name: coverage-html-${{ matrix.python-version }}
-          path: htmlcov/
+            coverageFile: coverage.xml
+            token: ${{ secrets.GITHUB_TOKEN }}
+            sourceDir: src

@@ -14,7 +14,7 @@ lint:
 	uv run pre-commit run --all-files
 
 test:
-	uv run pytest --cov=src --cov-report=html --cov-report=term tests/
+	uv run pytest --cov=src --cov-report=html --cov-report=term --cov-report=xml:coverage.xml tests/
 
 prefect/setup:
 	uv run prefect config set PREFECT_API_URL=http://localhost:4200/api
