@@ -23,7 +23,6 @@ When `interactive=True` (useful for manual CLI runs), it prints the list of run 
 
 No files are written. The flow modifies the Prefect internal database only.
 
----
 
 ## Running
 

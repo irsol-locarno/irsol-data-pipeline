@@ -38,7 +38,7 @@ slit overlay + mu circle + solar limb"]
 
     DAT --> SCAN --> META --> GEO
     SDO --> FETCH
-    GEO --> RENDER
+    GEO --> FETCH
     FETCH --> RENDER --> WRITE
     WRITE --> PNG
     WRITE --> ERR
@@ -95,44 +95,8 @@ SDO FITS cache files live separately under `processed/_sdo_cache/`.
 
 The pipeline skips measurements that already have a `*_slit_preview.png` or `*_slit_preview_error.json` in `processed/`. Delete those files to re-run a measurement.
 
----
 
 ## Running
-
-### Process a single measurement (Python)
-
-```python
-from pathlib import Path
-from irsol_data_pipeline.pipeline.slit_images_processor import generate_slit_image
-
-generate_slit_image(
-    measurement_path=Path("data/2025/20250312/reduced/6302_m1.dat"),
-    processed_dir=Path("data/2025/20250312/processed"),
-    jsoc_email="your@email.com",
-)
-```
-
-### Process an observation day (Python)
-
-```python
-from pathlib import Path
-from irsol_data_pipeline.core.models import ObservationDay
-from irsol_data_pipeline.pipeline.filesystem import (
-    processed_dir_for_day, raw_dir_for_day, reduced_dir_for_day,
-)
-from irsol_data_pipeline.pipeline.slit_images_processor import generate_slit_images_for_day
-
-day_path = Path("data/2025/20250312")
-day = ObservationDay(
-    path=day_path,
-    raw_dir=raw_dir_for_day(day_path),
-    reduced_dir=reduced_dir_for_day(day_path),
-    processed_dir=processed_dir_for_day(day_path),
-)
-
-result = generate_slit_images_for_day(day=day, jsoc_email="your@email.com")
-print(f"processed={result.processed}, skipped={result.skipped}, failed={result.failed}")
-```
 
 ### Run with Prefect
 

@@ -136,7 +136,6 @@ Flat-field analysis cache files are stored separately under `processed/_cache/`:
 
 The pipeline is **idempotent**: re-running it on a day that already has `*_corrected.fits` or `*_error.json` files will simply skip those measurements. To re-process a measurement, delete its output files from `processed/`.
 
----
 
 ## Running
 
@@ -169,22 +168,6 @@ uv run entrypoints/plot_fits_profile.py /path/to/6302_m1_corrected.fits \
 ```
 
 The plot shows all four Stokes components (I, Q/I, U/I, V/I) as 2D images. When wavelength calibration is available in the FITS headers, the x-axis shows wavelengths in Ångström instead of pixel numbers.
-
-### Run the full pipeline locally (without Prefect)
-
-```python
-from pathlib import Path
-from irsol_data_pipeline.pipeline.scanner import scan_dataset
-from irsol_data_pipeline.pipeline.day_processor import process_observation_day
-
-root = Path("/path/to/data")
-
-scan_result = scan_dataset(root)
-for day in scan_result.observation_days:
-    if day.name in scan_result.pending_measurements:
-        result = process_observation_day(day)
-        print(f"{day.name}: processed={result.processed}, failed={result.failed}")
-```
 
 ### Run with Prefect
 
@@ -232,22 +215,3 @@ uv run prefect deployment run \
 | `max_delta_hours` | `2.0` | Maximum flat-field time gap in hours |
 | `max_concurrent_days_to_process` | CPU count − 1 (max 12) | How many days to process in parallel |
 | `day_path` | *(required for daily flow)* | Path to a single observation day directory |
-
----
-
-## Python library usage
-
-See [library-usage.md](library-usage.md) for detailed code examples covering reading `.dat` files, analysing flat-fields, applying corrections, running calibration, and writing FITS files.
-
-Key entry points:
-
-```python
-# Process a single measurement end-to-end
-from irsol_data_pipeline.pipeline.measurement_processor import process_single_measurement
-
-# Process an observation day
-from irsol_data_pipeline.pipeline.day_processor import process_observation_day
-
-# Scan the full dataset
-from irsol_data_pipeline.pipeline.scanner import scan_dataset
-```
