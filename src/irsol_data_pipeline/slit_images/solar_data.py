@@ -27,7 +27,6 @@ from irsol_data_pipeline.slit_images.config import (
 )
 
 
-@task(task_run_name="fetch-sdo-maps-for-wavelength-{wavelength}")
 def _fetch_sdo_map_for_product_wavelength(
     keys_df,
     segs_df,
@@ -57,7 +56,6 @@ def _fetch_sdo_map_for_product_wavelength(
         return (data_time, smap)
 
 
-@task(task_run_name="fetch-sdo-maps-for-observation/{series}")
 def _fetch_sdo_maps_for_product(
     client,
     series: str,
