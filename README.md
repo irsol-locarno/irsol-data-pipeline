@@ -58,6 +58,7 @@ Use this section as the canonical traversal path.
 
 | Page | Purpose |
 |---|---|
+| [documentation/prefect-introduction.md](documentation/prefect-introduction.md) | What Prefect is, why it is used here, and a minimal flow/deployment tutorial |
 | [documentation/running.md](documentation/running.md) | Single source of truth for run commands, runtime parameters, and Prefect Variables |
 | [documentation/prefect-production.md](documentation/prefect-production.md) | Production serving model, monitoring, and lifecycle management |
 
