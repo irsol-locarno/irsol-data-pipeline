@@ -11,7 +11,6 @@ from typing import Optional
 
 from loguru import logger
 
-from irsol_data_pipeline.core.config import JSOC_EMAIL
 from irsol_data_pipeline.core.models import (
     DayProcessingResult,
     MeasurementMetadata,
@@ -32,10 +31,15 @@ from irsol_data_pipeline.pipeline.filesystem import (
 from irsol_data_pipeline.plotting import plot_slit
 
 
+@task(
+    task_run_name="slit-images/generate-measurement/{measurement_path.name}",
+    retries=2,
+    retry_delay_seconds=30,
+)
 def generate_slit_image(
     measurement_path: Path,
     processed_dir: Path,
-    jsoc_email: Optional[str] = None,
+    jsoc_email: str,
     sdo_cache_dir: Optional[Path] = None,
     use_limbguider: bool = False,
     offset_corrections: tuple[float, float] = (0.0, 0.0),
@@ -46,8 +50,7 @@ def generate_slit_image(
     Args:
         measurement_path: Path to the measurement ``.dat`` file.
         processed_dir: Output directory for the slit preview image.
-        jsoc_email: JSOC email for DRMS queries. Falls back to
-            ``JSOC_EMAIL`` from ``core.config``.
+        jsoc_email: JSOC email for DRMS queries.
         sdo_cache_dir: Optional cache directory for SDO FITS files.
         use_limbguider: Whether to try using limbguider coordinates.
         offset_corrections: (x, y) corrections in arcsec.
@@ -56,58 +59,26 @@ def generate_slit_image(
     Raises:
         SlitImageGenerationError: If the image cannot be generated.
     """
-    email = jsoc_email or JSOC_EMAIL
-    if not email:
-        raise SlitImageGenerationError(
-            "JSOC_EMAIL environment variable is not set and no email was provided. "
-            "Set JSOC_EMAIL or pass jsoc_email parameter."
-        )
 
-    _generate_slit_image_task(
-        meas_path=measurement_path,
-        processed_dir=processed_dir,
-        jsoc_email=email,
-        sdo_cache_dir=sdo_cache_dir,
-        use_limbguider=use_limbguider,
-        offset_corrections=offset_corrections,
-        angle_correction=angle_correction,
-    )
-
-
-@task(
-    task_run_name="slit-images/generate-measurement/{meas_path.name}",
-    retries=2,
-    retry_delay_seconds=30,
-)
-def _generate_slit_image_task(
-    meas_path: Path,
-    processed_dir: Path,
-    jsoc_email: str,
-    sdo_cache_dir: Optional[Path] = None,
-    use_limbguider: bool = False,
-    offset_corrections: tuple[float, float] = (0.0, 0.0),
-    angle_correction: float = 0.0,
-) -> None:
-    """Internal task: generate slit preview for one measurement."""
-    with logger.contextualize(file=meas_path.name):
+    with logger.contextualize(file=measurement_path.name):
         logger.info("Generating slit preview image")
 
         output_path = processed_output_path(
-            processed_dir, meas_path.name, kind="slit_preview_png"
+            processed_dir, measurement_path.name, kind="slit_preview_png"
         )
         error_path = processed_output_path(
-            processed_dir, meas_path.name, kind="slit_preview_error_json"
+            processed_dir, measurement_path.name, kind="slit_preview_error_json"
         )
 
         try:
             # 1. Load measurement metadata
             logger.info("Loading measurement metadata")
-            stokes, info = dat_io.read(meas_path)
+            stokes, info = dat_io.read(measurement_path)
             metadata = MeasurementMetadata.from_info_array(info)
 
             if metadata.solar_x is None or metadata.solar_y is None:
                 raise SlitImageGenerationError(
-                    f"No solar disc coordinates in measurement {meas_path.name}"
+                    f"No solar disc coordinates in measurement {measurement_path.name}"
                 )
 
             # 2. Compute slit geometry
@@ -130,7 +101,7 @@ def _generate_slit_image_task(
 
             if all(m is None for _, m in maps):
                 raise SlitImageGenerationError(
-                    f"No SDO data available for measurement {meas_path.name} "
+                    f"No SDO data available for measurement {measurement_path.name} "
                     f"at time {slit_geometry.start_time}"
                 )
 
@@ -148,12 +119,12 @@ def _generate_slit_image_task(
         except Exception as exc:
             logger.exception(
                 "Slit preview generation failed",
-                file=meas_path.name,
+                file=measurement_path.name,
             )
             processed_dir.mkdir(parents=True, exist_ok=True)
             processing_metadata_io.write_error(
                 error_path,
-                source_file=meas_path.name,
+                source_file=measurement_path.name,
                 error=str(exc),
             )
             raise
@@ -161,7 +132,7 @@ def _generate_slit_image_task(
 
 def generate_slit_images_for_day(
     day: ObservationDay,
-    jsoc_email: Optional[str] = None,
+    jsoc_email: str,
     use_limbguider: bool = False,
 ) -> DayProcessingResult:
     """Generate slit preview images for all measurements in an observation day.
@@ -177,11 +148,6 @@ def generate_slit_images_for_day(
     Returns:
         DayProcessingResult summary.
     """
-    email = jsoc_email or JSOC_EMAIL
-    if not email:
-        raise SlitImageGenerationError(
-            "JSOC_EMAIL environment variable is not set and no email was provided."
-        )
 
     with logger.contextualize(day=day.name):
         logger.info("Generating slit images for observation day")
@@ -198,27 +164,29 @@ def generate_slit_images_for_day(
         failed = 0
         errors: list[str] = []
 
-        for meas_path in measurement_files:
-            if is_slit_preview_generated(day.processed_dir, meas_path.name):
+        for measurement_path in measurement_files:
+            if is_slit_preview_generated(day.processed_dir, measurement_path.name):
                 logger.debug(
-                    "Slit preview already exists, skipping", file=meas_path.name
+                    "Slit preview already exists, skipping", file=measurement_path.name
                 )
                 skipped += 1
                 continue
 
             try:
                 generate_slit_image(
-                    measurement_path=meas_path,
+                    measurement_path=measurement_path,
                     processed_dir=day.processed_dir,
-                    jsoc_email=email,
+                    jsoc_email=jsoc_email,
                     sdo_cache_dir=sdo_cache,
                     use_limbguider=use_limbguider,
                 )
                 processed += 1
             except Exception as exc:
                 failed += 1
-                errors.append(f"{meas_path.name}: {exc}")
-                logger.exception("Failed to generate slit image", file=meas_path.name)
+                errors.append(f"{measurement_path.name}: {exc}")
+                logger.exception(
+                    "Failed to generate slit image", file=measurement_path.name
+                )
 
         logger.info(
             "Slit image generation complete",

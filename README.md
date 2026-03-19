@@ -16,8 +16,8 @@ Correct + calibrate → FITS
 SDO context images
 (daily at 04:00)"]
         MN["Prefect maintenance
-Delete old run history
-(daily at 00:00)"]
+    Delete old run history + stale cache
+    (daily at 00:00)"]
     end
 
     subgraph outputs["Outputs (per measurement)"]
@@ -51,7 +51,6 @@ uv sync
 # Flat-field correction — process a single measurement (no Prefect required)
 uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat
 ```
-
 ## Documentation
 
 | Page | Description |
@@ -63,7 +62,7 @@ uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat
 | [pipeline.md](documentation/pipeline.md) | Overview of all pipelines, shared dataset layout, output files |
 | [pipeline-flat-field-correction.md](documentation/pipeline-flat-field-correction.md) | Flat-field + smile correction + wavelength calibration → FITS |
 | [pipeline-slit-image-generation.md](documentation/pipeline-slit-image-generation.md) | SDO context images with spectrograph slit overlay |
-| [pipeline-maintenance.md](documentation/pipeline-maintenance.md) | Prefect flow run history cleanup |
+| [pipeline-maintenance.md](documentation/pipeline-maintenance.md) | Prefect flow run-history and cache cleanup |
 | **Operations** | |
 | [running.md](documentation/running.md) | How to run each pipeline (CLI, Python, Prefect) |
 | [prefect-production.md](documentation/prefect-production.md) | Production deployment, monitoring, manual triggers |

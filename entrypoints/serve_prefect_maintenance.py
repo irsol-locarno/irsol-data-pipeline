@@ -22,7 +22,6 @@ def main():
 
     delete_old_prefect_data_deployment = delete_flow_runs_older_than.to_deployment(
         name="prefect-run-cleanup",
-        parameters={"hours": 24 * 7 * 4, "interactive": False},
         description="Delete Prefect flow runs older than a retention duration.",
         cron="0 0 * * *",  # Daily at midnight
         tags=[
@@ -34,7 +33,7 @@ def main():
 
     delete_old_cache_files_deployment = delete_old_cache_files.to_deployment(
         name="cache-cleanup",
-        parameters={"root": str(root_path / "data"), "hours": 24 * 7 * 4},
+        parameters={"root": str(root_path / "data")},
         description=(
             "Delete stale .pkl cache files under processed/_cache and "
             "processed/_sdo_cache."

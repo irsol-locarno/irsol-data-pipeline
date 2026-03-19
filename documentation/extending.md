@@ -107,8 +107,21 @@ serve(deployment)
 
 ```makefile
 prefect/serve-my-new-flow:
-    PREFECT_ENABLED=true uv run entrypoints/serve_my_new_flow.py
+    uv run entrypoints/serve_my_new_flow.py
 ```
+
+## Adding a dynamic runtime parameter
+
+For parameters that should be configurable at runtime (for example retention windows, API credentials, or service endpoints), use Prefect Variables as the baseline source.
+
+Pattern:
+
+1. Add a canonical name to `PrefectVariableName` in `orchestration/variables.py`.
+2. Register it in `entrypoints/bootstrap_variables.py` so operators can manage it centrally.
+3. Resolve it in flows via `get_variable(...)` when the run parameter is omitted.
+4. Keep per-run overrides possible via normal flow parameters.
+
+This keeps dynamic runtime configuration out of environment variables and avoids scattering hardcoded fallback values through flow modules.
 
 ### Flow and task naming convention
 
@@ -174,13 +187,15 @@ When adding a new pipeline, pick a short, descriptive prefix (all lowercase, hyp
 
 ## Running scientific logic outside of Prefect
 
-All `@task` and `@flow` decorators in this codebase are no-ops unless `PREFECT_ENABLED=true`. This means every function decorated with them is a plain Python function in any other context. You can import and call them freely:
+Scientific and pipeline logic remains directly callable from Python modules, independent from Prefect serving. You can import and call these functions freely:
 
 ```python
-# Works without PREFECT_ENABLED and without a running Prefect server
+# Works without a running Prefect server
 from irsol_data_pipeline.pipeline.scanner import scan_dataset
 from irsol_data_pipeline.pipeline.filesystem import discover_observation_days
 
 days = discover_observation_days(root)          # decorated with @task, but still callable
 scan = scan_dataset(root)                       # decorated with @task, but still callable
 ```
+
+`PREFECT_ENABLED` is the only environment variable used to toggle Prefect behavior in this repository. Dynamic runtime values should still be passed as run parameters or resolved from Prefect Variables.

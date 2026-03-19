@@ -48,15 +48,14 @@ slit overlay + mu circle + solar limb"]
 
 A JSOC email address is required to query the DRMS service. Register for free at [http://jsoc.stanford.edu/ajax/register_email.html](http://jsoc.stanford.edu/ajax/register_email.html).
 
-The slit-image deployments set `JSOC_EMAIL` through Prefect `job_variables.env`.
-They use your local `JSOC_EMAIL` when you run `make prefect/serve-slit-image-pipeline`,
-and otherwise fall back to a Prefect Secret block named `jsoc-email`.
-
-You can still export it locally or pass it directly as a flow parameter:
+Set it as the Prefect Variable `jsoc-email` before serving the deployments:
 
 ```bash
-export JSOC_EMAIL=your@email.com
+uv run entrypoints/bootstrap_variables.py
+make prefect/serve-slit-image-pipeline
 ```
+
+You can also pass `jsoc_email` explicitly as a flow parameter when triggering a run. If omitted, the flow resolves `jsoc_email` from the Prefect Variable `jsoc-email`.
 
 ## Processing steps
 
@@ -142,10 +141,10 @@ uv run prefect deployment run \
 
 **Runtime parameters:**
 
-| Parameter | Default | Description |
+| Parameter | Source | Description |
 |---|---|---|
-| `root` | `<repo>/data` | Dataset root path |
-| `jsoc_email` | `JSOC_EMAIL` env var injected by Prefect deployment, or explicit parameter | Email registered with JSOC for DRMS queries |
-| `use_limbguider` | `false` | Use limbguider coordinates instead of default solar disc coordinates |
-| `max_concurrent_days` | CPU count − 1 (max 4) | Concurrent day tasks (lower than flat-field pipeline due to network I/O) |
-| `day_path` | *(required for daily flow)* | Path to a single observation day directory |
+| `root` | Run parameter | Dataset root path |
+| `jsoc_email` | Run parameter or Prefect Variable `jsoc-email` | JSOC email used for DRMS queries |
+| `use_limbguider` | Run parameter | Use limbguider coordinates instead of solar disc coordinates |
+| `max_concurrent_days` | Run parameter | Concurrent day tasks (lower than flat-field pipeline due to network I/O) |
+| `day_path` | Run parameter (required for daily flow) | Path to a single observation day directory |

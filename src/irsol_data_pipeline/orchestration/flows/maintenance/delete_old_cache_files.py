@@ -20,6 +20,10 @@ from loguru import logger
 from irsol_data_pipeline.core.models import CacheCleanupDayResult, ObservationDay
 from irsol_data_pipeline.orchestration.decorators import flow, task
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
+from irsol_data_pipeline.orchestration.variables import (
+    PrefectVariableName,
+    get_variable,
+)
 from irsol_data_pipeline.pipeline.cache_cleanup import cleanup_day_cache_files
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
@@ -27,8 +31,6 @@ from irsol_data_pipeline.pipeline.filesystem import (
     raw_dir_for_day,
     reduced_dir_for_day,
 )
-
-DEFAULT_CACHE_RETENTION_HOURS = 24 * 7 * 4
 
 
 @task(task_run_name="maintenance-cache/discover-days/{root.name}")
@@ -56,18 +58,22 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
 )
 def delete_old_day_cache_files(
     day_path: Path,
-    hours: float = DEFAULT_CACHE_RETENTION_HOURS,
+    hours: float = 0.0,
 ) -> CacheCleanupDayResult:
     """Delete stale cache files for a single observation day.
 
     Args:
         day_path: Observation day path.
-        hours: Cache retention window in hours.
+        hours: Optional cache retention window in hours. If unset (0),
+            the Prefect Variable ``cache-expiration-hours`` is used.
 
     Returns:
         Cleanup summary for the day.
     """
     setup_logging()
+    hours = hours or float(
+        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672")
+    )
     path = Path(day_path)
     day = ObservationDay(
         path=path,
@@ -80,25 +86,30 @@ def delete_old_day_cache_files(
 
 @flow(
     name="maintenance-cache-cleanup",
-    flow_run_name="maintenance/cache-cleanup/{hours}h",
+    flow_run_name="maintenance/cache-cleanup",
     description=(
         "Delete old .pkl cache files from processed/_cache and processed/_sdo_cache"
     ),
 )
 def delete_old_cache_files(
     root: str,
-    hours: float = DEFAULT_CACHE_RETENTION_HOURS,
+    hours: float = 0.0,
 ) -> list[CacheCleanupDayResult]:
     """Delete stale cache files across all observation days.
 
     Args:
         root: Dataset root path.
-        hours: Cache retention window in hours.
+        hours: Optional cache retention window in hours. If unset (0),
+            the Prefect Variable ``cache-expiration-hours`` is used.
 
     Returns:
         Per-day cleanup summaries.
     """
     setup_logging()
+
+    hours = hours or float(
+        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672")
+    )
 
     root_path = Path(root)
     logger.info("Starting cache cleanup", root=root_path, hours=hours)

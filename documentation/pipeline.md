@@ -10,6 +10,10 @@ The repository implements three independent pipelines. Each runs against the sam
 
 The flat-field correction and slit image generation pipelines are **independent**: they can run in any order and operate on the same input files without interfering with each other.
 
+## Runtime configuration
+
+Dynamic runtime parameters are managed through Prefect Variables, with optional per-run overrides from the UI/CLI. See [running.md](running.md) for the complete parameter resolution policy and managed variable names.
+
 ## Dataset layout
 
 All pipelines expect the same dataset directory structure:

@@ -10,9 +10,42 @@ This page gives a brief overview of how to invoke each pipeline. For full detail
 | **Slit image generation** | Python API — see doc | [pipeline-slit-image-generation.md](pipeline-slit-image-generation.md) |
 | **Prefect maintenance** | Prefect deployment only — see doc | [pipeline-maintenance.md](pipeline-maintenance.md) |
 
-## The `PREFECT_ENABLED` environment variable
+## Prefect activation environment variable
 
-All `@task` and `@flow` decorators in this codebase are conditional no-ops unless `PREFECT_ENABLED=true`. When unset, every pipeline runs as plain Python with no Prefect server required. The `make prefect/serve-*` targets set this automatically.
+`PREFECT_ENABLED` is the only environment variable used for orchestration behavior in this repository.
+
+- `PREFECT_ENABLED=true`: project decorators integrate with Prefect runtime metadata.
+- `PREFECT_ENABLED` unset/false: the same functions remain directly callable as plain Python.
+
+This variable controls Prefect invasiveness into execution behavior; it is not used to pass dynamic runtime parameters.
+
+## Dynamic runtime parameters
+
+Dynamic flow parameters are resolved in this order:
+
+1. Value explicitly provided at run time (`--param ...` in CLI or **Custom Run** in UI).
+2. Value loaded from the corresponding Prefect Variable.
+
+Dynamic flow runtime parameters are not configured via environment variables.
+Baseline dynamic values should be managed in Prefect Variables, not hardcoded in flow or deployment code.
+
+Managed Prefect Variables are bootstrapped with:
+
+```bash
+uv run entrypoints/bootstrap_variables.py
+```
+
+Managed variable names:
+
+| Variable | Used by flow parameter |
+|---|---|
+| `jsoc-email` | `jsoc_email` in slit-image flows |
+| `cache-expiration-hours` | `hours` in cache-cleanup maintenance flow |
+| `flow-run-expiration-hours` | `hours` in run-history cleanup maintenance flow |
+
+Keep these variables set in Prefect before serving deployments.
+
+
 
 ## Make targets
 

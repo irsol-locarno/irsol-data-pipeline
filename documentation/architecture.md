@@ -16,7 +16,7 @@ irsol-data-pipeline/
 ├── src/irsol_data_pipeline/
 │   ├── core/                      # Scientific logic — no I/O, no orchestration
 │   │   ├── models.py              # All shared data types (Pydantic models)
-│   │   ├── config.py              # Shared constants and defaults
+│   │   ├── config.py              # Shared constants
 │   │   ├── correction/
 │   │   │   ├── analyzer.py        # Analyse a flat-field → produces correction artefacts
 │   │   │   └── corrector.py       # Apply the correction to a measurement
@@ -44,10 +44,11 @@ irsol-data-pipeline/
 │   │   └── measurement_processor.py  # Process a single measurement end-to-end
 │   │
 │   ├── orchestration/             # Prefect-specific wiring (flows, decorators, logging)
-│   │   ├── decorators.py          # Conditional @task/@flow (no-ops without PREFECT_ENABLED)
+│   │   ├── decorators.py          # Project @task/@flow wrappers
 │   │   ├── patch_logging.py       # Forward loguru logs to Prefect's run logger
 │   │   ├── retry.py               # Retry helper for Prefect tasks
 │   │   ├── utils.py               # Prefect artifact helpers
+│   │   ├── variables.py           # Prefect Variable names + centralized access helper
 │   │   └── flows/
 │   │       ├── flat_field_correction.py   # Main flat-field correction flows
 │   │       ├── slit_image_generation.py   # Main slit-image generation flows

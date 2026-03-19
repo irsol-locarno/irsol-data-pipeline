@@ -33,7 +33,7 @@ graph LR
 
 - **Prefect Server**: stores flow run history, schedules, and artefacts in a local SQLite database.
 - **Processing Worker**: serves the `flat-field-correction-full` and `flat-field-correction-daily` deployments.
-- **Maintenance Worker**: serves the `cleanup` deployment.
+- **Maintenance Worker**: serves the `cleanup` and `cache-cleanup` deployments.
 
 > The workers contact the Prefect server and poll for scheduled or manually triggered runs. If a worker is stopped, its deployments will not execute even if the server is running.
 
@@ -79,18 +79,30 @@ uv run prefect deployment run \
     --param day_path=/path/to/data/2025/20250312
 ```
 
-## Overriding parameters at runtime
+## Runtime parameter management
 
-When triggering a run from the UI, you can override any parameter defined in the flow function signature:
+Use this policy for dynamic runtime values:
 
-| Parameter | Flow | Default | Description |
-|---|---|---|---|
-| `root` | `ff-correction-full` | `<repo>/data` | Dataset root path |
-| `max_delta_hours` | both ff-correction flows | `2.0` | Maximum flat-field time gap in hours |
-| `max_concurrent_days_to_process` | `ff-correction-full` | CPU count − 1 (max 12) | How many days to process in parallel |
-| `day_path` | `ff-correction-daily` | *(required)* | Path to a single observation day directory |
-| `hours` | `maintenance-cleanup` | `672` | Retention window in hours (default: 4 weeks) |
-| `interactive` | `maintenance-cleanup` | `false` | Ask for confirmation before deleting (useful in CLI) |
+1. Pass a run parameter when you need a one-off override.
+2. Otherwise, let the flow resolve from Prefect Variables.
+
+`PREFECT_ENABLED` remains the only supported environment variable for orchestration behavior. It does not carry dynamic runtime parameter values.
+
+Managed Prefect Variables:
+
+| Variable | Used by |
+|---|---|
+| `jsoc-email` | Slit-image flows (`jsoc_email`) |
+| `cache-expiration-hours` | Cache-cleanup maintenance flow (`hours`) |
+| `flow-run-expiration-hours` | Run-history cleanup maintenance flow (`hours`) |
+
+Bootstrap or refresh these values with:
+
+```bash
+uv run entrypoints/bootstrap_variables.py
+```
+
+You can still override any flow parameter from the UI or CLI for an individual run.
 
 ## Monitoring and logs
 
@@ -118,4 +130,4 @@ After resetting, restart all three processes. The workers will re-register their
 
 ## Scheduled cleanup
 
-The maintenance deployment handles database growth automatically. Its default schedule (daily at midnight) deletes all flow runs older than 4 weeks. To change the retention window, edit `entrypoints/serve_prefect_maintenance.py` and update the `hours` parameter default, or override it when triggering a manual run.
+The maintenance deployment handles database growth automatically. Its schedule deletes old run history and stale cache files daily. Retention windows are managed through Prefect Variables (`flow-run-expiration-hours` and `cache-expiration-hours`) and can be overridden per run when needed.

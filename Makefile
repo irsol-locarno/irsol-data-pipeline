@@ -4,7 +4,9 @@ help:
 	@echo "Available targets:"
 	@echo "  lint  - Run pre-commit checks"
 	@echo "  test  - Run pytest with coverage"
+	@echo "  prefect/setup - Configure Prefect for local development and execution"
 	@echo "  prefect/dashboard - Start the Prefect dashboard"
+	@echo "  prefect/configure - Bootstrap Prefect Variables from the command line"
 	@echo "  prefect/reset - Reset the Prefect database"
 	@echo "  prefect/serve-flat-field-correction-pipeline - Serve flat-field correction deployment"
 	@echo "  prefect/serve-slit-image-pipeline - Serve slit image generation deployment"
@@ -23,6 +25,9 @@ prefect/setup:
 
 prefect/dashboard: prefect/setup
 	uv run prefect server start
+
+prefect/configure:
+	uv run entrypoints/bootstrap_variables.py
 
 prefect/reset:
 	uv run prefect server database reset

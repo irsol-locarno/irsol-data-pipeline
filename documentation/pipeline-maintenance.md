@@ -13,7 +13,7 @@ This keeps both the local Prefect database and the on-disk cache footprint bound
 flowchart TD
     subgraph A["Flow 1: Prefect run cleanup"]
         A1["Query Prefect DB for flow runs older than retention cutoff
-        (default: 4 weeks)"] --> A2{"Any runs found?"}
+        (from Prefect Variable)"] --> A2{"Any runs found?"}
         A2 -->|No| A3["Exit"]
         A2 -->|Yes| A4["Delete each flow run by ID"]
     end
@@ -22,13 +22,15 @@ flowchart TD
         B1["Discover all observation day folders under root"] --> B2["Dispatch daily subflow per day"]
         B2 --> B3["Inspect processed/_cache and processed/_sdo_cache"]
         B3 --> B4["Delete .pkl files older than retention cutoff
-        (default: 4 weeks)"]
+        (from Prefect Variable)"]
     end
 ```
 
-The retention window is configurable. The default is 672 hours (4 weeks) for both flows.
+Retention windows are runtime-configurable. If `hours` is omitted when triggering a run, maintenance flows resolve it from Prefect Variables:
 
-When `interactive=True` (useful for manual CLI runs), it prints the list of run IDs and asks for confirmation before deleting.
+- `flow-run-expiration-hours` for Prefect run-history cleanup.
+- `cache-expiration-hours` for cache file cleanup.
+
 
 ## Output
 
@@ -76,32 +78,26 @@ uv run prefect deployment run 'maintenance-cache-cleanup/cache-cleanup'
 
 `maintenance-cleanup/cleanup`
 
-| Parameter | Default | Description |
+| Parameter | Source | Description |
 |---|---|---|
-| `hours` | `672` | Retention window in hours (672 h = 4 weeks) |
-| `interactive` | `false` | If `true`, ask for confirmation before deleting (useful in CLI) |
+| `hours` | Run parameter or Prefect Variable `flow-run-expiration-hours` | Retention window in hours used to delete old Prefect flow runs |
 
 `maintenance-cache-cleanup/cache-cleanup`
 
-| Parameter | Default | Description |
+| Parameter | Source | Description |
 |---|---|---|
-| `root` | `<repo>/data` | Dataset root to scan (`<root>/<year>/<day>`) |
-| `hours` | `672` | Delete only `.pkl` cache files older than this retention window |
+| `root` | Run parameter | Dataset root to scan (`<root>/<year>/<day>`) |
+| `hours` | Run parameter or Prefect Variable `cache-expiration-hours` | Delete only `.pkl` cache files older than this retention window |
 
-### Changing the retention window
+### Changing retention windows
 
-Override `hours` at run time from the UI or CLI, or edit defaults in `entrypoints/serve_prefect_maintenance.py`:
+Use one of these two mechanisms:
 
-```python
-delete_old_prefect_data_deployment = delete_flow_runs_older_than.to_deployment(
-    name="cleanup",
-    parameters={"hours": 24 * 7 * 2, "interactive": False},  # 2 weeks
-    ...
-)
+1. Set or update Prefect Variables (`flow-run-expiration-hours`, `cache-expiration-hours`) for baseline values.
+2. Override `hours` for a specific run from the UI or CLI.
 
-delete_old_cache_files_deployment = delete_old_cache_files.to_deployment(
-    name="cache-cleanup",
-    parameters={"root": str(root_path / "data"), "hours": 24 * 7 * 2},
-    ...
-)
+To bootstrap or refresh baseline values:
+
+```bash
+uv run entrypoints/bootstrap_variables.py
 ```

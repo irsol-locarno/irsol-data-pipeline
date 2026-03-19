@@ -21,13 +21,16 @@ from prefect import flow, task
 from prefect.futures import as_completed
 from prefect.task_runners import ThreadPoolTaskRunner
 
-from irsol_data_pipeline.core.config import JSOC_EMAIL
 from irsol_data_pipeline.core.models import (
     DayProcessingResult,
     ObservationDay,
 )
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.orchestration.utils import create_prefect_markdown_report
+from irsol_data_pipeline.orchestration.variables import (
+    PrefectVariableName,
+    get_variable,
+)
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
     processed_dir_for_day,
@@ -88,8 +91,8 @@ def generate_slit_images(
 
     Args:
         root: Dataset root path.
-        jsoc_email: JSOC email for DRMS queries. Falls back to
-            ``JSOC_EMAIL`` from ``core.config``.
+        jsoc_email: Optional JSOC email override for DRMS queries. If unset,
+            the Prefect Variable ``jsoc-email`` is used.
         use_limbguider: Whether to try using limbguider coordinates.
         max_concurrent_days: Maximum number of concurrent day processing
             tasks. Defaults to CPU count - 1, capped at 4
@@ -100,13 +103,17 @@ def generate_slit_images(
     """
     setup_logging()
 
-    email = jsoc_email or JSOC_EMAIL
+    email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:
-        logger.error("No JSOC email provided. Set JSOC_EMAIL environment variable.")
+        logger.error(
+            "No JSOC email provided. Set the "
+            f"'{PrefectVariableName.JSOC_EMAIL.value}' Prefect Variable "
+            "or pass 'jsoc_email' as a flow parameter."
+        )
         return []
 
     dataset_root = Path(root)
-    logger.info("Starting slit image generation", root=root)
+    logger.info("Starting slit image generation", root=root, jsoc_email=email)
 
     observation_days = scan_observation_days_task(root=dataset_root)
     logger.info(
@@ -164,8 +171,8 @@ def generate_daily_slit_images(
 
     Args:
         day_path: Path to the observation day directory.
-        jsoc_email: JSOC email for DRMS queries. Falls back to
-            ``JSOC_EMAIL`` from ``core.config``.
+        jsoc_email: Optional JSOC email override for DRMS queries. If unset,
+            the Prefect Variable ``jsoc-email`` is used.
         use_limbguider: Whether to try using limbguider coordinates.
 
     Returns:
@@ -173,12 +180,23 @@ def generate_daily_slit_images(
     """
     setup_logging()
 
-    email = jsoc_email or JSOC_EMAIL
+    email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:
-        logger.error("No JSOC email provided. Set JSOC_EMAIL environment variable.")
+        logger.error(
+            "No JSOC email provided. Set the "
+            f"'{PrefectVariableName.JSOC_EMAIL.value}' Prefect Variable "
+            "or pass 'jsoc_email' as a flow parameter."
+        )
         return DayProcessingResult(
             day_name=Path(day_path).name, errors=["No JSOC email"]
         )
+
+    logger.info(
+        "Starting day slit generation",
+        day=day_path.name,
+        jsoc_email=email,
+        use_limbguider=use_limbguider,
+    )
 
     path = Path(day_path)
     day = ObservationDay(
