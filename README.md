@@ -1,74 +1,70 @@
 # IRSOL Data Pipeline
 
-The IRSOL data pipeline processes raw ZIMPOL spectro-polarimetric solar observations from the IRSOL observatory (Locarno, Switzerland). It runs three independent pipelines against the same dataset:
+IRSOL Data Pipeline processes reduced ZIMPOL spectro-polarimetric observations and produces calibrated scientific outputs and operational artifacts.
+
+The repository contains three independent pipelines over the same dataset root.
 
 ```mermaid
-graph TB
-    subgraph inputs["Inputs"]
-        DAT["ZIMPOL .dat files"]
-    end
-
-    subgraph pipelines["Pipelines"]
-        FF["Flat-field correction
-Correct + calibrate → FITS
-(daily at 01:00)"]
-        SI["Slit image generation
-SDO context images
-(daily at 04:00)"]
-        MN["Prefect maintenance
-    Delete old run history + stale cache
-    (daily at 00:00)"]
-    end
-
-    subgraph outputs["Outputs (per measurement)"]
-        FITS["*_corrected.fits"]
-        META["*_metadata.json"]
-        PNG["*_profile_*.png + *_slit_preview.png"]
-    end
-
-    subgraph orchestration["Orchestration"]
-        UI["Prefect Web UI
-        localhost:4200"]
-    end
+flowchart LR
+    DAT["Reduced ZIMPOL .dat files"]
+    FF["Flat-field correction\nFITS + metadata + profile PNGs"]
+    SI["Slit image generation\nSDO context PNGs"]
+    MT["Maintenance\nPrefect run cleanup + cache cleanup"]
+    PF["Prefect orchestration\nUI + schedules + manual runs"]
 
     DAT --> FF
     DAT --> SI
-    FF --> FITS
-    FF --> META
-    FF --> PNG
-    SI --> PNG
-    UI -.-> FF
-    UI -.-> SI
-    UI -.-> MN
+    PF -. serves .-> FF
+    PF -. serves .-> SI
+    PF -. serves .-> MT
 ```
 
-## Quick start
+## Quick Start
 
 ```bash
-# Install dependencies
 uv sync
-
-# Flat-field correction — process a single measurement (no Prefect required)
 uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat
 ```
+
 ## Documentation
 
-| Page | Description |
+Use this section as the canonical traversal path.
+
+### 1. Getting Started
+
+| Page | Purpose |
 |---|---|
-| [concepts.md](documentation/concepts.md) | Domain vocabulary: Stokes parameters, flat-field, smile, calibration |
-| [architecture.md](documentation/architecture.md) | Repository layout and layered design |
-| [installation.md](documentation/installation.md) | Prerequisites, `uv sync`, and available `make` targets |
-| **Pipelines** | |
-| [pipeline.md](documentation/pipeline.md) | Overview of all pipelines, shared dataset layout, output files |
-| [pipeline-flat-field-correction.md](documentation/pipeline-flat-field-correction.md) | Flat-field + smile correction + wavelength calibration → FITS |
-| [pipeline-slit-image-generation.md](documentation/pipeline-slit-image-generation.md) | SDO context images with spectrograph slit overlay |
-| [pipeline-maintenance.md](documentation/pipeline-maintenance.md) | Prefect flow run-history and cache cleanup |
-| **Operations** | |
-| [running.md](documentation/running.md) | How to run each pipeline (CLI, Python, Prefect) |
-| [prefect-production.md](documentation/prefect-production.md) | Production deployment, monitoring, manual triggers |
-| **Development** | |
-| [library-usage.md](documentation/library-usage.md) | Using the pipeline as a plain Python library |
-| [extending.md](documentation/extending.md) | Custom policies, new wavelengths, new output formats, new flows |
-| [configuration.md](documentation/configuration.md) | All constants defined in `core/config.py` |
-| [testing.md](documentation/testing.md) | Running tests and test conventions |
-| [info_array.md](documentation/info_array.md) | Fields available in the `.dat` info array |
+| [documentation/installation.md](documentation/installation.md) | Install dependencies, set up local environment, discover `make` targets |
+| [documentation/concepts.md](documentation/concepts.md) | Domain vocabulary used in code and logs |
+| [documentation/configuration.md](documentation/configuration.md) | Constants and filename conventions from `core/config.py` |
+
+### 2. Architecture
+
+| Page | Purpose |
+|---|---|
+| [documentation/architecture.md](documentation/architecture.md) | Module layout, layer boundaries, dependency direction |
+| [documentation/library-usage.md](documentation/library-usage.md) | Use core/io/pipeline modules directly without Prefect |
+
+### 3. Pipelines
+
+| Page | Purpose |
+|---|---|
+| [documentation/pipeline.md](documentation/pipeline.md) | Cross-pipeline overview: inputs, outputs, idempotency, data layout |
+| [documentation/pipeline-flat-field-correction.md](documentation/pipeline-flat-field-correction.md) | Flat-field correction pipeline behavior and outputs |
+| [documentation/pipeline-slit-image-generation.md](documentation/pipeline-slit-image-generation.md) | Slit image generation behavior and outputs |
+| [documentation/pipeline-maintenance.md](documentation/pipeline-maintenance.md) | Maintenance flows and cleanup behavior |
+
+### 4. Operations
+
+| Page | Purpose |
+|---|---|
+| [documentation/running.md](documentation/running.md) | Single source of truth for run commands, runtime parameters, and Prefect Variables |
+| [documentation/prefect-production.md](documentation/prefect-production.md) | Production serving model, monitoring, and lifecycle management |
+
+### 5. Development
+
+| Page | Purpose |
+|---|---|
+| [documentation/extending.md](documentation/extending.md) | Add new policies, outputs, and flows safely |
+| [documentation/testing.md](documentation/testing.md) | Test strategy, conventions, and commands |
+| [documentation/info_array.md](documentation/info_array.md) | Reference fields from `.dat` info arrays |

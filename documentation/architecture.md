@@ -1,101 +1,93 @@
 # Repository Architecture
 
-## Layout
+## Design Goals
 
-```text
-irsol-data-pipeline/
-├── data/                          # Local dataset root for development and testing
-├── documentation/                 # Thematic documentation pages
-├── entrypoints/                   # Thin executable scripts (CLI and deployment bootstrap)
-│   ├── serve_flat_field_correction_pipeline.py   # Start Prefect processing deployments
-│   ├── serve_prefect_maintenance.py              # Start Prefect maintenance deployment
-│   ├── serve_slit_image_pipeline.py               # Start slit-image Prefect deployments
-│   ├── process_single_measurement.py             # Process one .dat file from a terminal
-│   └── plot_fits_profile.py                      # Visualise a processed FITS file
-│
-├── src/irsol_data_pipeline/
-│   ├── core/                      # Scientific logic — no I/O, no orchestration
-│   │   ├── models.py              # All shared data types (Pydantic models)
-│   │   ├── config.py              # Shared constants
-│   │   ├── correction/
-│   │   │   ├── analyzer.py        # Analyse a flat-field → produces correction artefacts
-│   │   │   └── corrector.py       # Apply the correction to a measurement
-│   │   └── calibration/
-│   │       ├── autocalibrate.py   # Wavelength calibration logic
-│   │       └── refdata/           # Bundled reference solar spectra (.npy files)
-│   │
-│   ├── io/                        # File reading and writing — no science logic
-│   │   ├── dat/
-│   │   │   └── importer.py        # Read .dat/.sav → StokesParameters + info array
-│   │   ├── fits/
-│   │   │   ├── exporter.py        # Write StokesParameters → .fits
-│   │   │   └── importer.py        # Read .fits → StokesParameters + CalibrationResult
-│   │   ├── flatfield/
-│   │   │   ├── exporter.py        # Serialise FlatFieldCorrection to .pkl
-│   │   │   └── importer.py        # Load FlatFieldCorrection from .pkl
-│   │   └── processing_metadata/
-│   │       └── exporter.py        # Write *_metadata.json and *_error.json
-│   │
-│   ├── pipeline/                  # Orchestration of scientific steps (no Prefect dependency)
-│   │   ├── filesystem.py          # Dataset discovery + canonical path helpers
-│   │   ├── scanner.py             # Find observation days with pending measurements
-│   │   ├── flatfield_cache.py     # Build and query the flat-field correction cache
-│   │   ├── day_processor.py       # Process all measurements in one observation day
-│   │   └── measurement_processor.py  # Process a single measurement end-to-end
-│   │
-│   ├── orchestration/             # Prefect-specific wiring (flows, decorators, logging)
-│   │   ├── decorators.py          # Project @task/@flow wrappers
-│   │   ├── patch_logging.py       # Forward loguru logs to Prefect's run logger
-│   │   ├── retry.py               # Retry helper for Prefect tasks
-│   │   ├── utils.py               # Prefect artifact helpers
-│   │   ├── variables.py           # Prefect Variable names + centralized access helper
-│   │   └── flows/
-│   │       ├── flat_field_correction.py   # Main flat-field correction flows
-│   │       ├── slit_image_generation.py   # Main slit-image generation flows
-│   │       ├── tags.py                    # Shared deployment tag enums
-│   │       └── maintenance/
-│   │           ├── delete_old_prefect_data.py # Prefect run-history cleanup flow
-│   │           └── delete_old_cache_files.py  # processed/_cache and _sdo_cache cleanup flows
-│   │
-│   ├── plotting/
-│   │   └── profile.py             # Matplotlib Stokes profile plots
-│   ├── exceptions.py              # All custom exception types
-│   ├── logging_config.py          # Loguru configuration
-│   └── version.py                 # Package version string
-│
-├── tests/unit/                    # Pytest unit tests
-├── pyproject.toml
-├── Makefile
-└── README.md
-```
+- Keep scientific logic reusable without orchestration runtime.
+- Isolate I/O formats from science algorithms.
+- Keep Prefect concerns inside `orchestration/` and entrypoints.
 
-## Layered architecture
-
-The codebase is deliberately split into four independent layers — you can use lower layers without knowing anything about higher ones:
+## High-Level Structure
 
 ```mermaid
-graph TB
-    A["<b>core</b>
-	Pure science logic
-	(correction, calibration, models)"]
-    B["<b>io</b>
-	File reading and writing
-	(dat, fits, flatfield, metadata)"]
-    C["<b>pipeline</b>
-	Pipeline steps
-	(scan, build cache, process day/measurement)"]
-    D["<b>orchestration</b>
-	Prefect flows and scheduling"]
-    E["<b>entrypoints</b>
-	CLI scripts"]
+flowchart TB
+    CORE["core\nscience + models + slit geometry"]
+    IO["io\nformat adapters"]
+    PIPE["pipeline\ndataset/day/measurement orchestration"]
+    ORCH["orchestration\nPrefect flows, variables, logging bridge"]
+    ENTRY["entrypoints\nserve and CLI scripts"]
 
-    A --> B
-    B --> C
-    C --> D
-    D --> E
+    CORE --> PIPE
+    IO --> PIPE
+    PIPE --> ORCH
+    ORCH --> ENTRY
 ```
 
-> **Key design rule**: The `core/` and `io/` layers have no knowledge of Prefect or the pipeline structure.
-> This means you can import and call them directly as plain Python functions — no Prefect context required.
+## Source Tree (Current)
 
-See [library-usage.md](library-usage.md) for practical examples of using each layer independently.
+```text
+src/irsol_data_pipeline/
+├── core/
+│   ├── config.py
+│   ├── models.py
+│   ├── calibration/
+│   │   ├── autocalibrate.py
+│   │   └── refdata/
+│   ├── correction/
+│   │   ├── analyzer.py
+│   │   └── corrector.py
+│   └── slit_images/
+│       ├── config.py
+│       ├── coordinates.py
+│       ├── solar_data.py
+│       └── z3readbd.py
+├── io/
+│   ├── dat/importer.py
+│   ├── fits/{importer.py, exporter.py}
+│   ├── flatfield/{importer.py, exporter.py}
+│   └── processing_metadata/{importer.py, exporter.py}
+├── pipeline/
+│   ├── filesystem.py
+│   ├── scanner.py
+│   ├── flatfield_cache.py
+│   ├── measurement_processor.py
+│   ├── day_processor.py
+│   ├── slit_images_processor.py
+│   └── cache_cleanup.py
+├── orchestration/
+│   ├── decorators.py
+│   ├── patch_logging.py
+│   ├── retry.py
+│   ├── utils.py
+│   ├── variables.py
+│   └── flows/
+│       ├── flat_field_correction.py
+│       ├── slit_image_generation.py
+│       ├── tags.py
+│       └── maintenance/
+│           ├── delete_old_prefect_data.py
+│           └── delete_old_cache_files.py
+├── plotting/
+│   ├── profile.py
+│   └── slit.py
+├── exceptions.py
+├── logging_config.py
+└── version.py
+```
+
+## Execution Paths
+
+| Path | Trigger | Main modules |
+|---|---|---|
+| Single measurement | `entrypoints/process_single_measurement.py` | `pipeline/measurement_processor.py`, `core/correction`, `core/calibration`, `io/fits` |
+| Flat-field batch | Prefect flow `ff-correction-full` / `ff-correction-daily` | `orchestration/flows/flat_field_correction.py`, `pipeline/day_processor.py` |
+| Slit preview batch | Prefect flow `slit-images-full` / `slit-images-daily` | `orchestration/flows/slit_image_generation.py`, `pipeline/slit_images_processor.py` |
+| Maintenance | Prefect flow `maintenance-cleanup` / `maintenance-cache-cleanup` | `orchestration/flows/maintenance/*`, `pipeline/cache_cleanup.py` |
+
+## Boundaries
+
+- `core/` has no file-format policy and no scheduling policy.
+- `io/` does not perform scientific transformations.
+- `pipeline/` contains process logic but no Prefect deployment definitions.
+- `orchestration/` and `entrypoints/` own deployment names, schedules, and serving.
+
+For direct Python usage patterns, see [library-usage.md](library-usage.md).

@@ -1,60 +1,89 @@
 # Running the Pipelines
 
-This page gives a brief overview of how to invoke each pipeline. For full details — including step-by-step walk-throughs, output files, and Prefect deployment parameters — see the dedicated page for each pipeline.
+This page is the single source of truth for:
+- run commands;
+- deployment names;
+- runtime parameter and Prefect Variable resolution.
 
-## Available pipelines
+## Runtime Resolution Policy
 
-| Pipeline | Quick invocation | Full doc |
-|---|---|---|
-| **Flat-field correction** | Python API — see doc | [pipeline-flat-field-correction.md](pipeline-flat-field-correction.md) |
-| **Slit image generation** | Python API — see doc | [pipeline-slit-image-generation.md](pipeline-slit-image-generation.md) |
-| **Prefect maintenance** | Prefect deployment only — see doc | [pipeline-maintenance.md](pipeline-maintenance.md) |
+```mermaid
+flowchart TD
+		P["Flow parameter value provided at run time?"] -->|Yes| A["Use explicit run parameter"]
+		P -->|No| B["Read mapped Prefect Variable"]
+```
 
-## Prefect activation environment variable
+`PREFECT_ENABLED` is the only orchestration environment toggle in this repository.
 
-`PREFECT_ENABLED` is the only environment variable used for orchestration behavior in this repository.
+- `PREFECT_ENABLED=true`: decorators integrate with Prefect runtime.
+- unset or `false`: same call paths remain plain-Python callable.
 
-- `PREFECT_ENABLED=true`: project decorators integrate with Prefect runtime metadata.
-- `PREFECT_ENABLED` unset/false: the same functions remain directly callable as plain Python.
+`PREFECT_ENABLED` is not used for dynamic runtime values.
 
-This variable controls Prefect invasiveness into execution behavior; it is not used to pass dynamic runtime parameters.
+## Managed Prefect Variables
 
-## Dynamic runtime parameters
-
-Dynamic flow parameters are resolved in this order:
-
-1. Value explicitly provided at run time (`--param ...` in CLI or **Custom Run** in UI).
-2. Value loaded from the corresponding Prefect Variable.
-
-Dynamic flow runtime parameters are not configured via environment variables.
-Baseline dynamic values should be managed in Prefect Variables, not hardcoded in flow or deployment code.
-
-Managed Prefect Variables are bootstrapped with:
+Bootstrap or refresh:
 
 ```bash
 uv run entrypoints/bootstrap_variables.py
 ```
 
-Managed variable names:
-
-| Variable | Used by flow parameter |
+| Variable name | Typical flow parameter |
 |---|---|
-| `jsoc-email` | `jsoc_email` in slit-image flows |
-| `cache-expiration-hours` | `hours` in cache-cleanup maintenance flow |
-| `flow-run-expiration-hours` | `hours` in run-history cleanup maintenance flow |
+| `jsoc-email` | `jsoc_email` |
+| `cache-expiration-hours` | `hours` (cache cleanup) |
+| `flow-run-expiration-hours` | `hours` (run-history cleanup) |
 
-Keep these variables set in Prefect before serving deployments.
-
-
-
-## Make targets
+## Local Prefect Commands
 
 ```bash
-make prefect/dashboard                             # Start the Prefect server + UI at :4200
-make prefect/serve-flat-field-correction-pipeline  # Serve flat-field correction deployments
-make prefect/serve-slit-image-pipeline             # Serve slit image generation deployments
-make prefect/serve-maintenance-pipeline            # Serve the maintenance deployment
-make prefect/reset                                 # Reset the local Prefect database (destructive)
+make prefect/dashboard
+make prefect/serve-flat-field-correction-pipeline
+make prefect/serve-slit-image-pipeline
+make prefect/serve-maintenance-pipeline
 ```
 
-For production deployment (keeping workers alive with `screen` or `systemd`), see [prefect-production.md](prefect-production.md).
+## Deployment Triggers (CLI)
+
+### Flat-field correction
+
+```bash
+uv run prefect deployment run 'ff-correction-full/flat-field-correction-full'
+uv run prefect deployment run \
+	'ff-correction-daily/flat-field-correction-daily' \
+	--param day_path=/path/to/data/2025/20250312
+```
+
+### Slit image generation
+
+```bash
+uv run prefect deployment run 'slit-images-full/slit-images-full'
+uv run prefect deployment run \
+	'slit-images-daily/slit-images-daily' \
+	--param day_path=/path/to/data/2025/20250312
+```
+
+### Maintenance
+
+```bash
+uv run prefect deployment run 'maintenance-cleanup/prefect-run-cleanup'
+uv run prefect deployment run 'maintenance-cache-cleanup/cache-cleanup'
+```
+
+## Primary Runtime Parameters
+
+| Flow | Parameter | Notes |
+|---|---|---|
+| `ff-correction-full` | `root`, `max_delta_hours`, `max_concurrent_days_to_process` | Scheduled full scan + processing |
+| `ff-correction-daily` | `day_path`, `max_delta_hours` | Single day |
+| `slit-images-full` | `root`, `jsoc_email`, `use_limbguider`, `max_concurrent_days` | `jsoc_email` can come from Prefect Variable |
+| `slit-images-daily` | `day_path`, `jsoc_email`, `use_limbguider` | Single day |
+| `maintenance-cleanup` | `hours` | Falls back to `flow-run-expiration-hours` |
+| `maintenance-cache-cleanup` | `root`, `hours` | `hours` falls back to `cache-expiration-hours` |
+
+## Related Pages
+
+- [pipeline-flat-field-correction.md](pipeline-flat-field-correction.md)
+- [pipeline-slit-image-generation.md](pipeline-slit-image-generation.md)
+- [pipeline-maintenance.md](pipeline-maintenance.md)
+- [prefect-production.md](prefect-production.md)
