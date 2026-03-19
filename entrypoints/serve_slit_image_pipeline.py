@@ -8,6 +8,11 @@ from irsol_data_pipeline.orchestration.flows.slit_image_generation import (
     generate_daily_slit_images,
     generate_slit_images,
 )
+from irsol_data_pipeline.orchestration.flows.tags import (
+    DeploymentAutomationTag,
+    DeploymentScheduleTag,
+    DeploymentTopicTag,
+)
 
 
 def main():
@@ -15,17 +20,24 @@ def main():
     root_path = Path(__file__).parent.parent
 
     generate_slit_images_deployment = generate_slit_images.to_deployment(
-        name="full",
+        name="slit-images/full",
         parameters={"root": str(root_path / "data")},
         description="Generate slit preview images for all unprocessed measurements.",
         cron="0 4 * * *",  # Daily at 4am
-        tags=["slit-images", "top-level-pipeline"],
+        tags=[
+            DeploymentTopicTag.SLIT_IMAGE_GENERATION,
+            DeploymentScheduleTag.DAILY,
+            DeploymentAutomationTag.SCHEDULED,
+        ],
     )
 
     generate_daily_slit_images_deployment = generate_daily_slit_images.to_deployment(
-        name="daily",
+        name="slit-images/daily",
         description="Generate slit preview images for a specific observation day.",
-        tags=["slit-images"],
+        tags=[
+            DeploymentTopicTag.SLIT_IMAGE_GENERATION,
+            DeploymentAutomationTag.MANUAL,
+        ],
     )
 
     serve(

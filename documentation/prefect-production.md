@@ -32,8 +32,8 @@ graph LR
 ```
 
 - **Prefect Server**: stores flow run history, schedules, and artefacts in a local SQLite database.
-- **Processing Worker**: serves the `run-flat-field-correction-pipeline` and `run-daily-flat-field-correction-pipeline` deployments.
-- **Maintenance Worker**: serves the `delete-old-prefect-flow-runs` deployment.
+- **Processing Worker**: serves the `flat-field-correction/full` and `flat-field-correction/daily` deployments.
+- **Maintenance Worker**: serves the `cleanup` deployment.
 
 > The workers contact the Prefect server and poll for scheduled or manually triggered runs. If a worker is stopped, its deployments will not execute even if the server is running.
 
@@ -71,11 +71,11 @@ From the command line (with the Prefect server running):
 
 ```bash
 # Trigger the full dataset pipeline
-uv run prefect deployment run 'process-unprocessed-measurements/run-flat-field-correction-pipeline'
+uv run prefect deployment run 'ff-correction-full/flat-field-correction/full'
 
 # Trigger a single-day run with a specific day path
 uv run prefect deployment run \
-    'process-unprocessed-daily-measurements/run-daily-flat-field-correction-pipeline' \
+    'ff-correction-daily/flat-field-correction/daily' \
     --param day_path=/path/to/data/2025/20250312
 ```
 
@@ -85,12 +85,12 @@ When triggering a run from the UI, you can override any parameter defined in the
 
 | Parameter | Flow | Default | Description |
 |---|---|---|---|
-| `root` | `process-unprocessed-measurements` | `<repo>/data` | Dataset root path |
-| `max_delta_hours` | both flows | `2.0` | Maximum flat-field time gap in hours |
-| `max_concurrent_days_to_process` | `process-unprocessed-measurements` | CPU count − 1 (max 12) | How many days to process in parallel |
-| `day_path` | `process-unprocessed-daily-measurements` | *(required)* | Path to a single observation day directory |
-| `hours` | `delete-flow-runs-older-than` | `672` | Retention window in hours (default: 4 weeks) |
-| `interactive` | `delete-flow-runs-older-than` | `false` | Ask for confirmation before deleting (useful in CLI) |
+| `root` | `ff-correction-full` | `<repo>/data` | Dataset root path |
+| `max_delta_hours` | both ff-correction flows | `2.0` | Maximum flat-field time gap in hours |
+| `max_concurrent_days_to_process` | `ff-correction-full` | CPU count − 1 (max 12) | How many days to process in parallel |
+| `day_path` | `ff-correction-daily` | *(required)* | Path to a single observation day directory |
+| `hours` | `maintenance-cleanup` | `672` | Retention window in hours (default: 4 weeks) |
+| `interactive` | `maintenance-cleanup` | `false` | Ask for confirmation before deleting (useful in CLI) |
 
 ## Monitoring and logs
 

@@ -117,8 +117,8 @@ This registers two deployments:
 
 | Deployment name | Schedule | What it does |
 |---|---|---|
-| `slit-images-full/full` | Daily at 04:00 | Scans the whole dataset and generates slit images for all days |
-| `slit-images-daily/daily` | On demand | Generates slit images for a single observation day |
+| `slit-images-full/slit-images/full` | Daily at 04:00 | Scans the whole dataset and generates slit images for all days |
+| `slit-images-daily/slit-images/daily` | On demand | Generates slit images for a single observation day |
 
 **Trigger a run manually:**
 
@@ -128,11 +128,11 @@ From the CLI:
 
 ```bash
 # Full dataset
-uv run prefect deployment run 'slit-images-full/full'
+uv run prefect deployment run 'slit-images-full/slit-images/full'
 
 # Single day
 uv run prefect deployment run \
-    'slit-images-daily/daily' \
+    'slit-images-daily/slit-images/daily' \
     --param day_path=/path/to/data/2025/20250312
 ```
 
