@@ -27,15 +27,17 @@ def get_variable(name: PrefectVariableName, default: Any = None) -> Any:
     Returns:
         The stored variable value, or ``default`` when not found.
     """
+    not_found = object()
     with logger.contextualize(variable=name.value):
-        value = Variable.get(name.value, default=default)
-        if value == default:
+        value = Variable.get(name.value, default=not_found)
+        if value is not_found:
             logger.warning(
                 "Prefect Variable not set, using default",
                 default=default,
             )
+            value = default
         else:
-            logger.debug("Resolved Prefect Variable")
+            logger.debug("Resolved Prefect Variable", value=value)
         return value
 
 
@@ -50,12 +52,14 @@ async def aget_variable(name: PrefectVariableName, default: Any = None) -> Any:
         The stored variable value, or ``default`` when not found.
     """
     with logger.contextualize(variable=name.value):
-        value = await Variable.aget(name.value, default=default)
-        if value == default:
+        not_found = object()
+        value = await Variable.aget(name.value, default=not_found)
+        if value is not_found:
             logger.warning(
                 "Prefect Variable not set, using default",
                 default=default,
             )
+            value = default
         else:
-            logger.debug("Resolved Prefect Variable")
+            logger.debug("Resolved Prefect Variable", value=value)
         return value
