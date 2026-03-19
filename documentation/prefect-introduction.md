@@ -4,7 +4,7 @@
 
 Prefect is the orchestration layer used to run pipeline logic as managed flows and tasks.
 
-In this codebase, scientific logic remains in `core/` and `pipeline/`, while Prefect concerns (flow wiring, deployment schedules, runtime variables, and reports) live in `orchestration/` and `entrypoints/`.
+In this codebase, scientific logic remains in `core/` and `pipeline/`, while Prefect concerns (flow wiring, deployment schedules, runtime variables, and reports) live in `orchestration/` and the package CLI modules under `src/irsol_data_pipeline/cli/`. The repository-level `entrypoints/` files are thin wrappers kept for local development and backwards compatibility.
 
 ```mermaid
 flowchart LR
@@ -100,20 +100,23 @@ def demo_pipeline_full(
     return results
 ```
 
-### 2. Deployment entrypoint with hardcoded defaults
+### 2. Deployment CLI module with hardcoded defaults
 
 ```python
 from __future__ import annotations
 
-from pathlib import Path
-
-from prefect import serve
-
-from irsol_data_pipeline.orchestration.flows.demo_pipeline import demo_pipeline_full
-
-
 def main() -> None:
-    root_path = Path(__file__).parent.parent
+    import os
+
+    os.environ.setdefault("PREFECT_ENABLED", "true")
+
+    from pathlib import Path
+
+    from prefect import serve
+
+    from irsol_data_pipeline.orchestration.flows.demo_pipeline import demo_pipeline_full
+
+    root_path = Path.cwd()
 
     deployment = demo_pipeline_full.to_deployment(
         name="demo-pipeline-full",
@@ -132,6 +135,8 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 ```
+
+In the real project, this code lives in `src/irsol_data_pipeline/cli/`. Any corresponding file under `entrypoints/` is only a thin wrapper that imports and runs the CLI module.
 
 ### 3. Trigger behavior
 

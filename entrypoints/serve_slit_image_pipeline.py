@@ -1,50 +1,14 @@
-"""Serve the slit image generation Prefect deployments."""
+"""Thin shim — delegates to irsol_data_pipeline.cli.serve_slit_images.
 
-from pathlib import Path
+Run via the package console script or directly during development:
 
-from prefect import serve
+    irsol-serve-slit-images
+    PREFECT_ENABLED=true uv run entrypoints/serve_slit_image_pipeline.py
+"""
 
-from irsol_data_pipeline.orchestration.flows.slit_image_generation import (
-    generate_daily_slit_images,
-    generate_slit_images,
-)
-from irsol_data_pipeline.orchestration.flows.tags import (
-    DeploymentAutomationTag,
-    DeploymentScheduleTag,
-    DeploymentTopicTag,
-)
+from __future__ import annotations
 
-
-def main():
-
-    root_path = Path(__file__).parent.parent
-
-    generate_slit_images_deployment = generate_slit_images.to_deployment(
-        name="slit-images-full",
-        parameters={"root": str(root_path / "data")},
-        description="Generate slit preview images for all unprocessed measurements.",
-        cron="0 4 * * *",  # Daily at 4am
-        tags=[
-            DeploymentTopicTag.SLIT_IMAGES.value,
-            DeploymentScheduleTag.DAILY.value,
-            DeploymentAutomationTag.SCHEDULED.value,
-        ],
-    )
-
-    generate_daily_slit_images_deployment = generate_daily_slit_images.to_deployment(
-        name="slit-images-daily",
-        description="Generate slit preview images for a specific observation day.",
-        tags=[
-            DeploymentTopicTag.SLIT_IMAGES.value,
-            DeploymentAutomationTag.MANUAL.value,
-        ],
-    )
-
-    serve(
-        generate_slit_images_deployment,
-        generate_daily_slit_images_deployment,
-    )
-
+from irsol_data_pipeline.cli.serve_slit_images import main
 
 if __name__ == "__main__":
     main()

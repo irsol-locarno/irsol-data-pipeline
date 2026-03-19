@@ -21,11 +21,16 @@ flowchart LR
 Commands:
 
 ```bash
-make prefect/dashboard
-make prefect/serve-flat-field-correction-pipeline
-make prefect/serve-slit-image-pipeline
-make prefect/serve-maintenance-pipeline
+irsol-dashboard
+irsol-serve-flat-field-correction
+irsol-serve-slit-images
+irsol-serve-maintenance
+
 ```
+
+The `irsol-*` commands are the package-installed production interface. The
+`make` targets remain convenient wrappers when operating from a repository
+checkout.
 
 ## Operational Guidance
 

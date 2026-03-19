@@ -21,6 +21,13 @@ dependencies = [
     "matplotlib>=3.7.0",
 ]
 
+[project.scripts]
+irsol-configure = "irsol_data_pipeline.cli.bootstrap_variables:app"
+irsol-dashboard = "irsol_data_pipeline.cli.dashboard:main"
+irsol-serve-flat-field-correction = "irsol_data_pipeline.cli.serve_flat_field_correction:main"
+irsol-serve-slit-images = "irsol_data_pipeline.cli.serve_slit_images:main"
+irsol-serve-maintenance = "irsol_data_pipeline.cli.serve_maintenance:main"
+
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
@@ -33,10 +40,11 @@ packages = ["src/irsol_data_pipeline"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
-    "/tests",
-    "/htmlcov",
     "/documentation",
+    "/entrypoints/dev",
+    "/htmlcov",
     "/README.md",
+    "/tests",
     "/uv.lock",
 ]
 

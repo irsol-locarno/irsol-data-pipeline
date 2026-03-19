@@ -25,8 +25,11 @@ flowchart TD
 Bootstrap or refresh:
 
 ```bash
-uv run entrypoints/bootstrap_variables.py
+irsol-configure
 ```
+
+The package-installed command is the canonical interface. The repository-local
+script under `entrypoints/` is a thin wrapper around the same implementation.
 
 | Variable name | Typical flow parameter |
 |---|---|
@@ -37,11 +40,16 @@ uv run entrypoints/bootstrap_variables.py
 ## Local Prefect Commands
 
 ```bash
-make prefect/dashboard
-make prefect/serve-flat-field-correction-pipeline
-make prefect/serve-slit-image-pipeline
-make prefect/serve-maintenance-pipeline
+irsol-dashboard
+irsol-serve-flat-field-correction
+irsol-serve-slit-images
+irsol-serve-maintenance
+
 ```
+
+When the project is installed from a package, use the `irsol-*` commands.
+Inside a repository checkout, the `make` targets and `entrypoints/` wrappers
+continue to work and call the same underlying code.
 
 ## Deployment Triggers (CLI)
 

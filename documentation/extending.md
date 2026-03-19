@@ -49,7 +49,8 @@ def my_flow(root: str) -> None:
     ...
 ```
 
-Serve with an entrypoint script and `.to_deployment(name=...)`.
+Serve with a CLI module under `src/irsol_data_pipeline/cli/` and `.to_deployment(name=...)`.
+If needed, add a thin wrapper in `entrypoints/` that imports and runs the CLI module for local `uv run entrypoints/...` usage.
 
 ## 6. Naming Conventions (Current)
 
@@ -63,7 +64,7 @@ Serve with an entrypoint script and `.to_deployment(name=...)`.
 ## 7. Add Dynamic Runtime Parameters
 
 1. Add variable enum in `orchestration/variables.py`.
-2. Register bootstrap prompt in `entrypoints/bootstrap_variables.py`.
+2. Register bootstrap prompt in `src/irsol_data_pipeline/cli/bootstrap_variables.py`.
 3. Resolve flow parameter first, then Prefect Variable fallback.
 
 See [running.md](running.md) for the central runtime policy.

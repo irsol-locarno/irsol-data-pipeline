@@ -4,22 +4,30 @@
 
 - Keep scientific logic reusable without orchestration runtime.
 - Isolate I/O formats from science algorithms.
-- Keep Prefect concerns inside `orchestration/` and entrypoints.
+- Keep Prefect concerns inside `orchestration/`, with package-installed command implementations in `cli/`.
 
 ## High-Level Structure
 
 ```mermaid
 flowchart TB
-    CORE["core\nscience + models + slit geometry"]
-    IO["io\nformat adapters"]
-    PIPE["pipeline\ndataset/day/measurement orchestration"]
-    ORCH["orchestration\nPrefect flows, variables, logging bridge"]
-    ENTRY["entrypoints\nserve and CLI scripts"]
+    CORE["core
+    science + models + slit geometry"]
+    IO["io
+    format adapters"]
+    PIPE["pipeline
+    dataset/day/measurement orchestration"]
+    ORCH["orchestration
+    Prefect flows, variables, logging bridge"]
+    CLI["cli
+    package-installed command entry points"]
+    ENTRY["entrypoints
+    thin compatibility wrappers"]
 
     CORE --> PIPE
     IO --> PIPE
     PIPE --> ORCH
-    ORCH --> ENTRY
+    ORCH --> CLI
+    CLI --> ENTRY
 ```
 
 ## Source Tree (Current)
@@ -66,6 +74,12 @@ src/irsol_data_pipeline/
 │       └── maintenance/
 │           ├── delete_old_prefect_data.py
 │           └── delete_old_cache_files.py
+├── cli/
+│   ├── bootstrap_variables.py
+│   ├── dashboard.py
+│   ├── serve_flat_field_correction.py
+│   ├── serve_maintenance.py
+│   └── serve_slit_images.py
 ├── plotting/
 │   ├── profile.py
 │   └── slit.py
@@ -73,6 +87,12 @@ src/irsol_data_pipeline/
 ├── logging_config.py
 └── version.py
 ```
+
+## Command Layout
+
+- `src/irsol_data_pipeline/cli/` contains the real implementation for package-installed commands such as `irsol-dashboard` and the Prefect serve commands.
+- `entrypoints/` remains in the repository for local development convenience and backwards compatibility with existing `uv run entrypoints/...` usage.
+- The files in `entrypoints/` are thin wrappers that delegate to the corresponding modules in `src/irsol_data_pipeline/cli/`.
 
 ## Execution Paths
 
@@ -88,6 +108,8 @@ src/irsol_data_pipeline/
 - `core/` has no file-format policy and no scheduling policy.
 - `io/` does not perform scientific transformations.
 - `pipeline/` contains process logic but no Prefect deployment definitions.
-- `orchestration/` and `entrypoints/` own deployment names, schedules, and serving.
+- `orchestration/` owns flow wiring and deployment construction.
+- `cli/` owns package-installed command implementations for serving, dashboard startup, and Prefect variable bootstrapping.
+- `entrypoints/` exposes thin compatibility shims over `cli/` for repository-local execution.
 
 For direct Python usage patterns, see [library-usage.md](library-usage.md).

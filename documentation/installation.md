@@ -39,6 +39,20 @@ uv add irsol-data-pipeline
 
 This installs `irsol-data-pipeline` from the Python Package Index (PyPI) like any other dependency.
 
+Installed package commands:
+
+```bash
+irsol-configure
+irsol-dashboard
+irsol-serve-flat-field-correction
+irsol-serve-slit-images
+irsol-serve-maintenance
+```
+
+These commands are implemented in `src/irsol_data_pipeline/cli/`. Repository
+files under `entrypoints/` are thin wrappers for development-time use from a
+checkout.
+
 ## Available Make targets
 
 ```bash
@@ -51,3 +65,6 @@ make prefect/serve-maintenance-pipeline        # Serve the maintenance deploymen
 make prefect/reset                             # Reset the local Prefect database
 make clean                                     # Remove __pycache__ and .pyc files
 ```
+
+These `make` targets are mainly for repository-local development. When the
+project is installed as a package, use the `irsol-*` commands above instead.
