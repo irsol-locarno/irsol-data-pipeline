@@ -309,7 +309,12 @@ def main(
                     )
                     continue
 
-                Variable.set(config.prefect_name.value, new_value, overwrite=True)
+                Variable.set(
+                    config.prefect_name.value,
+                    new_value,
+                    overwrite=True,
+                    tags=[tag.value for tag in config.topic_tags],
+                )
                 typer.secho(
                     f"  v Updated '{config.prefect_name.value}'",
                     fg=typer.colors.GREEN,
@@ -361,7 +366,12 @@ def main(
                 )
                 continue
 
-            Variable.set(config.prefect_name.value, value, overwrite=True)
+            Variable.set(
+                config.prefect_name.value,
+                value,
+                overwrite=True,
+                tags=[tag.value for tag in config.topic_tags],
+            )
             typer.secho(
                 f"  v Set '{config.prefect_name.value}'",
                 fg=typer.colors.GREEN,
