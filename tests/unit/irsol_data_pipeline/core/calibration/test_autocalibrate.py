@@ -14,8 +14,13 @@ class TestAutocalibrate:
 
     def test_calibrate_measurement(self, stokes: StokesParameters):
         result = calibrate_measurement(stokes)
-        assert pytest.approx(result.pixel_scale) == 0.023448466826962687
-        assert pytest.approx(result.wavelength_offset) == 5872.047381861239
-        assert pytest.approx(result.pixel_scale_error) == 0.00017740790053598606
-        assert pytest.approx(result.wavelength_offset_error) == 0.08647920052112987
+        assert pytest.approx(result.pixel_scale, rel=1e-8) == 0.023448466826962687
+        assert pytest.approx(result.wavelength_offset, rel=1e-8) == 5872.047381861239
+        assert (
+            pytest.approx(result.pixel_scale_error, rel=1e-8) == 0.00017740790053598606
+        )
+        assert (
+            pytest.approx(result.wavelength_offset_error, rel=1e-8)
+            == 0.08647920052112987
+        )
         assert result.reference_file == "ref_data5886_irsol.npy"
