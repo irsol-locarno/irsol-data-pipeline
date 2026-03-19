@@ -1,6 +1,7 @@
 # IRSOL Data Pipeline
 
 [![CI](https://github.com/irsol-locarno/irsol-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/irsol-locarno/irsol-data-pipeline/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/irsol-data-pipeline.svg?icon=si%3Apython)](https://badge.fury.io/py/irsol-data-pipeline)
 
 IRSOL Data Pipeline processes reduced ZIMPOL spectro-polarimetric observations and produces calibrated scientific outputs and operational artifacts.
 
