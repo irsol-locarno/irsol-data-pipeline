@@ -113,7 +113,7 @@ def generate_slit_images(
         return []
 
     dataset_root = Path(root)
-    logger.info("Starting slit image generation", root=root)
+    logger.info("Starting slit image generation", root=root, jsoc_email=email)
 
     observation_days = scan_observation_days_task(root=dataset_root)
     logger.info(
@@ -190,6 +190,13 @@ def generate_daily_slit_images(
         return DayProcessingResult(
             day_name=Path(day_path).name, errors=["No JSOC email"]
         )
+
+    logger.info(
+        "Starting day slit generation",
+        day=day_path.name,
+        jsoc_email=email,
+        use_limbguider=use_limbguider,
+    )
 
     path = Path(day_path)
     day = ObservationDay(

@@ -37,7 +37,7 @@ def get_variable(name: PrefectVariableName, default: Any = None) -> Any:
             )
             value = default
         else:
-            logger.debug("Resolved Prefect Variable", value=value)
+            logger.info("Resolved Prefect Variable", value=value)
         return value
 
 
@@ -61,5 +61,5 @@ async def aget_variable(name: PrefectVariableName, default: Any = None) -> Any:
             )
             value = default
         else:
-            logger.debug("Resolved Prefect Variable", value=value)
+            logger.info("Resolved Prefect Variable", value=value)
         return value
