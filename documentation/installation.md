@@ -11,18 +11,33 @@ Install `uv` if you don't have it:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## Set up the environment
+## Install For Development (Editable)
+
+Use this path if you want to contribute to the repository.
 
 ```bash
 # Clone the repository (if not already done)
 git clone <repo-url>
 cd irsol-data-pipeline
 
-# Create a virtual environment and install all dependencies
+# Create a virtual environment and install project + all dev dependencies in editable mode
 uv sync
 ```
 
-All commands in this guide use `uv run <script>` which automatically activates the virtual environment.
+With `uv sync`, the local package is installed from the working tree, so source code changes are immediately picked up without reinstalling.
+
+All commands in this guide use `uv run <script>` which automatically uses the project virtual environment.
+
+## Install From PyPI (As A Dependency)
+
+Use this path when consuming the package in another project.
+
+```bash
+# In your target project
+uv add irsol-data-pipeline
+```
+
+This installs `irsol-data-pipeline` from the Python Package Index (PyPI) like any other dependency.
 
 ## Available Make targets
 

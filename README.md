@@ -29,6 +29,8 @@ uv sync
 uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat
 ```
 
+For installation options (editable development install from a clone, or dependency install from PyPI with `uv add irsol-data-pipeline`), see [documentation/installation.md](documentation/installation.md).
+
 ## Documentation
 
 Use this section as the canonical traversal path.
