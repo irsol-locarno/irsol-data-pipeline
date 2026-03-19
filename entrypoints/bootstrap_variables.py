@@ -2,7 +2,7 @@
 
 Run this script once before serving any deployments:
 
-    uv run entrypoints/bootstap_variables.py
+    uv run entrypoints/bootstrap_variables.py
 
 It collects values interactively (optionally pre-filled with configured defaults)
 and stores them as Prefect Variables for use in flows and deployments.

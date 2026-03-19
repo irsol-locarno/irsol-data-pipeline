@@ -99,7 +99,7 @@ Managed Prefect Variables:
 Bootstrap or refresh these values with:
 
 ```bash
-uv run entrypoints/bootstap_variables.py
+uv run entrypoints/bootstrap_variables.py
 ```
 
 You can still override any flow parameter from the UI or CLI for an individual run.

@@ -32,7 +32,7 @@ Baseline dynamic values should be managed in Prefect Variables, not hardcoded in
 Managed Prefect Variables are bootstrapped with:
 
 ```bash
-uv run entrypoints/bootstap_variables.py
+uv run entrypoints/bootstrap_variables.py
 ```
 
 Managed variable names:

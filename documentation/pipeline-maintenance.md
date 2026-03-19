@@ -99,5 +99,5 @@ Use one of these two mechanisms:
 To bootstrap or refresh baseline values:
 
 ```bash
-uv run entrypoints/bootstap_variables.py
+uv run entrypoints/bootstrap_variables.py
 ```

@@ -117,7 +117,7 @@ For parameters that should be configurable at runtime (for example retention win
 Pattern:
 
 1. Add a canonical name to `PrefectVariableName` in `orchestration/variables.py`.
-2. Register it in `entrypoints/bootstap_variables.py` so operators can manage it centrally.
+2. Register it in `entrypoints/bootstrap_variables.py` so operators can manage it centrally.
 3. Resolve it in flows via `get_variable(...)` when the run parameter is omitted.
 4. Keep per-run overrides possible via normal flow parameters.
 

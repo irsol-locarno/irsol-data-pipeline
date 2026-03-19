@@ -51,7 +51,7 @@ A JSOC email address is required to query the DRMS service. Register for free at
 Set it as the Prefect Variable `jsoc-email` before serving the deployments:
 
 ```bash
-uv run entrypoints/bootstap_variables.py
+uv run entrypoints/bootstrap_variables.py
 make prefect/serve-slit-image-pipeline
 ```
 
