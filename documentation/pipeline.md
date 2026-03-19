@@ -6,7 +6,7 @@ The repository implements three independent pipelines. Each runs against the sam
 |---|---|---|---|
 | **Flat-field correction** | Correct and calibrate raw Stokes `.dat` measurements → FITS | Daily at 01:00 | [pipeline-flat-field-correction.md](pipeline-flat-field-correction.md) |
 | **Slit image generation** | Generate 6-panel SDO context images with slit overlay | Daily at 04:00 | [pipeline-slit-image-generation.md](pipeline-slit-image-generation.md) |
-| **Prefect maintenance** | Delete old Prefect flow run history | Daily at 00:00 | [pipeline-maintenance.md](pipeline-maintenance.md) |
+| **Prefect maintenance** | Delete old Prefect flow runs and stale cache `.pkl` files | Daily (00:00, 00:30) | [pipeline-maintenance.md](pipeline-maintenance.md) |
 
 The flat-field correction and slit image generation pipelines are **independent**: they can run in any order and operate on the same input files without interfering with each other.
 

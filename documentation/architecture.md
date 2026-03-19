@@ -9,6 +9,7 @@ irsol-data-pipeline/
 ├── entrypoints/                   # Thin executable scripts (CLI and deployment bootstrap)
 │   ├── serve_flat_field_correction_pipeline.py   # Start Prefect processing deployments
 │   ├── serve_prefect_maintenance.py              # Start Prefect maintenance deployment
+│   ├── serve_slit_image_pipeline.py               # Start slit-image Prefect deployments
 │   ├── process_single_measurement.py             # Process one .dat file from a terminal
 │   └── plot_fits_profile.py                      # Visualise a processed FITS file
 │
@@ -48,8 +49,12 @@ irsol-data-pipeline/
 │   │   ├── retry.py               # Retry helper for Prefect tasks
 │   │   ├── utils.py               # Prefect artifact helpers
 │   │   └── flows/
-│   │       ├── flat_field_correction.py   # Main processing flows
-│   │       └── delete_old_prefect_data.py # Maintenance flow
+│   │       ├── flat_field_correction.py   # Main flat-field correction flows
+│   │       ├── slit_image_generation.py   # Main slit-image generation flows
+│   │       ├── tags.py                    # Shared deployment tag enums
+│   │       └── maintenance/
+│   │           ├── delete_old_prefect_data.py # Prefect run-history cleanup flow
+│   │           └── delete_old_cache_files.py  # processed/_cache and _sdo_cache cleanup flows
 │   │
 │   ├── plotting/
 │   │   └── profile.py             # Matplotlib Stokes profile plots

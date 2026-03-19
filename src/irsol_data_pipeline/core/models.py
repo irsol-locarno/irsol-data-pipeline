@@ -522,6 +522,28 @@ class DayProcessingResult(BaseModel):
         return self.processed + self.skipped + self.failed
 
 
+class CacheCleanupDayResult(BaseModel):
+    """Summary of cache-file cleanup performed for one observation day.
+
+    Attributes:
+        day_name: Observation day folder name.
+        checked_files: Number of ``.pkl`` files found in cache directories.
+        deleted_files: Number of stale files successfully deleted.
+        skipped_recent_files: Number of recent files kept because they are
+            still within the retention window.
+        failed_files: Number of files that could not be deleted due to an
+            OS error.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    day_name: str
+    checked_files: int = 0
+    deleted_files: int = 0
+    skipped_recent_files: int = 0
+    failed_files: int = 0
+
+
 class ScanResult(BaseModel):
     """Result of scanning a dataset root."""
 

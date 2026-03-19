@@ -1,27 +1,41 @@
 # Prefect Maintenance Pipeline
 
-The maintenance pipeline is a housekeeping flow that deletes old Prefect flow run history. It keeps the local Prefect database small and prevents unbounded growth over time.
+The maintenance pipeline provides housekeeping flows for:
+
+- deleting old Prefect flow run history;
+- deleting stale cache ``.pkl`` files in day-level processed cache folders.
+
+This keeps both the local Prefect database and the on-disk cache footprint bounded over time.
 
 ## What it does
 
 ```mermaid
 flowchart TD
-    A["Query Prefect DB for flow runs
-older than retention cutoff
-(default: 4 weeks)"] --> B{"Any runs found?"}
-    B -->|No| C["Exit — nothing to delete"]
-    B -->|Yes| D["Delete each flow run by ID
-(up to 4 deletions in parallel)"]
-    D --> E["Log count of deleted runs"]
+    subgraph A["Flow 1: Prefect run cleanup"]
+        A1["Query Prefect DB for flow runs older than retention cutoff
+        (default: 4 weeks)"] --> A2{"Any runs found?"}
+        A2 -->|No| A3["Exit"]
+        A2 -->|Yes| A4["Delete each flow run by ID"]
+    end
+
+    subgraph B["Flow 2: Cache file cleanup"]
+        B1["Discover all observation day folders under root"] --> B2["Dispatch daily subflow per day"]
+        B2 --> B3["Inspect processed/_cache and processed/_sdo_cache"]
+        B3 --> B4["Delete .pkl files older than retention cutoff
+        (default: 4 weeks)"]
+    end
 ```
 
-The retention window is configurable. The default is 672 hours (4 weeks).
+The retention window is configurable. The default is 672 hours (4 weeks) for both flows.
 
 When `interactive=True` (useful for manual CLI runs), it prints the list of run IDs and asks for confirmation before deleting.
 
 ## Output
 
-No files are written. The flow modifies the Prefect internal database only.
+The maintenance flows:
+
+- modify Prefect internal database state (run-history cleanup);
+- delete stale cache files from day-level ``processed/_cache`` and ``processed/_sdo_cache`` folders.
 
 
 ## Running
@@ -40,11 +54,12 @@ make prefect/dashboard
 make prefect/serve-maintenance-pipeline
 ```
 
-This registers one deployment:
+This registers two deployments:
 
 | Deployment name | Schedule | What it does |
 |---|---|---|
 | `maintenance-cleanup/cleanup` | Daily at 00:00 | Deletes flow runs older than the retention window |
+| `maintenance-cache-cleanup/cache-cleanup` | Daily at 00:30 | Deletes stale `.pkl` files in `processed/_cache` and `processed/_sdo_cache` |
 
 **Trigger a run manually:**
 
@@ -54,23 +69,39 @@ From the CLI:
 
 ```bash
 uv run prefect deployment run 'maintenance-cleanup/cleanup'
+uv run prefect deployment run 'maintenance-cache-cleanup/cache-cleanup'
 ```
 
 **Runtime parameters:**
+
+`maintenance-cleanup/cleanup`
 
 | Parameter | Default | Description |
 |---|---|---|
 | `hours` | `672` | Retention window in hours (672 h = 4 weeks) |
 | `interactive` | `false` | If `true`, ask for confirmation before deleting (useful in CLI) |
 
+`maintenance-cache-cleanup/cache-cleanup`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `root` | `<repo>/data` | Dataset root to scan (`<root>/<year>/<day>`) |
+| `hours` | `672` | Delete only `.pkl` cache files older than this retention window |
+
 ### Changing the retention window
 
-Override `hours` at run time from the UI or CLI, or edit the default in `entrypoints/serve_prefect_maintenance.py`:
+Override `hours` at run time from the UI or CLI, or edit defaults in `entrypoints/serve_prefect_maintenance.py`:
 
 ```python
 delete_old_prefect_data_deployment = delete_flow_runs_older_than.to_deployment(
     name="cleanup",
     parameters={"hours": 24 * 7 * 2, "interactive": False},  # 2 weeks
+    ...
+)
+
+delete_old_cache_files_deployment = delete_old_cache_files.to_deployment(
+    name="cache-cleanup",
+    parameters={"root": str(root_path / "data"), "hours": 24 * 7 * 2},
     ...
 )
 ```
