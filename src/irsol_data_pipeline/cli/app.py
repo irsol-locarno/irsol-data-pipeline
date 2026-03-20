@@ -26,6 +26,11 @@ app.command(
     name="prefect",
     help="Run Prefect server commands through the unified CLI.",
 )
+app.command(
+    "irsol_data_pipeline.cli.plot:plot_app",
+    name="plot",
+    help="Render plots from observation files.",
+)
 
 
 def main() -> None:
