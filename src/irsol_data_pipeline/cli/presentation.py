@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import platform
+import shutil
 
 from irsol_data_pipeline.version import __version__ as pipeline_version
 from irsol_data_pipeline.version import (
@@ -18,11 +19,64 @@ TITLE_ART = r"""
                                                                       /_/       /_/
 """
 
+COMPACT_TITLE = r"""
+             _  ___  ___  ___  _
+            | || . \/ __>| . || |
+            | ||   /\__ \| | || |_
+   _        |_||_\_\<___/`___'|___|         _  _
+ _| | ___ _| |_ ___  ___  ___ <_> ___  ___ | |<_>._ _  ___
+/ . |<_> | | | <_> ||___|| . \| || . \/ ._>| || || ' |/ ._>
+\___|<___| |_| <___|     |  _/|_||  _/\___.|_||_||_|_|\___.
+                         |_|     |_|
+"""
+
+TITLE_VARIANTS: tuple[str, ...] = (
+    TITLE_ART,
+    COMPACT_TITLE,
+)
+
 _DISTRIBUTIONS: tuple[str, ...] = (
     "spectroflat",
     "numpy",
     "pydantic",
 )
+
+
+def _detect_terminal_columns() -> int:
+    """Detect terminal width in columns.
+
+    Returns:
+        Number of terminal columns, using a fallback when width is unavailable.
+    """
+    return shutil.get_terminal_size(fallback=(120, 24)).columns
+
+
+def _title_width(title: str) -> int:
+    """Compute the display width of a multi-line title.
+
+    Args:
+        title: ASCII art or plain-text title.
+
+    Returns:
+        Width of the longest non-empty line.
+    """
+    return max((len(line) for line in title.splitlines() if line.strip()), default=0)
+
+
+def _select_title() -> str:
+    """Select the title variant based on detected terminal width.
+
+    Returns:
+        Largest title variant that fits in the current terminal width.
+        If none fits, an empty string is returned.
+    """
+    terminal_columns = _detect_terminal_columns()
+    fitting_titles = [
+        title for title in TITLE_VARIANTS if _title_width(title) <= terminal_columns
+    ]
+    if fitting_titles:
+        return max(fitting_titles, key=_title_width)
+    return ""
 
 
 def _detect_operating_system() -> str:
@@ -50,7 +104,7 @@ def build_runtime_presentation() -> str:
     label_width = max(len(distribution_name) for distribution_name in _DISTRIBUTIONS)
 
     lines = [
-        TITLE_ART,
+        _select_title(),
         f"irsol-data-pipeline v{pipeline_version}",
         "",
         "Runtime",
