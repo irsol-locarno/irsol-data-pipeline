@@ -26,7 +26,8 @@ from irsol_data_pipeline.core.slit_images.coordinates import SlitGeometry
 def plot(
     maps: list[tuple[Optional[str], Optional[sunpy.map.Map]]],
     slit: SlitGeometry,
-    output_path: Path,
+    output_path: Path | None,
+    show: bool = False,
     show_mu_text: bool = True,
     show_mu_graphic: bool = True,
 ) -> None:
@@ -35,11 +36,20 @@ def plot(
     Args:
         maps: List of (time_string, SunPy Map) tuples from :func:`fetch_sdo_maps`.
         slit: Computed slit geometry.
-        output_path: Path to save the output PNG.
+        output_path: Optional path to save the output PNG.
+        show: Whether to display the rendered figure interactively.
         show_mu_text: Whether to show mu value in the figure title.
         show_mu_graphic: Whether to draw the mu iso-contour circle.
+
+    Raises:
+        ValueError: If neither output_path nor show is requested.
     """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if output_path is None and not show:
+        raise ValueError("One of output_path or show must be requested.")
+
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     xx = [slit.slit_x_start, slit.slit_x_end] * u.arcsec
     yy = [slit.slit_y_start, slit.slit_y_end] * u.arcsec
@@ -170,9 +180,12 @@ def plot(
             size="medium",
         )
 
-    plt.savefig(str(output_path))
+    if output_path is not None:
+        plt.savefig(str(output_path))
+        logger.info("Slit preview saved", output_path=output_path)
+    if show:
+        plt.show()
     plt.close(fig)
-    logger.info("Slit preview saved", output_path=output_path)
 
 
 def _plot_panel(

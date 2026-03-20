@@ -59,13 +59,14 @@ process, see [prefect-production.md](prefect-production.md#why-three-serve-proce
 
 ## Local Plot Commands
 
-Use the `plot` sub-command to load a `.dat` or `.sav` measurement and render the
-four-panel Stokes profile visualization.
+Use the `plot` sub-command to load a `.dat`, `.sav`, or FITS measurement and
+render the four-panel Stokes profile visualization.
 
 ```bash
 idp plot profile /path/to/measurement.dat --show
 idp plot profile /path/to/measurement.dat --output-path profile.png
 idp plot profile /path/to/measurement.dat --show --output-path profile.png
+idp plot profile /path/to/measurement_corrected.fits --output-path profile.png
 ```
 
 At least one of `--show` or `--output-path` must be provided.
