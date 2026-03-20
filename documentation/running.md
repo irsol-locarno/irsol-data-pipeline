@@ -25,7 +25,7 @@ flowchart TD
 Bootstrap or refresh:
 
 ```bash
-idp variables configure
+idp prefect variables configure
 ```
 
 The package-installed unified CLI is the canonical interface.
@@ -40,17 +40,17 @@ The package-installed unified CLI is the canonical interface.
 ## Local Prefect Commands
 
 ```bash
-uv run prefect server start
-idp flows serve flat-field-correction
-idp flows serve slit-images
-idp flows serve maintenance
+idp prefect start
+idp prefect flows serve flat-field-correction
+idp prefect flows serve slit-images
+idp prefect flows serve maintenance
 
 ```
 
 When the project is installed from a package, use `idp`. Inside a repository
 checkout, the `make` targets call the same underlying CLI.
 
-Run each `idp flows serve ...` command as a separate long-lived process. For the
+Run each `idp prefect flows serve ...` command as a separate long-lived process. For the
 design rationale and operational trade-offs versus a single combined serve
 process, see [prefect-production.md](prefect-production.md#why-three-serve-processes).
 
