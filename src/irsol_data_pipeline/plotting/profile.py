@@ -1,4 +1,10 @@
-from typing import Optional
+"""Profile plotting helpers for Stokes parameter measurements."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Literal
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -6,24 +12,60 @@ from matplotlib import pyplot as plt
 from irsol_data_pipeline.core.models import StokesParameters
 
 
+def _resolve_vrange(
+    vrange: Sequence[float] | Literal[False],
+) -> Sequence[float] | None:
+    """Resolve an optional plotting range into explicit bounds.
+
+    Args:
+        vrange: User-supplied plotting range or ``False`` for auto behavior.
+    Returns:
+        Explicit `[vmin, vmax]` bounds or `None` when matplotlib should use its
+        default scaling.
+    """
+
+    if vrange is False:
+        return None
+    return vrange
+
+
+def _require_vrange(vrange: Sequence[float] | Literal[False]) -> Sequence[float]:
+    """Return explicit plotting bounds after auto-range resolution.
+
+    Args:
+        vrange: User-supplied or auto-resolved plotting range.
+
+    Returns:
+        Explicit `[vmin, vmax]` bounds.
+
+    Raises:
+        ValueError: If no explicit range is available.
+    """
+
+    if vrange is False:
+        raise ValueError("Expected explicit plotting range.")
+    return vrange
+
+
 def plot(
     data: StokesParameters,
     /,
-    vrange_si=False,
-    vrange_sq=False,
-    vrange_su=False,
-    vrange_sv=False,
-    title=None,
-    filename_save=None,
-    pix_low=None,
-    pix_high=None,
-    pix_quiet_low=None,
-    pix_quiet_high=None,
-    alpha_px=0.21,
-    colors_lines=["tab:blue", "tab:orange", "tab:green", "tab:red"],
-    a0: Optional[float] = None,
-    a1: Optional[float] = None,
-):
+    vrange_si: Sequence[float] | Literal[False] = False,
+    vrange_sq: Sequence[float] | Literal[False] = False,
+    vrange_su: Sequence[float] | Literal[False] = False,
+    vrange_sv: Sequence[float] | Literal[False] = False,
+    title: str | None = None,
+    filename_save: str | Path | None = None,
+    pix_low: Sequence[float] | None = None,
+    pix_high: Sequence[float] | None = None,
+    pix_quiet_low: Sequence[float] | None = None,
+    pix_quiet_high: Sequence[float] | None = None,
+    alpha_px: float = 0.21,
+    colors_lines: Sequence[str] | None = None,
+    a0: float | None = None,
+    a1: float | None = None,
+    show: bool = False,
+) -> None:
     """Plot the four Stokes components for a measurement.
 
     The function expects 2D Stokes arrays with shape
@@ -52,9 +94,13 @@ def plot(
         a1: Wavelength dispersion in Angstrom per pixel. When both ``a0`` and
             ``a1`` are provided, the x-axis is displayed in Angstrom instead of
             pixels.
+        show: Display the figure interactively after rendering.
     """
 
     si, sq, su, sv = data
+    if colors_lines is None:
+        colors_lines = ["tab:blue", "tab:orange", "tab:green", "tab:red"]
+
     ### If no TCU has been used, then Q, U and V might have an offset that has to be considered for vrange
     if vrange_sq is False:
         dq = 0.01
@@ -68,6 +114,10 @@ def plot(
         dv = 0.01
         mean_sv = np.mean(sv)
         vrange_sv = [mean_sv - dv, mean_sv + dv]
+    resolved_vrange_si = _resolve_vrange(vrange_si)
+    resolved_vrange_sq = _require_vrange(vrange_sq)
+    resolved_vrange_su = _require_vrange(vrange_su)
+    resolved_vrange_sv = _require_vrange(vrange_sv)
 
     # Create the figure with the four Stokes components
     plt.rcParams["font.size"] = 16
@@ -89,7 +139,7 @@ def plot(
     extent = [wavelength_min, wavelength_max, spatial_min, spatial_max]
 
     ## Plot Stokes I
-    if vrange_si is False:
+    if resolved_vrange_si is None:
         im0 = axes[0].imshow(
             si, cmap="gist_gray", aspect="auto", extent=extent, origin="lower"
         )
@@ -100,8 +150,8 @@ def plot(
             aspect="auto",
             extent=extent,
             origin="lower",
-            vmin=vrange_si[0],
-            vmax=vrange_si[1],
+            vmin=resolved_vrange_si[0],
+            vmax=resolved_vrange_si[1],
         )
     axes[0].set_ylabel("Spatial dimension [px]")
     axes[0].text(
@@ -122,8 +172,8 @@ def plot(
         cmap="gist_gray",
         aspect="auto",
         extent=extent,
-        vmin=vrange_sq[0],
-        vmax=vrange_sq[1],
+        vmin=resolved_vrange_sq[0],
+        vmax=resolved_vrange_sq[1],
         origin="lower",
     )
     axes[1].set_ylabel("Spatial dimension [px]")
@@ -145,8 +195,8 @@ def plot(
         cmap="gist_gray",
         aspect="auto",
         extent=extent,
-        vmin=vrange_su[0],
-        vmax=vrange_su[1],
+        vmin=resolved_vrange_su[0],
+        vmax=resolved_vrange_su[1],
         origin="lower",
     )
     axes[2].set_ylabel("Spatial dimension [px]")
@@ -168,8 +218,8 @@ def plot(
         cmap="gist_gray",
         aspect="auto",
         extent=extent,
-        vmin=vrange_sv[0],
-        vmax=vrange_sv[1],
+        vmin=resolved_vrange_sv[0],
+        vmax=resolved_vrange_sv[1],
         origin="lower",
     )
     axes[3].set_xlabel(str_wlt_axis)
@@ -282,4 +332,8 @@ def plot(
 
     # Improve overall appearance
     plt.tight_layout(h_pad=-0.7, w_pad=0)
-    plt.savefig(filename_save, dpi=100, bbox_inches="tight")
+    if filename_save is not None:
+        fig.savefig(filename_save, dpi=100, bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close(fig)

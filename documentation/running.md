@@ -5,6 +5,9 @@ This page is the single source of truth for:
 - deployment names;
 - runtime parameter and Prefect Variable resolution.
 
+The unified CLI also includes a `plot` sub-command for quick inspection of raw
+ZIMPOL measurements without writing custom Python scripts.
+
 ## Runtime Resolution Policy
 
 ```mermaid
@@ -53,6 +56,19 @@ checkout, the `make` targets call the same underlying CLI.
 Run each `idp prefect flows serve ...` command as a separate long-lived process. For the
 design rationale and operational trade-offs versus a single combined serve
 process, see [prefect-production.md](prefect-production.md#why-three-serve-processes).
+
+## Local Plot Commands
+
+Use the `plot` sub-command to load a `.dat` or `.sav` measurement and render the
+four-panel Stokes profile visualization.
+
+```bash
+idp plot profile /path/to/measurement.dat --show
+idp plot profile /path/to/measurement.dat --output-path profile.png
+idp plot profile /path/to/measurement.dat --show --output-path profile.png
+```
+
+At least one of `--show` or `--output-path` must be provided.
 
 ## Deployment Triggers (CLI)
 

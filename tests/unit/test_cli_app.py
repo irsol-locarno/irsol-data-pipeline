@@ -16,6 +16,7 @@ class TestCliApp:
     def test_root_commands_are_registered(self) -> None:
         assert isinstance(app["prefect"], App)
         assert "info" in set(app)
+        assert isinstance(app["plot"], App)
 
     def test_root_help_mentions_install_completion(
         self, capsys: pytest.CaptureFixture[str]
