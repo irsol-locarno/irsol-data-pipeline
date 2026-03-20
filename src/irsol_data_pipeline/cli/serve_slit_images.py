@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from irsol_data_pipeline.cli.presentation import print_runtime_presentation
+
 
 def main() -> None:
     """Register and serve the slit-image generation Prefect deployments.
@@ -12,6 +14,8 @@ def main() -> None:
     sub-directory of the current working directory and can be overridden at
     run time via the Prefect UI or API.
     """
+    print_runtime_presentation()
+
     import os
 
     os.environ.setdefault("PREFECT_ENABLED", "true")
