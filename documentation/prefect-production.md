@@ -32,6 +32,23 @@ The `irsol-*` commands are the package-installed production interface. The
 `make` targets remain convenient wrappers when operating from a repository
 checkout.
 
+## Why Three Serve Processes
+
+This project intentionally serves deployments in three independent processes
+instead of one combined process.
+
+- Better fault isolation: if one serve process crashes, only that deployment
+    group stops scheduling.
+- Independent restarts: roll out a change or restart one pipeline without
+    interrupting the others.
+- Clearer operations: separate logs, health checks, and process supervision per
+    pipeline domain.
+- Easier resource control: apply different `systemd` limits or priorities to
+    flat-field, slit-image, and maintenance workloads.
+
+A single process for all deployments is simpler to manage, but it introduces a
+single point of failure and couples restarts across unrelated workflows.
+
 ## Operational Guidance
 
 - Use `systemd` (preferred) or `screen` to keep processes alive.

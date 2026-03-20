@@ -51,6 +51,10 @@ When the project is installed from a package, use the `irsol-*` commands.
 Inside a repository checkout, the `make` targets and `entrypoints/` wrappers
 continue to work and call the same underlying code.
 
+Run each `irsol-serve-*` command as a separate long-lived process. For the
+design rationale and operational trade-offs versus a single combined serve
+process, see [prefect-production.md](prefect-production.md#why-three-serve-processes).
+
 ## Deployment Triggers (CLI)
 
 ### Flat-field correction
