@@ -5,6 +5,8 @@ from __future__ import annotations
 import subprocess
 import sys
 
+from irsol_data_pipeline.cli.presentation import print_runtime_presentation
+
 
 def main() -> None:
     """Configure Prefect for local development and start the server dashboard.
@@ -12,6 +14,8 @@ def main() -> None:
     Equivalent to the ``make prefect/dashboard`` target: sets the local API
     URL and disables analytics before launching ``prefect server start``.
     """
+    print_runtime_presentation()
+
     subprocess.run(
         [
             "prefect",

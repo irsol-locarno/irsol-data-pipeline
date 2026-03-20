@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.table import Table
 
+from irsol_data_pipeline.cli.presentation import print_runtime_presentation
 from irsol_data_pipeline.orchestration.flows.tags import DeploymentTopicTag
 from irsol_data_pipeline.orchestration.variables import PrefectVariableName
 
@@ -235,6 +236,7 @@ def main(
     By default, variables already set in Prefect are skipped. Use
     --update-existing to prompt for updates on already-set variables.
     """
+    print_runtime_presentation()
     typer.echo()
     typer.echo(
         typer.style("Prefect Variable Bootstrap", bold=True, fg=typer.colors.BLUE)
