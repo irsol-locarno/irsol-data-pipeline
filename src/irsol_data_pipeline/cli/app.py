@@ -26,7 +26,7 @@ app.command(
     help="Show runtime and operational information.",
 )
 app.command(
-    "irsol_data_pipeline.cli.prefect:prefect_app",
+    "irsol_data_pipeline.cli.prefect_command:prefect_app",
     name="prefect",
     help="Run Prefect server commands through the unified CLI.",
 )

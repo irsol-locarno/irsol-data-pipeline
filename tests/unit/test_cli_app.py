@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from unittest.mock import patch
 
 import pytest
@@ -10,6 +11,7 @@ from cyclopts import App
 from cyclopts.exceptions import ValidationError
 
 from irsol_data_pipeline.cli.app import _meta, app
+from irsol_data_pipeline.cli.prefect_command import start_prefect_server
 
 
 class TestCliApp:
@@ -247,3 +249,32 @@ class TestCliApp:
             )
 
         assert result == 3
+
+    def test_prefect_start_sets_local_prefect_config_before_server_start(self) -> None:
+        with patch(
+            "irsol_data_pipeline.cli.prefect_command.subprocess.run"
+        ) as mock_run:
+            mock_run.side_effect = [
+                subprocess.CompletedProcess(args=[], returncode=0),
+            ]
+
+            with pytest.raises(SystemExit) as exc_info:
+                start_prefect_server()
+
+        assert exc_info.value.code == 0
+        assert mock_run.call_args_list == [
+            ((["prefect", "server", "start"],), {"check": False}),
+        ]
+
+    def test_prefect_start_propagates_server_exit_code(self) -> None:
+        with patch(
+            "irsol_data_pipeline.cli.prefect_command.subprocess.run"
+        ) as mock_run:
+            mock_run.side_effect = [
+                subprocess.CompletedProcess(args=[], returncode=7),
+            ]
+
+            with pytest.raises(SystemExit) as exc_info:
+                start_prefect_server()
+
+        assert exc_info.value.code == 7

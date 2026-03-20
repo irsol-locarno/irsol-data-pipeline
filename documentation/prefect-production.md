@@ -53,6 +53,8 @@ single point of failure and couples restarts across unrelated workflows.
 - Use `systemd` (preferred) or `screen` to keep processes alive.
 - If one serve process is down, its deployments stop executing even if server is running.
 - Verify health from `http://<server>:4200/deployments` and `http://<server>:4200/runs`.
+- For a complete server onboarding and day-2 operations runbook on `sirius`, see
+    [ops-sirius-prefect.md](ops-sirius-prefect.md).
 
 ## Manual Run Triggers
 

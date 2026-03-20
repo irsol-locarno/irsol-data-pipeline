@@ -2,15 +2,35 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 from cyclopts import App
 
 prefect_app = App(name="prefect", help="Run Prefect server commands.")
 
-prefect_app.command(
-    "prefect.cli.server:start",
-    name="start",
-    help="Start a Prefect server instance.",
-)
+
+@prefect_app.command(name="start")
+def start_prefect_server() -> None:
+    """Start the Prefect server after applying local dashboard config.
+
+    This keeps local development behavior aligned with the ``prefect/setup``
+    make target by ensuring API URL and analytics settings are persisted in
+    Prefect config before the server starts.
+    """
+
+    from prefect.settings.profiles import update_current_profile
+
+    update_current_profile(
+        {
+            "PREFECT_API_URL": "http://localhost:4200/api",
+            "PREFECT_SERVER_ANALYTICS_ENABLED": "false",
+        }
+    )
+
+    result = subprocess.run(["prefect", "server", "start"], check=False)
+    sys.exit(result.returncode)
+
 
 prefect_app.command(
     "prefect.cli.server:reset",

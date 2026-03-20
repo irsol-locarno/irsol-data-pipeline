@@ -12,8 +12,7 @@ import datetime
 from uuid import UUID
 
 from loguru import logger
-from prefect import flow, task
-from prefect.client.prefect import get_client
+from prefect import flow, get_client, task
 from prefect.server.schemas.filters import FlowRunFilter, FlowRunFilterEndTime
 from prefect.server.schemas.sorting import FlowRunSort
 from prefect.task_runners import ThreadPoolTaskRunner

@@ -66,6 +66,7 @@ Use this section as the canonical traversal path.
 | [documentation/prefect-introduction.md](documentation/prefect-introduction.md) | What Prefect is, why it is used here, and a minimal flow/deployment tutorial |
 | [documentation/running.md](documentation/running.md) | Single source of truth for run commands, runtime parameters, and Prefect Variables |
 | [documentation/prefect-production.md](documentation/prefect-production.md) | Production serving model, monitoring, and lifecycle management |
+| [documentation/ops-sirius-prefect.md](documentation/ops-sirius-prefect.md) | OPS onboarding and runbook for managing Prefect services on `sirius` |
 
 ### 5. Development
 
