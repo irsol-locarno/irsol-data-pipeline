@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from irsol_data_pipeline.orchestration.flows.tags import DeploymentTopicTag
+from irsol_data_pipeline.orchestration.flows.tags import PrefectDeploymentTopicTag
 from irsol_data_pipeline.orchestration.variables import PrefectVariableName
 
 OutputFormat = Literal["table", "json"]
-FlowGroupName = Literal[
+PrefectFlowGroupName = Literal[
     "flat-field-correction",
     "slit-images",
     "maintenance",
@@ -17,7 +17,7 @@ FlowGroupName = Literal[
 
 
 @dataclass(frozen=True)
-class VariableMetadata:
+class PrefectVariableMetadata:
     """Metadata describing one configurable Prefect variable.
 
     Attributes:
@@ -32,11 +32,11 @@ class VariableMetadata:
     prompt_text: str
     default_value: str | None = None
     required: bool = True
-    topic_tags: tuple[DeploymentTopicTag, ...] = ()
+    topic_tags: tuple[PrefectDeploymentTopicTag, ...] = ()
 
 
 @dataclass(frozen=True)
-class FlowMetadata:
+class PrefectFlowMetadata:
     """Metadata describing one flow/deployment exposed by the CLI.
 
     Attributes:
@@ -48,7 +48,7 @@ class FlowMetadata:
         schedule: Schedule label shown in reports.
     """
 
-    group_name: FlowGroupName
+    group_name: PrefectFlowGroupName
     flow_name: str
     deployment_name: str
     description: str
@@ -57,7 +57,7 @@ class FlowMetadata:
 
 
 @dataclass(frozen=True)
-class FlowGroupMetadata:
+class PrefectFlowGroupMetadata:
     """Metadata describing one flow group.
 
     Attributes:
@@ -67,45 +67,55 @@ class FlowGroupMetadata:
         flows: Concrete flow metadata entries served by the group.
     """
 
-    name: FlowGroupName
-    topic_tag: DeploymentTopicTag
+    name: PrefectFlowGroupName
+    topic_tag: PrefectDeploymentTopicTag
     description: str
-    flows: tuple[FlowMetadata, ...] = field(default_factory=tuple)
+    flows: tuple[PrefectFlowMetadata, ...] = field(default_factory=tuple)
 
 
-VARIABLES: tuple[VariableMetadata, ...] = (
-    VariableMetadata(
+PREFECT_VARIABLES: tuple[PrefectVariableMetadata, ...] = (
+    PrefectVariableMetadata(
+        prefect_name=PrefectVariableName.DATA_ROOT_PATH,
+        prompt_text="Default dataset root path used by Prefect flows",
+        required=True,
+        topic_tags=(
+            PrefectDeploymentTopicTag.FLAT_FIELD_CORRECTION,
+            PrefectDeploymentTopicTag.SLIT_IMAGES,
+            PrefectDeploymentTopicTag.MAINTENANCE,
+        ),
+    ),
+    PrefectVariableMetadata(
         prefect_name=PrefectVariableName.JSOC_EMAIL,
         prompt_text=(
             "JSOC email (register at http://jsoc.stanford.edu/ajax/register_email.html)"
         ),
         required=True,
-        topic_tags=(DeploymentTopicTag.SLIT_IMAGES,),
+        topic_tags=(PrefectDeploymentTopicTag.SLIT_IMAGES,),
     ),
-    VariableMetadata(
+    PrefectVariableMetadata(
         prefect_name=PrefectVariableName.CACHE_EXPIRATION_HOURS,
         prompt_text="Cache expiration time in hours (e.g. 4 weeks)",
         default_value=f"{24 * 7 * 4}",
         required=False,
-        topic_tags=(DeploymentTopicTag.MAINTENANCE,),
+        topic_tags=(PrefectDeploymentTopicTag.MAINTENANCE,),
     ),
-    VariableMetadata(
+    PrefectVariableMetadata(
         prefect_name=PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS,
         prompt_text="Prefect flow-run history retention in hours (e.g. 4 weeks)",
         default_value=f"{24 * 7 * 4}",
         required=False,
-        topic_tags=(DeploymentTopicTag.MAINTENANCE,),
+        topic_tags=(PrefectDeploymentTopicTag.MAINTENANCE,),
     ),
 )
 
 
-FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
-    FlowGroupMetadata(
+PREFECT_FLOW_GROUPS: tuple[PrefectFlowGroupMetadata, ...] = (
+    PrefectFlowGroupMetadata(
         name="flat-field-correction",
-        topic_tag=DeploymentTopicTag.FLAT_FIELD_CORRECTION,
+        topic_tag=PrefectDeploymentTopicTag.FLAT_FIELD_CORRECTION,
         description="Serve the flat-field correction deployments.",
         flows=(
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="flat-field-correction",
                 flow_name="ff-correction-full",
                 deployment_name="flat-field-correction-full",
@@ -116,7 +126,7 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
                 automation="scheduled",
                 schedule="daily",
             ),
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="flat-field-correction",
                 flow_name="ff-correction-daily",
                 deployment_name="flat-field-correction-daily",
@@ -126,12 +136,12 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
             ),
         ),
     ),
-    FlowGroupMetadata(
+    PrefectFlowGroupMetadata(
         name="slit-images",
-        topic_tag=DeploymentTopicTag.SLIT_IMAGES,
+        topic_tag=PrefectDeploymentTopicTag.SLIT_IMAGES,
         description="Serve the slit-image generation deployments.",
         flows=(
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="slit-images",
                 flow_name="slit-images-full",
                 deployment_name="slit-images-full",
@@ -141,7 +151,7 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
                 automation="scheduled",
                 schedule="daily",
             ),
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="slit-images",
                 flow_name="slit-images-daily",
                 deployment_name="slit-images-daily",
@@ -153,12 +163,12 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
             ),
         ),
     ),
-    FlowGroupMetadata(
+    PrefectFlowGroupMetadata(
         name="maintenance",
-        topic_tag=DeploymentTopicTag.MAINTENANCE,
+        topic_tag=PrefectDeploymentTopicTag.MAINTENANCE,
         description="Serve maintenance and retention-cleanup deployments.",
         flows=(
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="maintenance",
                 flow_name="maintenance-cleanup",
                 deployment_name="prefect-run-cleanup",
@@ -166,7 +176,7 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
                 automation="scheduled",
                 schedule="daily",
             ),
-            FlowMetadata(
+            PrefectFlowMetadata(
                 group_name="maintenance",
                 flow_name="maintenance-cache-cleanup",
                 deployment_name="cache-cleanup",
@@ -180,6 +190,3 @@ FLOW_GROUPS: tuple[FlowGroupMetadata, ...] = (
         ),
     ),
 )
-
-
-FLOW_GROUP_NAMES: tuple[FlowGroupName, ...] = tuple(group.name for group in FLOW_GROUPS)

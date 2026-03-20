@@ -15,7 +15,11 @@ from irsol_data_pipeline.cli.common import (
     print_json,
     safe_read_prefect_variable,
 )
-from irsol_data_pipeline.cli.metadata import VARIABLES, OutputFormat, VariableMetadata
+from irsol_data_pipeline.cli.metadata import (
+    PREFECT_VARIABLES,
+    OutputFormat,
+    PrefectVariableMetadata,
+)
 
 variables_app = App(name="variables", help="List and configure Prefect variables.")
 
@@ -78,7 +82,7 @@ def _get_variable_entries() -> list[VariableReportEntry]:
     """
 
     entries: list[VariableReportEntry] = []
-    for variable in VARIABLES:
+    for variable in PREFECT_VARIABLES:
         current_value, status = safe_read_prefect_variable(variable.prefect_name.value)
         entries.append(
             VariableReportEntry(
@@ -146,7 +150,7 @@ def _serialize_variable_entries(entries: list[VariableReportEntry]) -> dict[str,
     }
 
 
-def _prompt_for_value(config: VariableMetadata) -> str | None:
+def _prompt_for_value(config: PrefectVariableMetadata) -> str | None:
     """Prompt the operator for a variable value.
 
     Args:
@@ -237,8 +241,8 @@ def configure_variables(
     already_set_count = 0
     report_entries: list[VariableReportEntry] = []
 
-    for index, config in enumerate(VARIABLES, start=1):
-        total = len(VARIABLES)
+    for index, config in enumerate(PREFECT_VARIABLES, start=1):
+        total = len(PREFECT_VARIABLES)
         remaining = total - index
         print(f"[{index}/{total}] {config.prefect_name.value} ({remaining} remaining)")
 

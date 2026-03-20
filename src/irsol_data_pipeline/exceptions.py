@@ -76,3 +76,14 @@ class FlatfieldCorrectionImportError(FlatfieldCorrectionError):
 
 class SlitImageGenerationError(IrsolDataPipelineException, RuntimeError):
     """Exception raised when slit image generation fails."""
+
+
+class DatasetRootNotConfiguredError(IrsolDataPipelineException, ValueError):
+    """Raised when no dataset root is provided and no default is configured."""
+
+    def __init__(self, variable_name: str):
+        self.variable_name = variable_name
+        super().__init__(
+            "No dataset root path provided and no default Prefect Variable is set "
+            f"for '{variable_name}'."
+        )

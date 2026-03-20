@@ -18,7 +18,6 @@ from pathlib import Path
 
 from loguru import logger
 from prefect import flow, task
-from prefect.futures import as_completed
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.models import (
@@ -30,6 +29,7 @@ from irsol_data_pipeline.orchestration.utils import create_prefect_markdown_repo
 from irsol_data_pipeline.orchestration.variables import (
     PrefectVariableName,
     get_variable,
+    resolve_dataset_root,
 )
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
@@ -83,7 +83,7 @@ def run_day_slit_generation_task(
     description="Scans the dataset and generates slit preview images for all observation days",
 )
 def generate_slit_images(
-    root: str,
+    root: str = "",
     jsoc_email: str = "",
     use_limbguider: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
@@ -91,7 +91,7 @@ def generate_slit_images(
     """Scan the dataset and generate slit preview images for all days.
 
     Args:
-        root: Dataset root path.
+        root: Dataset root path. If not set, the default path from Prefect Variable is used.
         jsoc_email: Optional JSOC email override for DRMS queries. If unset,
             the Prefect Variable ``jsoc-email`` is used.
         use_limbguider: Whether to try using limbguider coordinates.
@@ -113,8 +113,8 @@ def generate_slit_images(
         )
         return []
 
-    dataset_root = Path(root)
-    logger.info("Starting slit image generation", root=root, jsoc_email=email)
+    dataset_root = resolve_dataset_root(root)
+    logger.info("Starting slit image generation", root=dataset_root, jsoc_email=email)
 
     observation_days = scan_observation_days_task(root=dataset_root)
     logger.info(
@@ -141,10 +141,7 @@ def generate_slit_images(
             )
             result_futures.append(future)
 
-        results = []
-        for result_future in as_completed(result_futures):
-            result = result_future.result()
-            results.append(result)
+        results = [result_future.result() for result_future in result_futures]
 
     total_processed = sum(r.processed for r in results)
     total_failed = sum(r.failed for r in results)

@@ -24,6 +24,7 @@ from irsol_data_pipeline.orchestration.utils import create_prefect_markdown_repo
 from irsol_data_pipeline.orchestration.variables import (
     PrefectVariableName,
     get_variable,
+    resolve_dataset_root,
 )
 from irsol_data_pipeline.pipeline.cache_cleanup import (
     build_cache_cleanup_report,
@@ -96,13 +97,13 @@ def delete_old_day_cache_files(
     ),
 )
 def delete_old_cache_files(
-    root: str,
+    root: str = "",
     hours: float = 0.0,
 ) -> list[CacheCleanupDayResult]:
     """Delete stale cache files across all observation days.
 
     Args:
-        root: Dataset root path.
+        root: Dataset root path. If not set, the default path from Prefect Variable is used.
         hours: Optional cache retention window in hours. If unset (0),
             the Prefect Variable ``cache-expiration-hours`` is used.
 
@@ -115,7 +116,7 @@ def delete_old_cache_files(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672")
     )
 
-    root_path = Path(root)
+    root_path = resolve_dataset_root(root)
     logger.info("Starting cache cleanup", root=root_path, hours=hours)
 
     days = scan_observation_days_task(root_path)

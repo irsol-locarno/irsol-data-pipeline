@@ -9,7 +9,7 @@ from irsol_data_pipeline.version import __version__
 app = App(
     name="idp",
     help=(
-        "Operational CLI for serving Prefect flow groups, configuring Prefect "
+        "IRSOL Data Pipeline Operational CLI for serving Prefect flow groups, configuring Prefect "
         "variables, and inspecting runtime information."
     ),
     version=__version__,

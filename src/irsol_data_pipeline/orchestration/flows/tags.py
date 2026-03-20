@@ -1,7 +1,7 @@
 import enum
 
 
-class DeploymentTopicTag(enum.Enum):
+class PrefectDeploymentTopicTag(enum.Enum):
     FLAT_FIELD_CORRECTION = "flat-field-correction"
     SLIT_IMAGES = "slit-images"
     MAINTENANCE = "maintenance"

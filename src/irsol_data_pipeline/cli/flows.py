@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from pathlib import Path
 from typing import Any, cast
 
 from cyclopts import App
@@ -17,26 +16,28 @@ from irsol_data_pipeline.cli.common import (
     print_json,
 )
 from irsol_data_pipeline.cli.metadata import (
-    FLOW_GROUPS,
-    FlowGroupMetadata,
-    FlowGroupName,
+    PREFECT_FLOW_GROUPS,
     OutputFormat,
+    PrefectFlowGroupMetadata,
+    PrefectFlowGroupName,
 )
 
 flows_app = App(name="flows", help="List and serve Prefect flow groups.")
 
 
-def _flow_group_by_name() -> dict[FlowGroupName, FlowGroupMetadata]:
+def _flow_group_by_name() -> dict[PrefectFlowGroupName, PrefectFlowGroupMetadata]:
     """Build a lookup table for flow-group metadata.
 
     Returns:
         Mapping from canonical group name to metadata.
     """
 
-    return {group.name: group for group in FLOW_GROUPS}
+    return {group.name: group for group in PREFECT_FLOW_GROUPS}
 
 
-def _serialize_flow_groups(groups: Iterable[FlowGroupMetadata]) -> list[dict[str, Any]]:
+def _serialize_flow_groups(
+    groups: Iterable[PrefectFlowGroupMetadata],
+) -> list[dict[str, Any]]:
     """Convert flow metadata to stable JSON-serializable records.
 
     Args:
@@ -66,7 +67,7 @@ def _serialize_flow_groups(groups: Iterable[FlowGroupMetadata]) -> list[dict[str
     ]
 
 
-def _render_flow_groups_table(groups: Iterable[FlowGroupMetadata]) -> None:
+def _render_flow_groups_table(groups: Iterable[PrefectFlowGroupMetadata]) -> None:
     """Render a Rich table for flow-group metadata.
 
     Args:
@@ -96,10 +97,10 @@ def _render_flow_groups_table(groups: Iterable[FlowGroupMetadata]) -> None:
 
 
 def _normalize_selected_groups(
-    flow_groups: tuple[FlowGroupName, ...],
+    flow_groups: tuple[PrefectFlowGroupName, ...],
     *,
     all_groups: bool,
-) -> tuple[FlowGroupMetadata, ...]:
+) -> tuple[PrefectFlowGroupMetadata, ...]:
     """Validate and normalize the requested flow groups.
 
     Args:
@@ -121,9 +122,9 @@ def _normalize_selected_groups(
         )
 
     if all_groups:
-        return FLOW_GROUPS
+        return PREFECT_FLOW_GROUPS
 
-    seen: set[FlowGroupName] = set()
+    seen: set[PrefectFlowGroupName] = set()
     group_lookup = _flow_group_by_name()
     selected = []
     for flow_group in flow_groups:
@@ -152,22 +153,19 @@ def _build_flat_field_deployments() -> list[Any]:
     from irsol_data_pipeline.orchestration.flows.tags import (
         DeploymentAutomationTag,
         DeploymentScheduleTag,
-        DeploymentTopicTag,
+        PrefectDeploymentTopicTag,
     )
-
-    root_path = Path.cwd()
 
     return [
         process_unprocessed_measurements.to_deployment(
             name="flat-field-correction-full",
-            parameters={"root": str(root_path / "data")},
             description=(
                 "Run the flat field correction pipeline on all unprocessed "
                 "measurements."
             ),
             cron="0 1 * * *",
             tags=[
-                DeploymentTopicTag.FLAT_FIELD_CORRECTION.value,
+                PrefectDeploymentTopicTag.FLAT_FIELD_CORRECTION.value,
                 DeploymentScheduleTag.DAILY.value,
                 DeploymentAutomationTag.SCHEDULED.value,
             ],
@@ -176,7 +174,7 @@ def _build_flat_field_deployments() -> list[Any]:
             name="flat-field-correction-daily",
             description="Run the flat field correction pipeline on a specific day folder.",
             tags=[
-                DeploymentTopicTag.FLAT_FIELD_CORRECTION.value,
+                PrefectDeploymentTopicTag.FLAT_FIELD_CORRECTION.value,
                 DeploymentAutomationTag.MANUAL.value,
             ],
         ),
@@ -197,19 +195,16 @@ def _build_slit_image_deployments() -> list[Any]:
     from irsol_data_pipeline.orchestration.flows.tags import (
         DeploymentAutomationTag,
         DeploymentScheduleTag,
-        DeploymentTopicTag,
+        PrefectDeploymentTopicTag,
     )
-
-    root_path = Path.cwd()
 
     return [
         generate_slit_images.to_deployment(
             name="slit-images-full",
-            parameters={"root": str(root_path / "data")},
             description="Generate slit preview images for all unprocessed measurements.",
             cron="0 4 * * *",
             tags=[
-                DeploymentTopicTag.SLIT_IMAGES.value,
+                PrefectDeploymentTopicTag.SLIT_IMAGES.value,
                 DeploymentScheduleTag.DAILY.value,
                 DeploymentAutomationTag.SCHEDULED.value,
             ],
@@ -218,7 +213,7 @@ def _build_slit_image_deployments() -> list[Any]:
             name="slit-images-daily",
             description="Generate slit preview images for a specific observation day.",
             tags=[
-                DeploymentTopicTag.SLIT_IMAGES.value,
+                PrefectDeploymentTopicTag.SLIT_IMAGES.value,
                 DeploymentAutomationTag.MANUAL.value,
             ],
         ),
@@ -241,10 +236,9 @@ def _build_maintenance_deployments() -> list[Any]:
     from irsol_data_pipeline.orchestration.flows.tags import (
         DeploymentAutomationTag,
         DeploymentScheduleTag,
-        DeploymentTopicTag,
+        PrefectDeploymentTopicTag,
     )
 
-    root_path = Path.cwd()
     delete_old_cache_files_flow = cast(Any, delete_old_cache_files)
 
     return [
@@ -253,21 +247,20 @@ def _build_maintenance_deployments() -> list[Any]:
             description="Delete Prefect flow runs older than a retention duration.",
             cron="0 0 * * *",
             tags=[
-                DeploymentTopicTag.MAINTENANCE.value,
+                PrefectDeploymentTopicTag.MAINTENANCE.value,
                 DeploymentScheduleTag.DAILY.value,
                 DeploymentAutomationTag.SCHEDULED.value,
             ],
         ),
         delete_old_cache_files_flow.to_deployment(
             name="cache-cleanup",
-            parameters={"root": str(root_path / "data")},
             description=(
                 "Delete stale .pkl cache files under processed/_cache and "
                 "processed/_sdo_cache."
             ),
             cron="30 0 * * *",
             tags=[
-                DeploymentTopicTag.MAINTENANCE.value,
+                PrefectDeploymentTopicTag.MAINTENANCE.value,
                 DeploymentScheduleTag.DAILY.value,
                 DeploymentAutomationTag.SCHEDULED.value,
             ],
@@ -275,7 +268,7 @@ def _build_maintenance_deployments() -> list[Any]:
     ]
 
 
-def _build_deployments_for_group(group_name: FlowGroupName) -> list[Any]:
+def _build_deployments_for_group(group_name: PrefectFlowGroupName) -> list[Any]:
     """Build the deployments for a selected flow group.
 
     Args:
@@ -295,7 +288,7 @@ def _build_deployments_for_group(group_name: FlowGroupName) -> list[Any]:
 
 @flows_app.command(name="list")
 def list_flows(
-    topic: FlowGroupName | None = None,
+    topic: PrefectFlowGroupName | None = None,
     format: OutputFormat = "table",
     no_banner: bool = False,
 ) -> None:
@@ -310,7 +303,7 @@ def list_flows(
     ensure_prefect_enabled()
     print_banner(output_format=format, no_banner=no_banner)
 
-    groups = FLOW_GROUPS
+    groups = PREFECT_FLOW_GROUPS
     if topic is not None:
         groups = tuple(group for group in groups if group.name == topic)
 
@@ -323,7 +316,7 @@ def list_flows(
 
 @flows_app.command(name="serve")
 def serve_flows(
-    *flow_groups: FlowGroupName,
+    *flow_groups: PrefectFlowGroupName,
     all: bool = False,
     no_banner: bool = False,
 ) -> None:

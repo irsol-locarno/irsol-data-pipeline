@@ -22,7 +22,6 @@ from pathlib import Path
 
 from loguru import logger
 from prefect import flow, task
-from prefect.futures import as_completed
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.models import (
@@ -32,6 +31,7 @@ from irsol_data_pipeline.core.models import (
 )
 from irsol_data_pipeline.orchestration.patch_logging import setup_logging
 from irsol_data_pipeline.orchestration.utils import create_prefect_markdown_report
+from irsol_data_pipeline.orchestration.variables import resolve_dataset_root
 from irsol_data_pipeline.pipeline.day_processor import (
     process_observation_day,
 )
@@ -80,14 +80,14 @@ def run_day_processing_subflow_task(
     description="Scans the dataset and processes all days with pending measurements",
 )
 def process_unprocessed_measurements(
-    root: str,
+    root: str = "",
     max_delta_hours: float = 2.0,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
 ) -> list[DayProcessingResult]:
     """Scan the dataset and process all days with pending measurements.
 
     Args:
-        root: Dataset root path.
+        root: Dataset root path, if not set, the default path from Prefect Variable is used.
         max_delta_hours: Maximum flat-field time delta in hours.
         max_concurrent_days_to_process: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
 
@@ -95,11 +95,13 @@ def process_unprocessed_measurements(
         List of DayProcessingResult for each processed day.
     """
     setup_logging()
+    dataset_root = resolve_dataset_root(root)
     logger.info(
-        "Starting dataset scan flow", root=root, max_delta_hours=max_delta_hours
+        "Starting dataset scan flow",
+        root=dataset_root,
+        max_delta_hours=max_delta_hours,
     )
 
-    dataset_root = Path(root)
     # Scan
     scan_result = scan_dataset_task(root=dataset_root)
     logger.info(
@@ -136,10 +138,7 @@ def process_unprocessed_measurements(
                 },
             )
             result_futures.append(future)
-        results = []
-        for result_future in as_completed(result_futures):
-            result = result_future.result()
-            results.append(result)
+        results = [result_future.result() for result_future in result_futures]
     # Summary
     total_processed = sum(r.processed for r in results)
     total_failed = sum(r.failed for r in results)

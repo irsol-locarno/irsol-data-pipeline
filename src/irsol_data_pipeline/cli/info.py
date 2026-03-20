@@ -13,7 +13,11 @@ from irsol_data_pipeline.cli.common import (
     print_json,
     safe_read_prefect_variable,
 )
-from irsol_data_pipeline.cli.metadata import FLOW_GROUPS, VARIABLES, OutputFormat
+from irsol_data_pipeline.cli.metadata import (
+    PREFECT_FLOW_GROUPS,
+    PREFECT_VARIABLES,
+    OutputFormat,
+)
 from irsol_data_pipeline.version import __version__
 
 
@@ -32,7 +36,7 @@ def _build_info_payload() -> dict[str, Any]:
                 "name": group.name,
                 "topic_tag": group.topic_tag.value,
             }
-            for group in FLOW_GROUPS
+            for group in PREFECT_FLOW_GROUPS
         ],
         "prefect_variables": [
             {
@@ -40,7 +44,7 @@ def _build_info_payload() -> dict[str, Any]:
                 "status": safe_read_prefect_variable(variable.prefect_name.value)[1],
                 "value": safe_read_prefect_variable(variable.prefect_name.value)[0],
             }
-            for variable in VARIABLES
+            for variable in PREFECT_VARIABLES
         ],
         "version": __version__,
     }

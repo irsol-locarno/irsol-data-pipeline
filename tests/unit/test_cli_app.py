@@ -75,6 +75,7 @@ class TestCliApp:
 
     def test_info_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         value_by_name = {
+            "data-root-path": ("/srv/data", "set"),
             "jsoc-email": ("operator@example.com", "set"),
             "cache-expiration-hours": ("672", "set"),
             "flow-run-expiration-hours": ("<unset>", "unset"),
@@ -95,13 +96,14 @@ class TestCliApp:
 
         assert payload["version"]
         assert payload["prefect_variables"][0] == {
-            "name": "jsoc-email",
+            "name": "data-root-path",
             "status": "set",
-            "value": "operator@example.com",
+            "value": "/srv/data",
         }
 
     def test_variables_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         value_by_name = {
+            "data-root-path": ("/srv/data", "set"),
             "jsoc-email": ("observer@example.com", "set"),
             "cache-expiration-hours": ("672", "set"),
             "flow-run-expiration-hours": ("<unset>", "unset"),
@@ -120,8 +122,9 @@ class TestCliApp:
 
         payload = json.loads(capsys.readouterr().out)
 
-        assert payload["variables"][0]["value"] == "observer@example.com"
-        assert payload["variables"][2]["status"] == "unset"
+        assert payload["variables"][0]["value"] == "/srv/data"
+        assert payload["variables"][1]["value"] == "observer@example.com"
+        assert payload["variables"][3]["status"] == "unset"
 
     def test_variables_configure_returns_zero_when_skipping_all(
         self,
@@ -129,7 +132,10 @@ class TestCliApp:
         with (
             patch("prefect.variables.Variable.get", return_value=None),
             patch("prefect.variables.Variable.set"),
-            patch("builtins.input", side_effect=["", "", "n", "", "n"]),
+            patch(
+                "builtins.input",
+                side_effect=["", "", "", "n", "", "n"],
+            ),
             patch(
                 "irsol_data_pipeline.cli.variables._render_variable_entries",
                 return_value=None,
@@ -153,7 +159,16 @@ class TestCliApp:
             ),
             patch(
                 "builtins.input",
-                side_effect=["operator@example.com", "y", "", "n", "", "n"],
+                side_effect=[
+                    "/srv/data",
+                    "y",
+                    "operator@example.com",
+                    "y",
+                    "",
+                    "n",
+                    "",
+                    "n",
+                ],
             ),
             patch(
                 "irsol_data_pipeline.cli.variables._render_variable_entries",

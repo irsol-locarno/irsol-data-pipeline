@@ -32,6 +32,7 @@ The package-installed unified CLI is the canonical interface.
 
 | Variable name | Typical flow parameter |
 |---|---|
+| `data-root-path` | `root` |
 | `jsoc-email` | `jsoc_email` |
 | `cache-expiration-hours` | `hours` (cache cleanup) |
 | `flow-run-expiration-hours` | `hours` (run-history cleanup) |
@@ -84,12 +85,12 @@ uv run prefect deployment run 'maintenance-cache-cleanup/cache-cleanup'
 
 | Flow | Parameter | Notes |
 |---|---|---|
-| `ff-correction-full` | `root`, `max_delta_hours`, `max_concurrent_days_to_process` | Scheduled full scan + processing |
+| `ff-correction-full` | `root`, `max_delta_hours`, `max_concurrent_days_to_process` | `root` falls back to `data-root-path` |
 | `ff-correction-daily` | `day_path`, `max_delta_hours` | Single day |
-| `slit-images-full` | `root`, `jsoc_email`, `use_limbguider`, `max_concurrent_days` | `jsoc_email` can come from Prefect Variable |
+| `slit-images-full` | `root`, `jsoc_email`, `use_limbguider`, `max_concurrent_days` | `root` falls back to `data-root-path`; `jsoc_email` can come from Prefect Variable |
 | `slit-images-daily` | `day_path`, `jsoc_email`, `use_limbguider` | Single day |
 | `maintenance-cleanup` | `hours` | Falls back to `flow-run-expiration-hours` |
-| `maintenance-cache-cleanup` | `root`, `hours` | `hours` falls back to `cache-expiration-hours` |
+| `maintenance-cache-cleanup` | `root`, `hours` | `root` falls back to `data-root-path`; `hours` falls back to `cache-expiration-hours` |
 
 ## Related Pages
 
