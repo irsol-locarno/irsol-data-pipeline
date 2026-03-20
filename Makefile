@@ -4,7 +4,6 @@ help:
 	@echo "Available targets:"
 	@echo "  lint  - Run pre-commit checks"
 	@echo "  test  - Run pytest with coverage"
-	@echo "  prefect/setup - Configure Prefect for local development and execution"
 	@echo "  prefect/dashboard - Start the Prefect dashboard"
 	@echo "  prefect/configure - Configure Prefect Variables through the unified CLI"
 	@echo "  prefect/reset - Reset the Prefect database"
@@ -19,11 +18,7 @@ lint:
 test:
 	uv run pytest --cov=src --cov-report=html --cov-report=term --cov-report=xml:coverage.xml tests/
 
-prefect/setup:
-	uv run prefect config set PREFECT_API_URL=http://localhost:4200/api
-	uv run prefect config set PREFECT_SERVER_ANALYTICS_ENABLED=false
-
-prefect/dashboard: prefect/setup
+prefect/dashboard:
 	uv run idp prefect start
 
 prefect/configure:
@@ -42,8 +37,10 @@ prefect/serve-slit-image-pipeline:
 	uv run idp prefect flows serve slit-images
 
 clean:
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
+	@find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name "*.pyc" -delete || true
+	@rm coverage.xml 2>/dev/null || true
+	@rm *.log 2>/dev/null || true
 
 
 .DEFAULT_GOAL := help
