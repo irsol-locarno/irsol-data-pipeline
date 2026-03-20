@@ -21,10 +21,10 @@ flowchart LR
 Commands:
 
 ```bash
-uv run prefect server start
-idp flows serve flat-field-correction
-idp flows serve slit-images
-idp flows serve maintenance
+idp prefect start
+idp prefect flows serve flat-field-correction
+idp prefect flows serve slit-images
+idp prefect flows serve maintenance
 
 ```
 

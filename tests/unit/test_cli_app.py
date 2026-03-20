@@ -14,8 +14,7 @@ from irsol_data_pipeline.cli.app import app
 
 class TestCliApp:
     def test_root_commands_are_registered(self) -> None:
-        assert isinstance(app["flows"], App)
-        assert isinstance(app["variables"], App)
+        assert isinstance(app["prefect"], App)
         assert "info" in set(app)
 
     def test_root_help_mentions_install_completion(
@@ -30,9 +29,23 @@ class TestCliApp:
 
         assert "--install-completion" in capsys.readouterr().out
 
-    def test_flows_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_prefect_group_help(self, capsys: pytest.CaptureFixture[str]) -> None:
         app(
-            ["flows", "list", "--format", "json", "--no-banner"],
+            ["prefect", "--help"],
+            exit_on_error=False,
+            print_error=False,
+            result_action="return_value",
+        )
+
+        output = capsys.readouterr().out
+        assert "start" in output
+        assert "reset-database" in output
+        assert "flows" in output
+        assert "variables" in output
+
+    def test_prefect_flows_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+        app(
+            ["prefect", "flows", "list", "--format", "json", "--no-banner"],
             exit_on_error=False,
             print_error=False,
             result_action="return_value",
@@ -49,19 +62,20 @@ class TestCliApp:
             "flat-field-correction-full"
         )
 
-    def test_flows_serve_requires_selection(self) -> None:
+    def test_prefect_flows_serve_requires_selection(self) -> None:
         with pytest.raises(ValidationError):
             app(
-                ["flows", "serve", "--no-banner"],
+                ["prefect", "flows", "serve", "--no-banner"],
                 exit_on_error=False,
                 print_error=False,
                 result_action="return_value",
             )
 
-    def test_flows_serve_rejects_all_plus_explicit_group(self) -> None:
+    def test_prefect_flows_serve_rejects_all_plus_explicit_group(self) -> None:
         with pytest.raises(ValidationError):
             app(
                 [
+                    "prefect",
                     "flows",
                     "serve",
                     "--all",
@@ -101,7 +115,9 @@ class TestCliApp:
             "value": "/srv/data",
         }
 
-    def test_variables_list_json(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_prefect_variables_list_json(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         value_by_name = {
             "data-root-path": ("/srv/data", "set"),
             "jsoc-email": ("observer@example.com", "set"),
@@ -114,7 +130,7 @@ class TestCliApp:
             side_effect=value_by_name.__getitem__,
         ):
             app(
-                ["variables", "list", "--format", "json", "--no-banner"],
+                ["prefect", "variables", "list", "--format", "json", "--no-banner"],
                 exit_on_error=False,
                 print_error=False,
                 result_action="return_value",
@@ -126,7 +142,7 @@ class TestCliApp:
         assert payload["variables"][1]["value"] == "observer@example.com"
         assert payload["variables"][3]["status"] == "unset"
 
-    def test_variables_configure_returns_zero_when_skipping_all(
+    def test_prefect_variables_configure_returns_zero_when_skipping_all(
         self,
     ) -> None:
         with (
@@ -142,7 +158,7 @@ class TestCliApp:
             ),
         ):
             result = app(
-                ["variables", "configure", "--no-banner"],
+                ["prefect", "variables", "configure", "--no-banner"],
                 exit_on_error=False,
                 print_error=False,
                 result_action="return_value",
@@ -150,7 +166,7 @@ class TestCliApp:
 
         assert result == 0
 
-    def test_variables_configure_returns_three_on_failure(self) -> None:
+    def test_prefect_variables_configure_returns_three_on_failure(self) -> None:
         with (
             patch("prefect.variables.Variable.get", return_value=None),
             patch(
@@ -176,7 +192,7 @@ class TestCliApp:
             ),
         ):
             result = app(
-                ["variables", "configure", "--no-banner"],
+                ["prefect", "variables", "configure", "--no-banner"],
                 exit_on_error=False,
                 print_error=False,
                 result_action="return_value",

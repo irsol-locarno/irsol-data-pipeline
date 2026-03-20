@@ -24,22 +24,22 @@ prefect/setup:
 	uv run prefect config set PREFECT_SERVER_ANALYTICS_ENABLED=false
 
 prefect/dashboard: prefect/setup
-	uv run prefect server start
+	uv run idp prefect start
 
 prefect/configure:
-	uv run idp variables configure
+	uv run idp prefect variables configure
 
 prefect/reset:
-	uv run prefect server database reset
+	uv run idp prefect reset-database
 
 prefect/serve-maintenance-pipeline:
-	uv run idp flows serve maintenance
+	uv run idp prefect flows serve maintenance
 
 prefect/serve-flat-field-correction-pipeline:
-	uv run idp flows serve flat-field-correction
+	uv run idp prefect flows serve flat-field-correction
 
 prefect/serve-slit-image-pipeline:
-	uv run idp flows serve slit-images
+	uv run idp prefect flows serve slit-images
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

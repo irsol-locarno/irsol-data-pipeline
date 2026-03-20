@@ -45,9 +45,10 @@ Installed package commands:
 idp --help
 idp info
 idp --install-completion
-idp variables configure
-idp flows list
-idp flows serve flat-field-correction
+idp prefect variables configure
+idp prefect flows list
+idp prefect start
+idp prefect flows serve flat-field-correction
 ```
 
 These commands are implemented in `src/irsol_data_pipeline/cli/`.
