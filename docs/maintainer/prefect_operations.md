@@ -23,7 +23,7 @@ flowchart LR
 
 | Process | Command | Purpose |
 |---------|---------|---------|
-| Prefect Server | `uvx prefect server start` | API server and web dashboard |
+| Prefect Server | `idp prefect start` | API server and web dashboard |
 | Flat-field runner | `idp prefect flows serve flat-field-correction` | Scheduled + manual flat-field correction |
 | Slit images runner | `idp prefect flows serve slit-images` | Scheduled + manual slit image generation |
 | Maintenance runner | `idp prefect flows serve maintenance` | Cache cleanup and run history pruning |
@@ -43,10 +43,11 @@ flowchart LR
    idp info
    ```
 
-3. **Configure Prefect API:**
+3. **Start the Prefect server:**
    ```bash
-   uvx prefect config set PREFECT_API_URL=http://127.0.0.1:4200/api
+   idp prefect start
    ```
+   > This automatically configures the Prefect API URL and analytics settings.
 
 4. **Configure variables:**
    ```bash
@@ -78,9 +79,7 @@ After=network.target
 [Service]
 Type=simple
 User=irsol-prefect
-ExecStart=/home/irsol-prefect/.local/bin/uvx prefect server start \
-    --host 127.0.0.1 --port 4200
-Environment=PREFECT_SERVER_ANALYTICS_ENABLED=false
+ExecStart=/home/irsol-prefect/.local/bin/idp prefect start
 Restart=always
 RestartSec=5
 

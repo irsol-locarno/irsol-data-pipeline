@@ -120,14 +120,10 @@ For scheduled flows and the web dashboard, start the Prefect server:
 make prefect/dashboard
 
 # Or directly
-uvx prefect server start
+idp prefect start
 ```
 
-Then configure the API URL:
-
-```bash
-uvx prefect config set PREFECT_API_URL=http://127.0.0.1:4200/api
-```
+> **Note:** `idp prefect start` automatically configures the Prefect API URL and analytics settings before launching the server — no separate configuration step is required.
 
 ### JSOC Registration
 

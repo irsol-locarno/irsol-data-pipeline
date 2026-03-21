@@ -80,10 +80,7 @@ Organize your data following the standard directory convention:
 ```bash
 # Start the Prefect server
 make prefect/dashboard
-# or: uvx prefect server start
-
-# Set the API URL
-uvx prefect config set PREFECT_API_URL=http://127.0.0.1:4200/api
+# or: idp prefect start
 
 # Configure variables
 uv run idp prefect variables configure
@@ -121,14 +118,7 @@ Open the Prefect dashboard at [http://127.0.0.1:4200](http://127.0.0.1:4200) to:
 
 ### Step 5 — Manually Trigger a Run (Optional)
 
-```bash
-# Process all unprocessed measurements
-uvx prefect deployment run 'ff-correction-full/flat-field-correction-full'
-
-# Process a single day
-uvx prefect deployment run 'ff-correction-daily/flat-field-correction-daily' \
-    --param day_path=/data/observations/2025/20250312
-```
+Use the Prefect dashboard at [http://127.0.0.1:4200/deployments](http://127.0.0.1:4200/deployments) to manually trigger a run. Select a deployment and click **Run** — optionally overriding parameters such as `day_path`.
 
 ## Typical Workflow
 
