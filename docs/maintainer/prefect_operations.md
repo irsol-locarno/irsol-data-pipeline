@@ -101,7 +101,6 @@ Type=simple
 User=irsol-prefect
 ExecStart=/home/irsol-prefect/.local/bin/idp prefect flows serve flat-field-correction
 Environment=PREFECT_ENABLED=1
-Environment=PREFECT_API_URL=http://127.0.0.1:4200/api
 Restart=always
 RestartSec=5
 
@@ -170,30 +169,17 @@ tail -f solar_pipeline.log
 
 ## Manual Trigger
 
-### Via Prefect CLI
+Use the Prefect dashboard at `http://sirius:4200/deployments` to manually trigger deployment runs. Select the target deployment and click **Run**, optionally overriding parameters such as `day_path`.
 
-```bash
-# Full flat-field correction
-uvx prefect deployment run 'ff-correction-full/flat-field-correction-full'
+Available deployments:
 
-# Single day flat-field correction
-uvx prefect deployment run 'ff-correction-daily/flat-field-correction-daily' \
-    --param day_path=/data/2025/20250312
-
-# Full slit image generation
-uvx prefect deployment run 'slit-images-full/slit-images-full'
-
-# Single day slit images
-uvx prefect deployment run 'slit-images-daily/slit-images-daily' \
-    --param day_path=/data/2025/20250312
-
-# Cache cleanup
-uvx prefect deployment run 'delete-old-cache-files/maintenance'
-```
-
-### Via Dashboard
-
-Navigate to the **Deployments** tab, select a deployment, and click **Run** with optional parameter overrides.
+| Deployment | Description |
+|-----------|-------------|
+| `ff-correction-full/flat-field-correction-full` | Process all unprocessed measurements |
+| `ff-correction-daily/flat-field-correction-daily` | Process a single observation day (set `day_path`) |
+| `slit-images-full/slit-images-full` | Generate all pending slit images |
+| `slit-images-daily/slit-images-daily` | Generate slit images for one day (set `day_path`) |
+| `delete-old-cache-files/maintenance` | Run cache cleanup |
 
 ## Common Failure Modes
 
@@ -216,9 +202,8 @@ rm /data/2025/20250312/processed/6302_m1_corrected.fits
 rm /data/2025/20250312/processed/6302_m1_metadata.json
 rm /data/2025/20250312/processed/6302_m1_error.json
 
-# Trigger reprocessing
-uvx prefect deployment run 'ff-correction-daily/flat-field-correction-daily' \
-    --param day_path=/data/2025/20250312
+# Trigger reprocessing via the Prefect dashboard
+# (select ff-correction-daily, set day_path=/data/2025/20250312)
 ```
 
 To reprocess an entire day:
@@ -266,11 +251,7 @@ Use this only as a last resort when the Prefect database is corrupted.
    sudo systemctl start irsol-prefect-serve-maintenance
    ```
 
-5. **Trigger a smoke-test run:**
-   ```bash
-   uvx prefect deployment run 'ff-correction-daily/flat-field-correction-daily' \
-       --param day_path=/data/2025/20250312
-   ```
+5. **Trigger a smoke-test run** via the Prefect dashboard (select `ff-correction-daily`, set `day_path` to a known observation day).
 
 6. **Check the dashboard** for successful completion.
 

@@ -29,7 +29,7 @@ uv sync
 uv run entrypoints/process_single_measurement.py /path/to/reduced/6302_m1.dat
 ```
 
-For installation options (editable development install from a clone, or dependency install from PyPI with `uv add irsol-data-pipeline`), see [documentation/installation.md](documentation/installation.md).
+For installation options (editable development install from a clone, or dependency install from PyPI with `uv add irsol-data-pipeline`), see [docs/user/installation.md](docs/user/installation.md).
 
 ## Documentation
 
@@ -39,39 +39,34 @@ Use this section as the canonical traversal path.
 
 | Page | Purpose |
 |---|---|
-| [documentation/installation.md](documentation/installation.md) | Install dependencies, set up local environment, discover `make` targets |
-| [documentation/concepts.md](documentation/concepts.md) | Domain vocabulary used in code and logs |
-| [documentation/configuration.md](documentation/configuration.md) | Constants and filename conventions from `core/config.py` |
+| [docs/user/installation.md](docs/user/installation.md) | Install dependencies, set up local environment, discover `make` targets |
+| [docs/user/quickstart.md](docs/user/quickstart.md) | Minimal working example and typical workflow |
 
 ### 2. Architecture
 
 | Page | Purpose |
 |---|---|
-| [documentation/architecture.md](documentation/architecture.md) | Module layout, layer boundaries, dependency direction |
-| [documentation/library-usage.md](documentation/library-usage.md) | Use core/io/pipeline modules directly without Prefect |
+| [docs/overview/architecture.md](docs/overview/architecture.md) | Module layout, layer boundaries, dependency direction |
 
-### 3. Pipelines
-
-| Page | Purpose |
-|---|---|
-| [documentation/pipeline.md](documentation/pipeline.md) | Cross-pipeline overview: inputs, outputs, idempotency, data layout |
-| [documentation/pipeline-flat-field-correction.md](documentation/pipeline-flat-field-correction.md) | Flat-field correction pipeline behavior and outputs |
-| [documentation/pipeline-slit-image-generation.md](documentation/pipeline-slit-image-generation.md) | Slit image generation behavior and outputs |
-| [documentation/pipeline-maintenance.md](documentation/pipeline-maintenance.md) | Maintenance flows and cleanup behavior |
-
-### 4. Operations
+### 3. Core Modules
 
 | Page | Purpose |
 |---|---|
-| [documentation/prefect-introduction.md](documentation/prefect-introduction.md) | What Prefect is, why it is used here, and a minimal flow/deployment tutorial |
-| [documentation/running.md](documentation/running.md) | Single source of truth for run commands, runtime parameters, and Prefect Variables |
-| [documentation/prefect-production.md](documentation/prefect-production.md) | Production serving model, monitoring, and lifecycle management |
-| [documentation/ops-sirius-prefect.md](documentation/ops-sirius-prefect.md) | OPS onboarding and runbook for managing Prefect services on `sirius` |
+| [docs/core/flat_field_correction.md](docs/core/flat_field_correction.md) | Flat-field and smile correction algorithms |
+| [docs/core/wavelength_autocalibration.md](docs/core/wavelength_autocalibration.md) | Wavelength auto-calibration via spectral line fitting |
+| [docs/core/slit_image_creation.md](docs/core/slit_image_creation.md) | Slit image generation with SDO context |
 
-### 5. Development
+### 4. Pipelines and IO
 
 | Page | Purpose |
 |---|---|
-| [documentation/extending.md](documentation/extending.md) | Add new policies, outputs, and flows safely |
-| [documentation/testing.md](documentation/testing.md) | Test strategy, conventions, and commands |
-| [documentation/info_array.md](documentation/info_array.md) | Reference fields from `.dat` info arrays |
+| [docs/pipeline/pipeline_overview.md](docs/pipeline/pipeline_overview.md) | End-to-end pipeline description and data flow |
+| [docs/pipeline/prefect_integration.md](docs/pipeline/prefect_integration.md) | Prefect orchestration, flows, and task structure |
+| [docs/io/io_modules.md](docs/io/io_modules.md) | Data loading, saving, and format support |
+
+### 5. Operations
+
+| Page | Purpose |
+|---|---|
+| [docs/cli/cli_usage.md](docs/cli/cli_usage.md) | CLI commands, arguments, and examples |
+| [docs/maintainer/prefect_operations.md](docs/maintainer/prefect_operations.md) | Production deployment, monitoring, and troubleshooting |
