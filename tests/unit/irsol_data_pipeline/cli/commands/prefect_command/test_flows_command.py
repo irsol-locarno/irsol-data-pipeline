@@ -24,6 +24,7 @@ class TestPrefectFlowsCommand:
         assert [entry["group"] for entry in payload["flow_groups"]] == [
             "flat-field-correction",
             "slit-images",
+            "web-assets-compatibility",
             "maintenance",
         ]
         assert payload["flow_groups"][0]["flows"][0]["deployment_name"] == (

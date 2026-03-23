@@ -266,6 +266,51 @@ def _build_maintenance_deployments() -> list[Any]:
     ]
 
 
+def _build_web_assets_compatibility_deployments() -> list[Any]:
+    """Build web-assets compatibility deployments.
+
+    Returns:
+        Deployment objects for the web-assets compatibility group.
+    """
+
+    from irsol_data_pipeline.prefect.flows.tags import (
+        DeploymentAutomationTag,
+        DeploymentScheduleTag,
+        PrefectDeploymentTopicTag,
+    )
+    from irsol_data_pipeline.prefect.flows.web_assets_compatibility import (
+        publish_web_assets_for_day,
+        publish_web_assets_for_root,
+    )
+
+    return [
+        publish_web_assets_for_root.to_deployment(
+            name="web-assets-compatibility-full",
+            description=(
+                "Scan a dataset root and deploy legacy-compatible quicklook "
+                "and context JPG assets for all days."
+            ),
+            cron="0 6 * * *",
+            tags=[
+                PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY.value,
+                DeploymentScheduleTag.DAILY.value,
+                DeploymentAutomationTag.SCHEDULED.value,
+            ],
+        ),
+        publish_web_assets_for_day.to_deployment(
+            name="web-assets-compatibility-daily",
+            description=(
+                "Deploy legacy-compatible quicklook and context JPG assets "
+                "for a specific day folder."
+            ),
+            tags=[
+                PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY.value,
+                DeploymentAutomationTag.MANUAL.value,
+            ],
+        ),
+    ]
+
+
 def _build_deployments_for_group(group_name: PrefectFlowGroupName) -> list[Any]:
     """Build the deployments for a selected flow group.
 
@@ -279,6 +324,7 @@ def _build_deployments_for_group(group_name: PrefectFlowGroupName) -> list[Any]:
     builders = {
         "flat-field-correction": _build_flat_field_deployments,
         "slit-images": _build_slit_image_deployments,
+        "web-assets-compatibility": _build_web_assets_compatibility_deployments,
         "maintenance": _build_maintenance_deployments,
     }
     return builders[group_name]()

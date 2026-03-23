@@ -20,6 +20,11 @@ class PrefectVariableName(Enum):
     JSOC_DATA_DELAY_DAYS = "jsoc-data-delay-days"
     CACHE_EXPIRATION_HOURS = "cache-expiration-hours"
     FLOW_RUN_EXPIRATION_HOURS = "flow-run-expiration-hours"
+    WEB_ASSET_QUICKLOOK_IMAGE_ROOT = "web-asset-quicklook-image-root"
+    WEB_ASSET_CONTEXT_IMAGE_ROOT = "web-asset-context-image-root"
+    PIOMBO_HOSTNAME = "piombo-hostname"
+    PIOMBO_USERNAME = "piombo-username"
+    PIOMBO_PASSWORD = "piombo-password"
 
 
 def get_variable(name: PrefectVariableName, default: Any = None) -> Any:

@@ -87,3 +87,7 @@ class DatasetRootNotConfiguredError(IrsolDataPipelineException, ValueError):
             "No dataset root path provided and no default Prefect Variable is set "
             f"for '{variable_name}'."
         )
+
+
+class WebAssetUploadError(IrsolDataPipelineException, RuntimeError):
+    """Raised when web-asset compatibility upload fails."""

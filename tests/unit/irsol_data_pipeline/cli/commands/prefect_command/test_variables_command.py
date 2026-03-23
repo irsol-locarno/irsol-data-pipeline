@@ -21,6 +21,8 @@ class TestPrefectVariablesCommand:
             PrefectVariableName.JSOC_DATA_DELAY_DAYS: "10",
             PrefectVariableName.CACHE_EXPIRATION_HOURS: "672",
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS: "<unset>",
+            PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT: "/srv/web/quicklook",
+            PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT: "/srv/web/context",
         }
 
         with patch(
@@ -40,6 +42,8 @@ class TestPrefectVariablesCommand:
         assert payload["variables"][1]["value"] == "observer@example.com"
         assert payload["variables"][2]["value"] == "10"
         assert payload["variables"][4]["value"] == "<unset>"
+        assert payload["variables"][5]["value"] == "/srv/web/quicklook"
+        assert payload["variables"][6]["value"] == "/srv/web/context"
 
     def test_prefect_variables_configure_returns_zero_when_skipping_all(
         self,
@@ -49,7 +53,20 @@ class TestPrefectVariablesCommand:
             patch("prefect.variables.Variable.set"),
             patch(
                 "builtins.input",
-                side_effect=["", "", "", "n", "", "n", "", "n"],
+                side_effect=[
+                    "",  # data-root-path (required, empty)
+                    "",  # jsoc-email (required, empty)
+                    "",
+                    "n",  # jsoc-data-delay-days
+                    "",
+                    "n",  # cache-expiration-hours
+                    "",
+                    "n",  # flow-run-expiration-hours
+                    "",
+                    "n",  # web-asset-quicklook-image-root
+                    "",
+                    "n",  # web-asset-context-image-root
+                ],
             ),
             patch(
                 "irsol_data_pipeline.cli.commands.prefect_command.variables_command._render_variable_entries",
@@ -79,6 +96,10 @@ class TestPrefectVariablesCommand:
                     "y",
                     "operator@example.com",
                     "y",
+                    "",
+                    "n",
+                    "",
+                    "n",
                     "",
                     "n",
                     "",

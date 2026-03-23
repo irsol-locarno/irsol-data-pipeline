@@ -19,6 +19,8 @@ class TestInfoCommand:
             PrefectVariableName.JSOC_DATA_DELAY_DAYS: "14",
             PrefectVariableName.CACHE_EXPIRATION_HOURS: "672",
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS: "<unset>",
+            PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT: "/srv/web/quicklook",
+            PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT: "/srv/web/context",
         }
 
         with patch(
