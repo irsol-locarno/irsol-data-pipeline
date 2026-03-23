@@ -68,6 +68,8 @@ idp --version
 idp info
 ```
 
+> Note: `uv tool install <package>` installs Python CLI tools into isolated, managed environments, adding their executables to your `PATH` for global access. It ensures tools have dedicated environments to prevent dependency conflicts, acting as a faster alternative to `pipx`
+
 ## Dependencies
 
 The pipeline relies on the following key dependencies:
