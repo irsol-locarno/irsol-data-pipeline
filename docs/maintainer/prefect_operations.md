@@ -43,13 +43,19 @@ flowchart LR
    idp info
    ```
 
-3. **Start the Prefect server:**
+3. Install auto-completion for your shell (optional but recommended):
+   ```bash
+   idp --install-completion
+   ```
+   and restart your shell or source the completion script.
+
+4. **Start the Prefect server:**
    ```bash
    idp prefect start
    ```
    > This automatically configures the Prefect API URL and analytics settings.
 
-4. **Configure variables:**
+5. **Configure variables:**
    ```bash
    idp prefect variables configure
    ```
@@ -60,17 +66,19 @@ flowchart LR
    - `cache-expiration-hours` — Cache file retention (default: 672 hours = 28 days).
    - `flow-run-expiration-hours` — Prefect run history retention (default: 672 hours).
 
-5. **Verify configuration:**
+6. **Verify configuration:**
    ```bash
    idp info
    idp prefect variables list
    idp prefect flows list
    ```
 
-6. **Upgrade the package:**
+7. **Upgrade the package:**
    ```bash
    uv tool upgrade irsol-data-pipeline --no-cache-dir --python 3.10
    ```
+
+Now the `idp` command line tool is ready to manage the Prefect server and flow runners globally for the current user.
 
 ### systemd Services
 
