@@ -1,0 +1,73 @@
+# Configuration for https://github.com/actions/labeler
+
+source-code:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/**"
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/cli/**"
+
+core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/core/**"
+
+io:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/io/**"
+
+pipeline:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/pipeline/**"
+
+prefect:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/irsol_data_pipeline/prefect/**"
+
+testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+          - "**/*.md"
+
+cicd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "Makefile"
+          - ".pre-commit-config.yaml"
+          - "uv.lock"
+
+# Add 'feature' label to any PR where the head branch name starts with `feature` or has a `feature` section in the name
+feature:
+ - head-branch: ['^feature', 'feature']
+
+# Add 'improvement' label to any PR where the head branch name starts with `improvement` or has a `improvement` section in the name
+improvement:
+ - head-branch: ['^improvement', 'improvement']
+
+
+# Add 'bugfix' label to any PR where the head branch name starts with `bugfix` or has a `bugfix` section in the name
+bugfix:
+ - head-branch: ['^bugfix', 'bugfix']
+
+# Add 'release' label to any PR that is opened against the `master` branch
+release:
+ - base-branch: 'master'
