@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock
 
 from PIL import Image
 
 from irsol_data_pipeline.core.config import PROFILE_CORRECTED_PNG_SUFFIX
 from irsol_data_pipeline.core.models import ObservationDay
+from irsol_data_pipeline.core.remote_filesystem import RemoteFileSystem
 from irsol_data_pipeline.exceptions import WebAssetUploadError
 from irsol_data_pipeline.pipeline.web_asset_compatibility import (
     _upload_staged_day_assets,
@@ -37,6 +38,13 @@ def _write_png(path: Path) -> None:
     image.save(path, format="PNG")
 
 
+def _make_mock_remote_fs() -> MagicMock:
+    """Return a mock that satisfies the RemoteFileSystem protocol."""
+    mock = MagicMock(spec=RemoteFileSystem)
+    mock.file_exists.return_value = False
+    return mock
+
+
 class TestUploadStagedDayAssets:
     def test_uploads_to_local_destination(self, tmp_path: Path) -> None:
         staged_day = tmp_path / "staged" / "250101"
@@ -49,10 +57,7 @@ class TestUploadStagedDayAssets:
             destination_root=destination_root,
             day_name="250101",
             force_overwrite=False,
-            use_piombo_upload=False,
-            piombo_hostname="",
-            piombo_username="",
-            piombo_password="",
+            remote_fs=None,
         )
 
         assert (destination_root / "250101" / "5876_m01.jpg").exists()
@@ -74,10 +79,7 @@ class TestUploadStagedDayAssets:
             destination_root=tmp_path / "dest",
             day_name="250101",
             force_overwrite=False,
-            use_piombo_upload=False,
-            piombo_hostname="",
-            piombo_username="",
-            piombo_password="",
+            remote_fs=None,
         )
 
         assert destination_file.read_bytes() == b"old"
@@ -99,34 +101,67 @@ class TestUploadStagedDayAssets:
             destination_root=tmp_path / "dest",
             day_name="250101",
             force_overwrite=True,
-            use_piombo_upload=False,
-            piombo_hostname="",
-            piombo_username="",
-            piombo_password="",
+            remote_fs=None,
         )
 
         assert destination_file.read_bytes() == b"new"
 
-    def test_uses_piombo_upload_when_enabled(self, tmp_path: Path) -> None:
+    def test_uses_remote_fs_when_provided(self, tmp_path: Path) -> None:
         staged_day = tmp_path / "staged" / "250101"
         staged_day.mkdir(parents=True)
         (staged_day / "5876_m01.jpg").write_bytes(b"data")
 
-        with patch(
-            "irsol_data_pipeline.pipeline.web_asset_compatibility._upload_staged_day_assets_piombo"
-        ) as mock_upload:
-            _upload_staged_day_assets(
-                staged_day_dir=staged_day,
-                destination_root="/var/www/assets",
-                day_name="250101",
-                force_overwrite=False,
-                use_piombo_upload=True,
-                piombo_hostname="piombo7.usi.ch",
-                piombo_username="user",
-                piombo_password="secret",
-            )
+        remote_fs = _make_mock_remote_fs()
+        _upload_staged_day_assets(
+            staged_day_dir=staged_day,
+            destination_root="/var/www/assets",
+            day_name="250101",
+            force_overwrite=False,
+            remote_fs=remote_fs,
+        )
 
-        assert mock_upload.call_count == 1
+        remote_fs.ensure_dir.assert_called_once()
+        remote_fs.upload_file.assert_called_once()
+
+    def test_remote_fs_skips_existing_file_without_overwrite(
+        self, tmp_path: Path
+    ) -> None:
+        staged_day = tmp_path / "staged" / "250101"
+        staged_day.mkdir(parents=True)
+        (staged_day / "5876_m01.jpg").write_bytes(b"data")
+
+        remote_fs = _make_mock_remote_fs()
+        remote_fs.file_exists.return_value = True
+
+        _upload_staged_day_assets(
+            staged_day_dir=staged_day,
+            destination_root="/var/www/assets",
+            day_name="250101",
+            force_overwrite=False,
+            remote_fs=remote_fs,
+        )
+
+        remote_fs.upload_file.assert_not_called()
+
+    def test_remote_fs_overwrites_existing_file_with_overwrite(
+        self, tmp_path: Path
+    ) -> None:
+        staged_day = tmp_path / "staged" / "250101"
+        staged_day.mkdir(parents=True)
+        (staged_day / "5876_m01.jpg").write_bytes(b"data")
+
+        remote_fs = _make_mock_remote_fs()
+        remote_fs.file_exists.return_value = True
+
+        _upload_staged_day_assets(
+            staged_day_dir=staged_day,
+            destination_root="/var/www/assets",
+            day_name="250101",
+            force_overwrite=True,
+            remote_fs=remote_fs,
+        )
+
+        remote_fs.upload_file.assert_called_once()
 
 
 class TestProcessDayWebAssetCompatibility:
@@ -172,38 +207,34 @@ class TestProcessDayWebAssetCompatibility:
         day = _make_day(tmp_path)
         _write_png(day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}")
 
-        with patch(
-            "irsol_data_pipeline.pipeline.web_asset_compatibility._upload_staged_day_assets_piombo",
-            side_effect=WebAssetUploadError("permission denied"),
-        ):
-            result = process_day_web_asset_compatibility(
-                day=day,
-                quicklook_root="/irsol_db/docs/web-site/assets/img_quicklook",
-                context_root="/irsol_db/docs/web-site/assets/img_data",
-                piombo_hostname="piombo7.usi.ch",
-                piombo_username="user",
-                piombo_password="secret",
-                deploy_context=False,
-            )
+        remote_fs = _make_mock_remote_fs()
+        remote_fs.upload_file.side_effect = WebAssetUploadError("permission denied")
+
+        result = process_day_web_asset_compatibility(
+            day=day,
+            quicklook_root="/irsol_db/docs/web-site/assets/img_quicklook",
+            context_root="/irsol_db/docs/web-site/assets/img_data",
+            remote_fs=remote_fs,
+            deploy_context=False,
+        )
 
         assert result.processed == 1
         assert result.failed == 1
         assert any("permission denied" in error for error in result.errors)
 
-    def test_partial_piombo_credentials_fail_fast(self, tmp_path: Path) -> None:
+    def test_processes_with_remote_fs(self, tmp_path: Path) -> None:
         day = _make_day(tmp_path)
         _write_png(day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}")
 
+        remote_fs = _make_mock_remote_fs()
         result = process_day_web_asset_compatibility(
             day=day,
-            quicklook_root=tmp_path / "dest" / "quicklook",
-            context_root=tmp_path / "dest" / "context",
-            piombo_hostname="piombo7.usi.ch",
-            piombo_username="",
-            piombo_password="",
+            quicklook_root="/irsol_db/docs/web-site/assets/img_quicklook",
+            context_root="/irsol_db/docs/web-site/assets/img_data",
+            remote_fs=remote_fs,
             deploy_context=False,
         )
 
-        assert result.processed == 0
-        assert result.failed == 1
-        assert any("must all be provided together" in error for error in result.errors)
+        assert result.processed == 1
+        assert result.failed == 0
+        remote_fs.upload_file.assert_called_once()

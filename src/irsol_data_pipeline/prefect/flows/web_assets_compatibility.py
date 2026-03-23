@@ -17,6 +17,8 @@ from prefect import flow, task
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.models import DayProcessingResult, ObservationDay
+from irsol_data_pipeline.core.remote_filesystem import RemoteFileSystem
+from irsol_data_pipeline.integrations.piombo import SftpRemoteFileSystem
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
     processed_dir_for_day,
@@ -33,6 +35,46 @@ from irsol_data_pipeline.prefect.variables import (
     get_variable,
     resolve_dataset_root,
 )
+
+
+def _build_remote_fs(
+    piombo_hostname: str,
+    piombo_username: str,
+    piombo_password: str,
+) -> RemoteFileSystem | None:
+    """Build a
+    :class:`~irsol_data_pipeline.integrations.piombo.SftpRemoteFileSystem` from
+    credentials.
+
+    Args:
+        piombo_hostname: SSH hostname.  Pass an empty string to use local upload.
+        piombo_username: SSH username.  Pass an empty string to use local upload.
+        piombo_password: SSH password.  Pass an empty string to use local upload.
+
+    Returns:
+        A configured :class:`SftpRemoteFileSystem` when all three credentials
+        are provided, or ``None`` when all three are empty (local upload).
+
+    Raises:
+        ValueError: If only some credentials are provided.
+    """
+    provided = [
+        bool(piombo_hostname.strip()),
+        bool(piombo_username.strip()),
+        bool(piombo_password.strip()),
+    ]
+    if not any(provided):
+        return None
+    if not all(provided):
+        raise ValueError(
+            "piombo_hostname, piombo_username, and piombo_password must "
+            "all be provided together"
+        )
+    return SftpRemoteFileSystem(
+        hostname=piombo_hostname,
+        username=piombo_username,
+        password=piombo_password,
+    )
 
 
 @task(task_run_name="web-assets-compatibility/scan-dataset/{root}")
@@ -292,9 +334,11 @@ def publish_web_assets_for_day(
         day=day,
         quicklook_root=quicklook_root,
         context_root=context_root,
-        piombo_hostname=str(piombo_hostname),
-        piombo_username=str(piombo_username),
-        piombo_password=str(piombo_password),
+        remote_fs=_build_remote_fs(
+            piombo_hostname=str(piombo_hostname),
+            piombo_username=str(piombo_username),
+            piombo_password=str(piombo_password),
+        ),
         jpeg_quality=jpeg_quality,
         force_overwrite=force_overwrite,
         deploy_quicklook=deploy_quicklook,

@@ -6,12 +6,11 @@ import shutil
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
-from typing import Any
 
-import paramiko
 from loguru import logger
 
 from irsol_data_pipeline.core.models import DayProcessingResult, ObservationDay
+from irsol_data_pipeline.core.remote_filesystem import RemoteFileSystem
 from irsol_data_pipeline.core.web_asset_compatibility.conversion import (
     _normalize_jpeg_quality,
     convert_png_to_jpeg,
@@ -23,132 +22,10 @@ from irsol_data_pipeline.core.web_asset_compatibility.models import WebAssetKind
 from irsol_data_pipeline.exceptions import WebAssetUploadError
 
 
-def _normalize_remote_root(destination_root: str | Path) -> str:
-    """Return a remote POSIX root path from an operator-provided destination.
-
-    Accepts either a direct path (e.g. ``/var/www/assets``) or an rsync-like
-    destination (e.g. ``user@host:/var/www/assets``).
-    """
-
-    destination = str(destination_root).strip()
-    if ":" in destination and not destination.startswith("/"):
-        _, candidate_path = destination.split(":", maxsplit=1)
-        return candidate_path
-    return destination
-
-
 def _remote_join(*parts: str) -> str:
-    """Join path components using POSIX separators for SFTP paths."""
+    """Join path components using POSIX separators for remote paths."""
 
     return str(PurePosixPath(*parts))
-
-
-def _ensure_remote_dir(sftp_client: Any, remote_dir: str) -> None:
-    """Create a remote directory path recursively via SFTP.
-
-    Args:
-        sftp_client: Active Paramiko SFTP client.
-        remote_dir: Absolute POSIX path on remote host.
-    """
-
-    if not remote_dir:
-        return
-
-    path_builder = PurePosixPath("/") if remote_dir.startswith("/") else PurePosixPath()
-    for part in PurePosixPath(remote_dir).parts:
-        if part == "/":
-            continue
-        path_builder = path_builder / part
-        candidate = str(path_builder)
-        try:
-            sftp_client.stat(candidate)
-        except OSError:
-            sftp_client.mkdir(candidate)
-
-
-def _upload_staged_day_assets_piombo(
-    staged_day_dir: Path,
-    destination_root: str | Path,
-    day_name: str,
-    force_overwrite: bool,
-    hostname: str,
-    username: str,
-    password: str,
-) -> None:
-    """Upload staged JPG files for one day using Paramiko SFTP.
-
-    Args:
-        staged_day_dir: Local day directory containing staged JPG files.
-        destination_root: Remote root directory path.
-        day_name: Observation day subdirectory.
-        force_overwrite: Overwrite existing remote files when True.
-        hostname: SSH hostname.
-        username: SSH username.
-        password: SSH password.
-
-    Raises:
-        WebAssetUploadError: If Paramiko transport or upload fails.
-    """
-
-    if not staged_day_dir.is_dir():
-        return
-
-    remote_root = _normalize_remote_root(destination_root)
-    remote_day_dir = _remote_join(remote_root, day_name)
-
-    ssh_client = paramiko.SSHClient()
-    sftp_client = None
-    try:
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(
-            hostname=hostname,
-            username=username,
-            password=password,
-        )
-        sftp_client = ssh_client.open_sftp()
-        _ensure_remote_dir(sftp_client, remote_day_dir)
-
-        for staged_file in sorted(staged_day_dir.glob("*.jpg")):
-            remote_file = _remote_join(remote_day_dir, staged_file.name)
-            if not force_overwrite:
-                try:
-                    sftp_client.stat(remote_file)
-                    continue
-                except OSError:
-                    pass
-
-            sftp_client.put(str(staged_file), remote_file)
-    except Exception as exc:
-        raise WebAssetUploadError(
-            "Failed to upload staged web assets with paramiko"
-            f" (host={hostname}, remote_dir={remote_day_dir})"
-        ) from exc
-    finally:
-        if sftp_client is not None:
-            sftp_client.close()
-        ssh_client.close()
-
-
-def _validate_piombo_credentials(
-    piombo_hostname: str,
-    piombo_username: str,
-    piombo_password: str,
-) -> bool:
-    """Validate Piombo credential set and return whether upload is remote."""
-
-    provided_fields = [
-        bool(piombo_hostname.strip()),
-        bool(piombo_username.strip()),
-        bool(piombo_password.strip()),
-    ]
-
-    if any(provided_fields) and not all(provided_fields):
-        raise ValueError(
-            "piombo_hostname, piombosername, and piombo_password must "
-            "all be provided together"
-        )
-
-    return all(provided_fields)
 
 
 def _destination_for(
@@ -166,10 +43,7 @@ def _upload_staged_day_assets(
     destination_root: str | Path,
     day_name: str,
     force_overwrite: bool,
-    use_piombo_upload: bool,
-    piombo_hostname: str,
-    piombo_username: str,
-    piombo_password: str,
+    remote_fs: RemoteFileSystem | None = None,
 ) -> None:
     """Upload staged JPG files for one day to a local or remote target.
 
@@ -178,10 +52,9 @@ def _upload_staged_day_assets(
         destination_root: Local or remote destination root path.
         day_name: Observation day name used as destination subdirectory.
         force_overwrite: Overwrite already-existing destination files.
-        use_piombo_upload: Whether to upload via Paramiko SFTP.
-        piombo_hostname: SSH hostname.
-        piombo_username: SSH username.
-        piombo_password: SSH password.
+        remote_fs: Optional remote file-system adapter.  When provided, files
+            are transferred to the remote host via the adapter; when ``None``,
+            a plain local ``shutil.copy2`` is used instead.
 
     Raises:
         WebAssetUploadError: If transfer to local or remote destination fails.
@@ -190,16 +63,20 @@ def _upload_staged_day_assets(
     if not staged_day_dir.is_dir():
         return
 
-    if use_piombo_upload:
-        _upload_staged_day_assets_piombo(
-            staged_day_dir=staged_day_dir,
-            destination_root=destination_root,
-            day_name=day_name,
-            force_overwrite=force_overwrite,
-            hostname=piombo_hostname,
-            username=piombo_username,
-            password=piombo_password,
-        )
+    if remote_fs is not None:
+        remote_root = str(destination_root).strip()
+        # Strip an optional rsync-like "user@host:/path" prefix
+        if ":" in remote_root and not remote_root.startswith("/"):
+            _, remote_root = remote_root.split(":", maxsplit=1)
+
+        remote_day_dir = _remote_join(remote_root, day_name)
+        remote_fs.ensure_dir(remote_day_dir)
+
+        for staged_file in sorted(staged_day_dir.glob("*.jpg")):
+            remote_file = _remote_join(remote_day_dir, staged_file.name)
+            if not force_overwrite and remote_fs.file_exists(remote_file):
+                continue
+            remote_fs.upload_file(str(staged_file), remote_file)
         return
 
     destination_day_dir = Path(destination_root) / day_name
@@ -215,9 +92,7 @@ def process_day_web_asset_compatibility(
     day: ObservationDay,
     quicklook_root: str | Path,
     context_root: str | Path,
-    piombo_hostname: str = "",
-    piombo_username: str = "",
-    piombo_password: str = "",
+    remote_fs: RemoteFileSystem | None = None,
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
     deploy_quicklook: bool = True,
@@ -229,9 +104,10 @@ def process_day_web_asset_compatibility(
         day: Observation day to process.
         quicklook_root: Root directory for quicklook output.
         context_root: Root directory for context output.
-        piomboostname: SSH hostname for remote upload.
-        piombosername: SSH username for remote upload.
-        piomboassword: SSH password for remote upload.
+        remote_fs: :class:`~irsol_data_pipeline.core.remote_filesystem.RemoteFileSystem`
+            or ``None``.  When provided, converted JPG files are transferred to
+            the remote host via the adapter.  When ``None``, files are copied to
+            a local destination directory.
         jpeg_quality: JPEG compression quality.
         force_overwrite: Overwrite existing JPG files when True.
         deploy_quicklook: Deploy corrected profile images when True.
@@ -261,12 +137,6 @@ def process_day_web_asset_compatibility(
         staged_counts_by_kind: dict[WebAssetKind, int] = defaultdict(int)
 
         try:
-            use_piombo_upload = _validate_piombo_credentials(
-                piombo_hostname=piombo_hostname,
-                piombo_username=piombo_username,
-                piombo_password=piombo_password,
-            )
-
             with TemporaryDirectory(prefix=f"web-assets-{day.name}-") as temp_dir:
                 staging_root = Path(temp_dir)
                 staging_quicklook_root = staging_root / "quicklook"
@@ -293,7 +163,7 @@ def process_day_web_asset_compatibility(
 
                     try:
                         if (
-                            not use_piombo_upload
+                            remote_fs is None
                             and destination_path.exists()
                             and not force_overwrite
                         ):
@@ -341,10 +211,7 @@ def process_day_web_asset_compatibility(
                         destination_root=quicklook_root,
                         day_name=day.name,
                         force_overwrite=force_overwrite,
-                        use_piombo_upload=use_piombo_upload,
-                        piombo_hostname=piombo_hostname,
-                        piombo_username=piombo_username,
-                        piombo_password=piombo_password,
+                        remote_fs=remote_fs,
                     )
 
                 if staged_counts_by_kind[WebAssetKind.CONTEXT] > 0:
@@ -353,10 +220,7 @@ def process_day_web_asset_compatibility(
                         destination_root=context_root,
                         day_name=day.name,
                         force_overwrite=force_overwrite,
-                        use_piombo_upload=use_piombo_upload,
-                        piombo_hostname=piombo_hostname,
-                        piombo_username=piombo_username,
-                        piombo_password=piombo_password,
+                        remote_fs=remote_fs,
                     )
         except (ValueError, WebAssetUploadError) as exc:
             failed += 1
