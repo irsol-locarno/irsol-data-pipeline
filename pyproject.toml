@@ -4,9 +4,9 @@ dynamic = ["version"]
 description = "Solar observation data processing pipeline for IRSOL"
 readme = { text = "Solar observation data processing pipeline for IRSOL", content-type = "text/markdown" }
 authors = [{ name = "Carlo Del Don", email = "deldoc@usi.ch" }]
-requires-python = ">=3.10"
+requires-python = ">=3.10, <=3.12"  # python 3.13 seems not to work with the dependencies
 dependencies = [
-    "numpy<2",  # spectroflat does not pin its numpy dependency but its internals require numpy<2
+    "numpy<2",
     "scipy>=1.10.0",
     "spectroflat>=2.1.0",
     "qollib>=0.1.0",
