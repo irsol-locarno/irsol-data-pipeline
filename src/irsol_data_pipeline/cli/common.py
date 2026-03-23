@@ -7,8 +7,10 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from cyclopts.exceptions import ValidationError
 from rich.console import Console
 
+from irsol_data_pipeline import has_display
 from irsol_data_pipeline.cli.metadata import OutputFormat
 from irsol_data_pipeline.cli.presentation import build_runtime_presentation
 
@@ -70,3 +72,18 @@ def get_console() -> Console:
     """
 
     return Console()
+
+
+def ensure_display_available() -> None:
+    """Validate that a display is available for interactive figure display.
+
+    Raises:
+        ValidationError: If DISPLAY environment variable is not set.
+    """
+
+    if not has_display():
+        raise ValidationError(
+            "Cannot display figures: DISPLAY environment variable is not set. "
+            "Either set DISPLAY (e.g., for X11: export DISPLAY=:0) or use "
+            "--output-path to save the figure to disk instead of --show."
+        )

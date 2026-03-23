@@ -8,6 +8,7 @@ from typing import Annotated
 from cyclopts import App, Parameter, validators
 from cyclopts.exceptions import ValidationError
 
+from irsol_data_pipeline.cli.common import ensure_display_available
 from irsol_data_pipeline.core.models import MeasurementMetadata, StokesParameters
 
 plot_app = App(name="plot", help="Render plots from observation files.")
@@ -142,6 +143,9 @@ def profile(
     if output_path_option is None and not show:
         raise ValidationError("One of --show and --output-path must be set.")
 
+    if show:
+        ensure_display_available()
+
     _configure_backend_for_show(show)
 
     from irsol_data_pipeline.plotting.profile import plot as plot_profile
@@ -195,6 +199,9 @@ def slit(
 
     if output_path_option is None and not show:
         raise ValidationError("One of --show and --output-path must be set.")
+
+    if show:
+        ensure_display_available()
 
     _configure_backend_for_show(show)
 

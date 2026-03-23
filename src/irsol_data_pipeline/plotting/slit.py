@@ -7,7 +7,6 @@ spectrograph slit position, +Q direction, mu circle, and solar limb.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -17,6 +16,9 @@ from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astropy.visualization import ImageNormalize, SqrtStretch
 from loguru import logger
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
+from matplotlib.patches import Circle
 from sunpy.coordinates.sun import angular_radius
 
 from irsol_data_pipeline.core.slit_images.config import FOV_ARCSEC, SDO_DATA_LABELS
@@ -24,7 +26,7 @@ from irsol_data_pipeline.core.slit_images.coordinates import SlitGeometry
 
 
 def plot(
-    maps: list[tuple[Optional[str], Optional[sunpy.map.Map]]],
+    maps: list[tuple[str | None, sunpy.map.Map | None]],
     slit: SlitGeometry,
     output_path: Path | None,
     show: bool = False,
@@ -56,13 +58,19 @@ def plot(
 
     start_utc = Time(slit.start_time, scale="utc")
 
-    fig = plt.figure(figsize=(12, 8))
+    # Use pyplot-managed figure only if interactive display is needed.
+    # For thread/subprocess safety, avoid pyplot state machine otherwise.
+    if show:
+        fig = plt.figure(figsize=(12, 8))
+    else:
+        fig = Figure(figsize=(12, 8))
+        FigureCanvasAgg(fig)
 
     for i, (data_time, smap) in enumerate(maps):
         if smap is None:
             continue
 
-        # Crop to field of view around slit center
+        # Crop to field of view around slit center.
         try:
             bottom_left = SkyCoord(
                 (slit.center_solar_x - FOV_ARCSEC // 2) * u.arcsec,
@@ -84,22 +92,22 @@ def plot(
 
         ax = fig.add_subplot(2, 3, i + 1, projection=sub_map)
 
-        # Plot with appropriate normalization
+        # Plot with appropriate normalization.
         label = SDO_DATA_LABELS[i]
         slit_color = _plot_panel(ax, sub_map, label)
 
-        # Draw +Q direction if derotator offset is available
+        # Draw +Q direction if derotator offset is available.
         if slit.derotator_offset is not None:
             _draw_q_direction(ax, slit)
 
-        # Draw mu iso-contour circle
+        # Draw mu iso-contour circle.
         if show_mu_graphic:
             _draw_mu_circle(ax, slit, start_utc)
 
-        # Draw solar limb
+        # Draw solar limb.
         sub_map.draw_limb()
 
-        # Draw slit
+        # Draw slit.
         slit_display_width = 4  # visual width for visibility
         ax.plot(
             xx.to(u.deg),
@@ -126,7 +134,7 @@ def plot(
         ax.set_xlabel("")
         ax.set_ylabel("")
 
-        # Lock axes to the cropped field of view
+        # Lock axes to the cropped field of view.
         ax.set_xlim(
             sub_map.wcs.world_to_pixel(bottom_left)[0],
             sub_map.wcs.world_to_pixel(top_right)[0],
@@ -136,10 +144,10 @@ def plot(
             sub_map.wcs.world_to_pixel(top_right)[1],
         )
 
-    # Figure annotations
+    # Figure annotations.
     fig.suptitle(" ")
-    plt.tight_layout()
-    plt.text(
+    fig.tight_layout()
+    fig.text(
         0.995,
         0.99,
         f"{slit.observation_name}  {slit.measurement_name}",
@@ -148,7 +156,7 @@ def plot(
         verticalalignment="top",
         size="medium",
     )
-    plt.text(
+    fig.text(
         0.005,
         0.99,
         f"{slit.start_time_str} - {slit.end_time_str}",
@@ -157,7 +165,7 @@ def plot(
         verticalalignment="top",
         size="medium",
     )
-    plt.text(
+    fig.text(
         0.998,
         0.5,
         "The fine calibration of the slit position has not been done yet. "
@@ -170,7 +178,7 @@ def plot(
         rotation=90,
     )
     if show_mu_text:
-        plt.text(
+        fig.text(
             0.5,
             0.99,
             f"\u03bc = {slit.mu:.3f}",
@@ -181,11 +189,13 @@ def plot(
         )
 
     if output_path is not None:
-        plt.savefig(str(output_path))
+        fig.savefig(str(output_path))
         logger.info("Slit preview saved", output_path=output_path)
     if show:
         plt.show()
-    plt.close(fig)
+        plt.close(fig)
+    else:
+        fig.clear()
 
 
 def _plot_panel(
@@ -195,18 +205,19 @@ def _plot_panel(
 ) -> str:
     """Plot a single SDO panel with appropriate styling.
 
-    Returns the slit color.
+    Returns:
+        The slit color.
     """
     if label == "HMI Magnetogram":
         norm = ImageNormalize(sub_map.data, stretch=SqrtStretch(), vmin=-500, vmax=500)
         sub_map.plot(axes=ax, norm=norm)
         return "blue"
-    elif label == "HMI Continuum":
+    if label == "HMI Continuum":
         sub_map.plot(axes=ax)
         return "cyan"
-    else:
-        sub_map.plot(axes=ax)
-        return "black"
+
+    sub_map.plot(axes=ax)
+    return "black"
 
 
 def _draw_q_direction(ax, slit: SlitGeometry) -> None:
@@ -214,7 +225,7 @@ def _draw_q_direction(ax, slit: SlitGeometry) -> None:
     q_angle = slit.angle_solar + slit.derotator_offset
     q_width = 1
 
-    # Full-length dashed line
+    # Full-length dashed line.
     q_length = FOV_ARCSEC
     q_x_shift = q_length * np.cos(q_angle)
     q_y_shift = q_length * np.sin(q_angle)
@@ -230,7 +241,7 @@ def _draw_q_direction(ax, slit: SlitGeometry) -> None:
         transform=ax.get_transform("world"),
     )
 
-    # Arrow indicators
+    # Arrow indicators.
     arrow_len = 0.3
     dx = arrow_len * np.cos(q_angle)
     dy = arrow_len * np.sin(q_angle)
@@ -250,7 +261,7 @@ def _draw_q_direction(ax, slit: SlitGeometry) -> None:
             ),
         )
 
-    # +Q label
+    # +Q label.
     ax.text(
         0.01,
         0.99,
@@ -271,7 +282,7 @@ def _draw_mu_circle(ax, slit: SlitGeometry, start_utc: Time) -> None:
     r0 = angular_radius(start_utc)
     mu_radius = r0 * np.sqrt(1 - (slit.mu**2) * np.sign(slit.mu))
 
-    circle = plt.Circle(
+    circle = Circle(
         [0, 0],
         radius=mu_radius.to_value(u.deg),
         color="white",

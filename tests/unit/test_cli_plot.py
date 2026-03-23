@@ -29,6 +29,7 @@ class TestCliPlot:
                 "irsol_data_pipeline.io.dat.read", return_value=(stokes, np.array([]))
             ) as read_dat,
             patch("irsol_data_pipeline.plotting.profile.plot") as plot_profile,
+            patch("irsol_data_pipeline.has_display", return_value=True),
         ):
             result = app(
                 [
@@ -67,6 +68,7 @@ class TestCliPlot:
                 "irsol_data_pipeline.io.dat.read", return_value=(stokes, np.array([]))
             ) as read_dat,
             patch("irsol_data_pipeline.plotting.profile.plot") as plot_profile,
+            patch("irsol_data_pipeline.has_display", return_value=True),
         ):
             result = app(
                 ["plot", "profile", str(input_path), "--show"],

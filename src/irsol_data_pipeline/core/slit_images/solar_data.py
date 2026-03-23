@@ -134,6 +134,12 @@ def fetch_sdo_maps(
         results: list[tuple[Optional[str], Optional[sunpy.map.Map]]] = []
 
         for series, wavelengths, segment, time_fmt in SDO_DATA_PRODUCTS:
+            logger.trace(
+                "Processing SDO data product",
+                series=series,
+                segment=segment,
+                wavelengths=wavelengths,
+            )
             results.extend(
                 _fetch_sdo_maps_for_product(
                     client,

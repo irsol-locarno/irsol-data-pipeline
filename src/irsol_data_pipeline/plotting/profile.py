@@ -6,10 +6,15 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal
 
+import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 from irsol_data_pipeline.core.models import StokesParameters
+
+COLORBAR_TICK_LABEL_SIZE = 16
+AXIS_LABEL_FONT_SIZE = 16
 
 
 def _resolve_vrange(
@@ -19,8 +24,9 @@ def _resolve_vrange(
 
     Args:
         vrange: User-supplied plotting range or ``False`` for auto behavior.
+
     Returns:
-        Explicit `[vmin, vmax]` bounds or `None` when matplotlib should use its
+        Explicit `[vmin, vmax]` bounds or `None` when Matplotlib should use its
         default scaling.
     """
 
@@ -74,7 +80,7 @@ def plot(
     Args:
         data: Stokes parameters to plot.
         vrange_si: Optional ``[vmin, vmax]`` range for the Stokes I panel.
-            When False, matplotlib chooses the range automatically.
+            When False, Matplotlib chooses the range automatically.
         vrange_sq: Optional ``[vmin, vmax]`` range for the Stokes Q/I panel.
             When False, a narrow range around the mean is derived automatically.
         vrange_su: Optional ``[vmin, vmax]`` range for the Stokes U/I panel.
@@ -82,7 +88,7 @@ def plot(
         vrange_sv: Optional ``[vmin, vmax]`` range for the Stokes V/I panel.
             When False, a narrow range around the mean is derived automatically.
         title: Optional figure title.
-        filename_save: Output path passed to ``matplotlib.pyplot.savefig``.
+        filename_save: Output path passed to ``Figure.savefig``.
         pix_low: Optional lower pixel bounds for highlighted spatial regions.
         pix_high: Optional upper pixel bounds for highlighted spatial regions.
         pix_quiet_low: Optional lower pixel bounds for quiet-Sun guide lines.
@@ -101,7 +107,7 @@ def plot(
     if colors_lines is None:
         colors_lines = ["tab:blue", "tab:orange", "tab:green", "tab:red"]
 
-    ### If no TCU has been used, then Q, U and V might have an offset that has to be considered for vrange
+    # If no TCU has been used, Q, U and V might have an offset to consider.
     if vrange_sq is False:
         dq = 0.01
         mean_sq = np.mean(sq)
@@ -114,20 +120,26 @@ def plot(
         dv = 0.01
         mean_sv = np.mean(sv)
         vrange_sv = [mean_sv - dv, mean_sv + dv]
+
     resolved_vrange_si = _resolve_vrange(vrange_si)
     resolved_vrange_sq = _require_vrange(vrange_sq)
     resolved_vrange_su = _require_vrange(vrange_su)
     resolved_vrange_sv = _require_vrange(vrange_sv)
 
-    # Create the figure with the four Stokes components
-    plt.rcParams["font.size"] = 16
-    fig, axes = plt.subplots(4, 1, figsize=(16, 14), sharex=True)
-    plt.subplots_adjust(hspace=0)
+    # Use pyplot-managed figure only if interactive display is needed.
+    # For thread/subprocess safety, avoid pyplot state machine otherwise.
+    if show:
+        fig = plt.figure(figsize=(16, 14))
+    else:
+        fig = Figure(figsize=(16, 14))
+        FigureCanvasAgg(fig)
+    axes = fig.subplots(4, 1, sharex=True)
+    fig.subplots_adjust(hspace=0)
 
     if title is not None:
-        plt.suptitle(title, fontsize=24, y=0.97)
+        fig.suptitle(title, fontsize=24, y=0.97)
 
-    # Define extent for imshow (to set proper axes)
+    # Define extent for imshow to set proper axes.
     if a0 is not None and a1 is not None:
         wavelength_min = a0
         wavelength_max = a0 + a1 * (si.shape[1] - 1)
@@ -138,10 +150,14 @@ def plot(
     spatial_min, spatial_max = 0, si.shape[0]
     extent = [wavelength_min, wavelength_max, spatial_min, spatial_max]
 
-    ## Plot Stokes I
+    # Plot Stokes I.
     if resolved_vrange_si is None:
         im0 = axes[0].imshow(
-            si, cmap="gist_gray", aspect="auto", extent=extent, origin="lower"
+            si,
+            cmap="gist_gray",
+            aspect="auto",
+            extent=extent,
+            origin="lower",
         )
     else:
         im0 = axes[0].imshow(
@@ -164,9 +180,10 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    plt.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
+    cbar0 = fig.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
+    cbar0.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
-    ## Plot Stokes Q/I
+    # Plot Stokes Q/I.
     im1 = axes[1].imshow(
         sq,
         cmap="gist_gray",
@@ -187,9 +204,10 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    plt.colorbar(im1, ax=axes[1], orientation="vertical", pad=0.01)
+    cbar1 = fig.colorbar(im1, ax=axes[1], orientation="vertical", pad=0.01)
+    cbar1.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
-    ## Plot Stokes U/I
+    # Plot Stokes U/I.
     im2 = axes[2].imshow(
         su,
         cmap="gist_gray",
@@ -210,9 +228,10 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    plt.colorbar(im2, ax=axes[2], orientation="vertical", pad=0.01)
+    cbar2 = fig.colorbar(im2, ax=axes[2], orientation="vertical", pad=0.01)
+    cbar2.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
-    ## Plot Stokes V/I
+    # Plot Stokes V/I.
     im3 = axes[3].imshow(
         sv,
         cmap="gist_gray",
@@ -234,22 +253,39 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    plt.colorbar(im3, ax=axes[3], orientation="vertical", pad=0.01)
+    cbar3 = fig.colorbar(im3, ax=axes[3], orientation="vertical", pad=0.01)
+    cbar3.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
-    # Add pixel ranges highlights
+    # Add pixel range highlights.
     if pix_low is not None and pix_high is not None:
         for i in range(len(pix_low)):
             axes[0].axhspan(
-                pix_high[i], pix_low[i], color=colors_lines[i], alpha=alpha_px, zorder=0
+                pix_high[i],
+                pix_low[i],
+                color=colors_lines[i],
+                alpha=alpha_px,
+                zorder=0,
             )
             axes[1].axhspan(
-                pix_high[i], pix_low[i], color=colors_lines[i], alpha=alpha_px, zorder=0
+                pix_high[i],
+                pix_low[i],
+                color=colors_lines[i],
+                alpha=alpha_px,
+                zorder=0,
             )
             axes[2].axhspan(
-                pix_high[i], pix_low[i], color=colors_lines[i], alpha=alpha_px, zorder=0
+                pix_high[i],
+                pix_low[i],
+                color=colors_lines[i],
+                alpha=alpha_px,
+                zorder=0,
             )
             axes[3].axhspan(
-                pix_high[i], pix_low[i], color=colors_lines[i], alpha=alpha_px, zorder=0
+                pix_high[i],
+                pix_low[i],
+                color=colors_lines[i],
+                alpha=alpha_px,
+                zorder=0,
             )
 
     if pix_quiet_low is not None and pix_quiet_high is not None:
@@ -319,10 +355,10 @@ def plot(
                 alpha=0.7,
             )
 
-    for ax in [axes[0], axes[1], axes[2], axes[3]]:
-        # ax.set_xticklabels([])
-        # Also hide the x-axis ticks themselves
-        # ax.tick_params(axis='x', which='both', length=0)
+    for ax in axes:
+        ax.xaxis.label.set_size(AXIS_LABEL_FONT_SIZE)
+        ax.yaxis.label.set_size(AXIS_LABEL_FONT_SIZE)
+        ax.tick_params(axis="both", labelsize=16)
         ax.tick_params(
             axis="x", which="major", direction="in", length=7, width=1.5, top=True
         )
@@ -330,10 +366,11 @@ def plot(
             axis="y", which="major", direction="in", length=7, width=1.5, right=True
         )
 
-    # Improve overall appearance
-    plt.tight_layout(h_pad=-0.7, w_pad=0)
+    fig.tight_layout(h_pad=-0.7, w_pad=0)
     if filename_save is not None:
         fig.savefig(filename_save, dpi=100, bbox_inches="tight")
     if show:
         plt.show()
-    plt.close(fig)
+        plt.close(fig)
+    else:
+        fig.clear()
