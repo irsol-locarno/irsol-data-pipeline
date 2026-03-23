@@ -13,6 +13,9 @@ from matplotlib.figure import Figure
 
 from irsol_data_pipeline.core.models import StokesParameters
 
+COLORBAR_TICK_LABEL_SIZE = 16
+AXIS_LABEL_FONT_SIZE = 16
+
 
 def _resolve_vrange(
     vrange: Sequence[float] | Literal[False],
@@ -177,7 +180,8 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    fig.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
+    cbar0 = fig.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
+    cbar0.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
     # Plot Stokes Q/I.
     im1 = axes[1].imshow(
@@ -200,7 +204,8 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    fig.colorbar(im1, ax=axes[1], orientation="vertical", pad=0.01)
+    cbar1 = fig.colorbar(im1, ax=axes[1], orientation="vertical", pad=0.01)
+    cbar1.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
     # Plot Stokes U/I.
     im2 = axes[2].imshow(
@@ -223,7 +228,8 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    fig.colorbar(im2, ax=axes[2], orientation="vertical", pad=0.01)
+    cbar2 = fig.colorbar(im2, ax=axes[2], orientation="vertical", pad=0.01)
+    cbar2.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
     # Plot Stokes V/I.
     im3 = axes[3].imshow(
@@ -247,7 +253,8 @@ def plot(
         fontsize=15,
         bbox=dict(facecolor="black", alpha=0.5),
     )
-    fig.colorbar(im3, ax=axes[3], orientation="vertical", pad=0.01)
+    cbar3 = fig.colorbar(im3, ax=axes[3], orientation="vertical", pad=0.01)
+    cbar3.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
     # Add pixel range highlights.
     if pix_low is not None and pix_high is not None:
@@ -349,6 +356,8 @@ def plot(
             )
 
     for ax in axes:
+        ax.xaxis.label.set_size(AXIS_LABEL_FONT_SIZE)
+        ax.yaxis.label.set_size(AXIS_LABEL_FONT_SIZE)
         ax.tick_params(axis="both", labelsize=16)
         ax.tick_params(
             axis="x", which="major", direction="in", length=7, width=1.5, top=True
