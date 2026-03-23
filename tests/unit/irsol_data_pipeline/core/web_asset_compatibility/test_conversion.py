@@ -75,3 +75,28 @@ class TestConvertPngToJpeg:
             optimize=True,
             progressive=False,
         )
+
+
+class TestConvertPngToJpegWithFixtures:
+    """Byte-level fidelity tests using pre-generated fixture images.
+
+    The fixture directory contains a reference ``sample.png`` and the
+    corresponding ``sample.jpg`` produced by :func:`convert_png_to_jpeg`
+    at quality 80.  Re-running the conversion must yield the exact same
+    bytes on disk, demonstrating that the function is fully deterministic.
+    """
+
+    _JPEG_QUALITY = 80
+
+    def test_png_to_jpeg_bytes_match_fixture(
+        self, fixture_dir: Path, tmp_path: Path
+    ) -> None:
+        """Converting the fixture PNG produces bytes identical to the fixture
+        JPEG."""
+        png_fixture = fixture_dir / "web_asset_compatibility" / "sample.png"
+        jpg_fixture = fixture_dir / "web_asset_compatibility" / "sample.jpg"
+
+        output_jpg = tmp_path / "converted.jpg"
+        convert_png_to_jpeg(png_fixture, output_jpg, jpeg_quality=self._JPEG_QUALITY)
+
+        assert output_jpg.read_bytes() == jpg_fixture.read_bytes()
