@@ -1,4 +1,4 @@
-"""Tests for processing metadata JSON read/write helpers."""
+"""Tests for processing metadata JSON write helpers."""
 
 import datetime
 import json
@@ -47,11 +47,3 @@ class TestWriteErrorMetadata:
         assert data["source_file"] == "6302_m1.dat"
         assert data["error"] == "No flat-field within threshold"
         assert "pipeline_version" in data
-
-
-class TestReadMetadata:
-    def test_reads_json(self, tmp_path):
-        path = tmp_path / "test.json"
-        path.write_text('{"key": "value"}')
-        data = processing_metadata_io.read(path)
-        assert data["key"] == "value"

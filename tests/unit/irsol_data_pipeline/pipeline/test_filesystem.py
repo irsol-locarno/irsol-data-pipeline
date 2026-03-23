@@ -1,5 +1,7 @@
 """Tests for filesystem discovery utilities."""
 
+from __future__ import annotations
+
 from irsol_data_pipeline.core.config import (
     CACHE_DIRNAME,
     CORRECTED_FITS_SUFFIX,
