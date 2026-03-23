@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -461,7 +462,7 @@ class TestCliApp:
         assert exc_info.value.code == 0
         mock_update.assert_called_once_with(PREFECT_PROFILE_SETTINGS)
         assert mock_run.call_args_list == [
-            ((["prefect", "server", "start"],), {"check": False}),
+            (([sys.executable, "-m", "prefect", "server", "start"],), {"check": False}),
         ]
 
     def test_prefect_start_propagates_server_exit_code(self) -> None:

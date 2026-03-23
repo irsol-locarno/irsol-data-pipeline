@@ -25,7 +25,7 @@ class TestCliPresentation:
             patch("platform.system", return_value="Linux"),
             patch("platform.release", return_value="6.8.0"),
             patch("platform.machine", return_value="x86_64"),
-            patch("platform.python_version", return_value="3.12.4"),
+            patch("platform.python_version", return_value="3.11.4"),
             patch(
                 "irsol_data_pipeline.cli.presentation._detect_terminal_columns",
                 return_value=200,
@@ -34,7 +34,7 @@ class TestCliPresentation:
             result = presentation.build_runtime_presentation()
 
         assert "OS      : Linux 6.8.0 x86_64" in result
-        assert "Python  : 3.12.4" in result
+        assert "Python  : 3.11.4" in result
         assert "spectroflat : 2.1.0" in result
         assert "numpy       : 1.26.4" in result
         assert "pydantic    : 2.10.6" in result
