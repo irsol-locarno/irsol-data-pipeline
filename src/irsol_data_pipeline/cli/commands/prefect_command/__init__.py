@@ -26,7 +26,9 @@ def start_prefect_server() -> None:
 
     update_current_profile(cast(dict[Any, Any], PREFECT_PROFILE_SETTINGS))
 
-    result = subprocess.run(["prefect", "server", "start"], check=False)
+    result = subprocess.run(
+        [sys.executable, "-m", "prefect", "server", "start"], check=False
+    )
     sys.exit(result.returncode)
 
 
