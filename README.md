@@ -70,3 +70,4 @@ Use this section as the canonical traversal path.
 |---|---|
 | [docs/cli/cli_usage.md](docs/cli/cli_usage.md) | CLI commands, arguments, and examples |
 | [docs/maintainer/prefect_operations.md](docs/maintainer/prefect_operations.md) | Production deployment, monitoring, and troubleshooting |
+| [docs/maintainer/create_a_release.md](docs/maintainer/create_a_release.md) | Step-by-step guide to creating a new release on GitHub and publishing to PyPI |
