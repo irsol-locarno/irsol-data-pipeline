@@ -87,9 +87,9 @@ def cleanup_day_cache_files(
 
         logger.info("Starting day cache cleanup", cache_directory=cache_dir)
 
-        cache_files = sorted(cache_dir.glob("*.*"))
+        cache_files = sorted([f for f in cache_dir.glob("**/*") if f.is_file()])
         logger.debug(
-            "Found .pkl files in cache directory",
+            "Found cache files in cache directory",
             cache_dir=cache_dir,
             count=len(cache_files),
         )
