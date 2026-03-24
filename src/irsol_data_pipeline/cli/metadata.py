@@ -6,9 +6,8 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from irsol_data_pipeline.core.config import (
-    DEFAULT_CONTEXT_ROOT,
+    DEFAULT_PIOMBO_BASE_PATH,
     DEFAULT_PIOMBO_HOST_NAME,
-    DEFAULT_QUICKLOOK_ROOT,
 )
 from irsol_data_pipeline.prefect.flows.tags import PrefectDeploymentTopicTag
 from irsol_data_pipeline.prefect.variables import PrefectVariableName
@@ -122,16 +121,9 @@ PREFECT_VARIABLES: tuple[PrefectVariableMetadata, ...] = (
         topic_tags=(PrefectDeploymentTopicTag.MAINTENANCE,),
     ),
     PrefectVariableMetadata(
-        prefect_name=PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT,
-        prompt_text="Root path for quicklook JPG assets deployed by web-assets-compatibility flows",
-        default_value=DEFAULT_QUICKLOOK_ROOT,
-        required=False,
-        topic_tags=(PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY,),
-    ),
-    PrefectVariableMetadata(
-        prefect_name=PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT,
-        prompt_text="Root path for context JPG assets deployed by web-assets-compatibility flows",
-        default_value=DEFAULT_CONTEXT_ROOT,
+        prefect_name=PrefectVariableName.PIOMBO_BASE_PATH,
+        prompt_text="Base path for Piombo web-assets uploads",
+        default_value=DEFAULT_PIOMBO_BASE_PATH,
         required=False,
         topic_tags=(PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY,),
     ),

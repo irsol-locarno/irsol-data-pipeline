@@ -13,6 +13,20 @@ class WebAssetKind(enum.Enum):
     CONTEXT = "context"
 
 
+class WebAssetFolderName(enum.Enum):
+    """Folder names used by legacy web assets on Piombo."""
+
+    QUICK_LOOK = "img_quicklook"
+    CONTEXT = "img_data"
+
+    @classmethod
+    def for_asset_kind(cls, kind: WebAssetKind) -> WebAssetFolderName:
+        return {
+            WebAssetKind.QUICK_LOOK: cls.QUICK_LOOK,
+            WebAssetKind.CONTEXT: cls.CONTEXT,
+        }[kind]
+
+
 class WebAssetSource(BaseModel):
     """One generated PNG that can be deployed as a compatible JPG.
 
