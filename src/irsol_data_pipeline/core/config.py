@@ -30,9 +30,8 @@ V_STOKES_CUTOFF = 0.4
 # Default delta days to access JSOC data
 DEFAULT_JSOC_DATA_DELAY_DAYS = 14
 
-# Default paths for web-assets compatibility flow outputs
-DEFAULT_QUICKLOOK_ROOT = "/irsol_db/docs/web-site/assets/img_quicklook"
-DEFAULT_CONTEXT_ROOT = "/irsol_db/docs/web-site/assets/img_data"
+# Default root path used by Piombo SFTP uploads for web assets.
+DEFAULT_PIOMBO_BASE_PATH = "/irsol_db/docs/web-site/assets"
 
 # Default host name for piombo host
 DEFAULT_PIOMBO_HOST_NAME = "piombo7.usi.ch"

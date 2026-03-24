@@ -9,5 +9,3 @@ The ``core`` and ``pipeline`` packages depend **only** on the
 :class:`~irsol_data_pipeline.core.remote_filesystem.RemoteFileSystem`
 protocol; they must never import from this package directly.
 """
-
-from __future__ import annotations

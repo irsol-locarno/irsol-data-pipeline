@@ -90,21 +90,6 @@ class TestDiscoverDayWebAssetSources:
         )
         assert result == []
 
-    def test_returns_empty_when_both_flags_false(
-        self, tmp_path: Path, observation_day: ObservationDay
-    ) -> None:
-        (
-            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
-        ).touch()
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-            deploy_quicklook=False,
-            deploy_context=False,
-        )
-        assert result == []
-
     def test_discovers_quicklook_sources(
         self, tmp_path: Path, observation_day: ObservationDay
     ) -> None:
@@ -119,7 +104,6 @@ class TestDiscoverDayWebAssetSources:
             day=observation_day,
             quicklook_root=tmp_path / "ql",
             context_root=tmp_path / "ctx",
-            deploy_context=False,
         )
 
         assert len(result) == 2
@@ -137,7 +121,6 @@ class TestDiscoverDayWebAssetSources:
             day=observation_day,
             quicklook_root=tmp_path / "ql",
             context_root=tmp_path / "ctx",
-            deploy_quicklook=False,
         )
 
         assert len(result) == 1
@@ -162,38 +145,6 @@ class TestDiscoverDayWebAssetSources:
         kinds = {s.kind for s in result}
         assert kinds == {WebAssetKind.QUICK_LOOK, WebAssetKind.CONTEXT}
 
-    def test_target_path_uses_quicklook_root(
-        self, tmp_path: Path, observation_day: ObservationDay
-    ) -> None:
-        (
-            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
-        ).touch()
-        ql_root = tmp_path / "quicklook_output"
-
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=ql_root,
-            context_root=tmp_path / "ctx",
-            deploy_context=False,
-        )
-
-        assert result[0].target_path == ql_root / "250101" / "5876_m01.jpg"
-
-    def test_target_path_uses_context_root(
-        self, tmp_path: Path, observation_day: ObservationDay
-    ) -> None:
-        (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
-        ctx_root = tmp_path / "context_output"
-
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=ctx_root,
-            deploy_quicklook=False,
-        )
-
-        assert result[0].target_path == ctx_root / "250101" / "5876_m01.jpg"
-
     def test_result_is_sorted(
         self, tmp_path: Path, observation_day: ObservationDay
     ) -> None:
@@ -206,7 +157,6 @@ class TestDiscoverDayWebAssetSources:
             day=observation_day,
             quicklook_root=tmp_path / "ql",
             context_root=tmp_path / "ctx",
-            deploy_context=False,
         )
 
         names = [s.measurement_name for s in result]
@@ -223,7 +173,6 @@ class TestDiscoverDayWebAssetSources:
             day=observation_day,
             quicklook_root=tmp_path / "ql",
             context_root=tmp_path / "ctx",
-            deploy_context=False,
         )
 
         assert result[0].observation_name == observation_day.name

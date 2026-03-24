@@ -16,8 +16,8 @@ from loguru import logger
 from prefect import flow, task
 from prefect.task_runners import ThreadPoolTaskRunner
 
+from irsol_data_pipeline.core.config import DEFAULT_PIOMBO_BASE_PATH
 from irsol_data_pipeline.core.models import DayProcessingResult, ObservationDay
-from irsol_data_pipeline.core.remote_filesystem import RemoteFileSystem
 from irsol_data_pipeline.integrations.piombo import SftpRemoteFileSystem
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
@@ -41,7 +41,8 @@ def _build_remote_fs(
     piombo_hostname: str,
     piombo_username: str,
     piombo_password: str,
-) -> RemoteFileSystem | None:
+    piombo_base_path: str,
+) -> SftpRemoteFileSystem:
     """Build a
     :class:`~irsol_data_pipeline.integrations.piombo.SftpRemoteFileSystem` from
     credentials.
@@ -50,10 +51,11 @@ def _build_remote_fs(
         piombo_hostname: SSH hostname.  Pass an empty string to use local upload.
         piombo_username: SSH username.  Pass an empty string to use local upload.
         piombo_password: SSH password.  Pass an empty string to use local upload.
+        piombo_base_path: Base destination path on Piombo used by SFTP uploads.
 
     Returns:
         A configured :class:`SftpRemoteFileSystem` when all three credentials
-        are provided, or ``None`` when all three are empty (local upload).
+        are provided.
 
     Raises:
         ValueError: If only some credentials are provided.
@@ -63,8 +65,6 @@ def _build_remote_fs(
         bool(piombo_username.strip()),
         bool(piombo_password.strip()),
     ]
-    if not any(provided):
-        return None
     if not all(provided):
         raise ValueError(
             "piombo_hostname, piombo_username, and piombo_password must "
@@ -74,6 +74,7 @@ def _build_remote_fs(
         hostname=piombo_hostname,
         username=piombo_username,
         password=piombo_password,
+        base_path=piombo_base_path,
     )
 
 
@@ -110,29 +111,23 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
 @task(task_run_name="web-assets-compatibility/process-day/{day_path.name}")
 def run_day_web_assets_subflow_task(
     day_path: Path,
-    quicklook_root: str,
-    context_root: str,
+    piombo_base_path: str = DEFAULT_PIOMBO_BASE_PATH,
     piombo_hostname: str = "",
     piombo_username: str = "",
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
-    deploy_quicklook: bool = True,
-    deploy_context: bool = True,
 ) -> DayProcessingResult:
     """Prefect task: execute the day flow as a sub-flow.
 
     Args:
         day_path: Observation day folder.
-        quicklook_root: Quicklook destination root path.
-        context_root: Context destination root path.
+        piombo_base_path: Base destination path on Piombo.
         piombo_hostname: SSH hostname for Piombo upload.
         piombo_username: SSH username for Piombo upload.
         piombo_password: SSH password for Piombo upload.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
-        deploy_quicklook: Whether quicklook artifacts should be deployed.
-        deploy_context: Whether context artifacts should be deployed.
 
     Returns:
         Day-level compatibility processing summary.
@@ -140,15 +135,12 @@ def run_day_web_assets_subflow_task(
 
     return publish_web_assets_for_day(
         day_path=day_path,
-        quicklook_root=quicklook_root,
-        context_root=context_root,
+        piombo_base_path=piombo_base_path,
         piombo_hostname=piombo_hostname,
         piombo_username=piombo_username,
         piombo_password=piombo_password,
         jpeg_quality=jpeg_quality,
         force_overwrite=force_overwrite,
-        deploy_quicklook=deploy_quicklook,
-        deploy_context=deploy_context,
     )
 
 
@@ -162,30 +154,24 @@ def run_day_web_assets_subflow_task(
 )
 def publish_web_assets_for_root(
     root: str = "",
-    quicklook_root: str = "",
-    context_root: str = "",
+    piombo_base_path: str = "",
     piombo_hostname: str = "",
     piombo_username: str = "",
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
-    deploy_quicklook: bool = True,
-    deploy_context: bool = True,
     max_concurrent_days: int = max(1, min(8, (os.cpu_count() or 1) - 1)),
 ) -> list[DayProcessingResult]:
     """Scan a root and run web-assets compatibility processing per day.
 
     Args:
         root: Dataset root path; if empty, Prefect variable default is used.
-        quicklook_root: Destination root for quicklook JPG files, if not provided, Prefect variable default is used.
-        context_root: Destination root for context JPG files, if not provided, Prefect variable default is used.
+        piombo_base_path: Piombo base path; if not provided, Prefect variable default is used.
         piombo_hostname: SSH hostname for Piombo upload; if not provided, Prefect variable default is used.
         piombo_username: SSH username for Piombo upload; if not provided, Prefect variable default is used.
         piombo_password: SSH password for Piombo upload; if not provided, Prefect variable default is used.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
-        deploy_quicklook: Whether quicklook artifacts should be deployed.
-        deploy_context: Whether context artifacts should be deployed.
         max_concurrent_days: Maximum number of day subflows to run concurrently.
 
     Returns:
@@ -194,11 +180,9 @@ def publish_web_assets_for_root(
 
     setup_logging()
     dataset_root = resolve_dataset_root(root)
-    quicklook_root = quicklook_root or get_variable(
-        PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT
-    )
-    context_root = context_root or get_variable(
-        PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT
+    piombo_base_path = piombo_base_path or get_variable(
+        PrefectVariableName.PIOMBO_BASE_PATH,
+        default="",
     )
     piombo_hostname = piombo_hostname or get_variable(
         PrefectVariableName.PIOMBO_HOSTNAME,
@@ -216,15 +200,9 @@ def publish_web_assets_for_root(
     logger.info(
         "Starting web-assets compatibility flow",
         root=dataset_root,
-        quicklook_root=quicklook_root,
-        context_root=context_root,
-        piombo_hostname=bool(str(piombo_hostname).strip()),
-        piombo_username=bool(str(piombo_username).strip()),
-        piombo_password=bool(str(piombo_password).strip()),
+        piombo_base_path=piombo_base_path,
         jpeg_quality=jpeg_quality,
         force_overwrite=force_overwrite,
-        deploy_quicklook=deploy_quicklook,
-        deploy_context=deploy_context,
         max_concurrent_days=max_concurrent_days,
     )
 
@@ -242,15 +220,12 @@ def publish_web_assets_for_root(
                     run_day_web_assets_subflow_task,
                     {
                         "day_path": day_path,
-                        "quicklook_root": quicklook_root,
-                        "context_root": context_root,
+                        "piombo_base_path": str(piombo_base_path),
                         "piombo_hostname": str(piombo_hostname),
                         "piombo_username": str(piombo_username),
                         "piombo_password": str(piombo_password),
                         "jpeg_quality": jpeg_quality,
                         "force_overwrite": force_overwrite,
-                        "deploy_quicklook": deploy_quicklook,
-                        "deploy_context": deploy_context,
                     },
                 )
             )
@@ -273,29 +248,23 @@ def publish_web_assets_for_root(
 )
 def publish_web_assets_for_day(
     day_path: Path,
-    quicklook_root: str = "",
-    context_root: str = "",
+    piombo_base_path: str = "",
     piombo_hostname: str = "",
     piombo_username: str = "",
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
-    deploy_quicklook: bool = True,
-    deploy_context: bool = True,
 ) -> DayProcessingResult:
     """Convert and deploy compatible web assets for one day.
 
     Args:
         day_path: Observation day directory path.
-        quicklook_root: Destination root for quicklook JPG files, if not provided, Prefect variable default is used.
-        context_root: Destination root for context JPG files, if not provided, Prefect variable default is used.
+        piombo_base_path: Piombo base path; if not provided, Prefect variable default is used.
         piombo_hostname: SSH hostname for Piombo upload; if not provided, Prefect variable default is used.
         piombo_username: SSH username for Piombo upload; if not provided, Prefect variable default is used.
         piombo_password: SSH password for Piombo upload; if not provided, Prefect variable default is used.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
-        deploy_quicklook: Whether quicklook artifacts should be deployed.
-        deploy_context: Whether context artifacts should be deployed.
 
     Returns:
         Day-level compatibility processing summary.
@@ -311,11 +280,9 @@ def publish_web_assets_for_day(
         processed_dir=processed_dir_for_day(path),
     )
 
-    quicklook_root = quicklook_root or get_variable(
-        PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT
-    )
-    context_root = context_root or get_variable(
-        PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT
+    piombo_base_path = piombo_base_path or get_variable(
+        PrefectVariableName.PIOMBO_BASE_PATH,
+        default="",
     )
     piombo_hostname = piombo_hostname or get_variable(
         PrefectVariableName.PIOMBO_HOSTNAME,
@@ -330,20 +297,18 @@ def publish_web_assets_for_day(
         default="",
     )
 
-    result = process_day_web_asset_compatibility(
-        day=day,
-        quicklook_root=quicklook_root,
-        context_root=context_root,
-        remote_fs=_build_remote_fs(
-            piombo_hostname=str(piombo_hostname),
-            piombo_username=str(piombo_username),
-            piombo_password=str(piombo_password),
-        ),
-        jpeg_quality=jpeg_quality,
-        force_overwrite=force_overwrite,
-        deploy_quicklook=deploy_quicklook,
-        deploy_context=deploy_context,
-    )
+    with _build_remote_fs(
+        piombo_hostname=str(piombo_hostname),
+        piombo_username=str(piombo_username),
+        piombo_password=str(piombo_password),
+        piombo_base_path=str(piombo_base_path),
+    ) as remote_fs:
+        result = process_day_web_asset_compatibility(
+            day=day,
+            remote_fs=remote_fs,
+            jpeg_quality=jpeg_quality,
+            force_overwrite=force_overwrite,
+        )
 
     logger.success(
         "Web-assets compatibility day flow complete",

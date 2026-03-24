@@ -29,7 +29,6 @@ class RemoteFileSystem(Protocol):
         Args:
             remote_dir: Absolute POSIX path of the directory to create.
         """
-        ...
 
     def file_exists(self, remote_path: str) -> bool:
         """Return whether *remote_path* already exists on the remote host.
@@ -40,7 +39,6 @@ class RemoteFileSystem(Protocol):
         Returns:
             ``True`` if the path exists, ``False`` otherwise.
         """
-        ...
 
     def upload_file(self, local_path: str, remote_path: str) -> None:
         """Upload a local file to the remote host.
@@ -52,4 +50,3 @@ class RemoteFileSystem(Protocol):
         Raises:
             WebAssetUploadError: If the transfer fails.
         """
-        ...

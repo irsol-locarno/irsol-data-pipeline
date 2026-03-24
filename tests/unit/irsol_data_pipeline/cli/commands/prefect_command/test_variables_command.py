@@ -21,8 +21,7 @@ class TestPrefectVariablesCommand:
             PrefectVariableName.JSOC_DATA_DELAY_DAYS: "10",
             PrefectVariableName.CACHE_EXPIRATION_HOURS: "672",
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS: "<unset>",
-            PrefectVariableName.WEB_ASSET_QUICKLOOK_IMAGE_ROOT: "/srv/web/quicklook",
-            PrefectVariableName.WEB_ASSET_CONTEXT_IMAGE_ROOT: "/srv/web/context",
+            PrefectVariableName.PIOMBO_BASE_PATH: "/irsol_db/docs/web-site/assets",
             PrefectVariableName.PIOMBO_HOSTNAME: "piombo7.usi.ch",
             PrefectVariableName.PIOMBO_USERNAME: "<unset>",
             PrefectVariableName.PIOMBO_PASSWORD: "<unset>",
@@ -45,8 +44,8 @@ class TestPrefectVariablesCommand:
         assert payload["variables"][1]["value"] == "observer@example.com"
         assert payload["variables"][2]["value"] == "10"
         assert payload["variables"][4]["value"] == "<unset>"
-        assert payload["variables"][5]["value"] == "/srv/web/quicklook"
-        assert payload["variables"][6]["value"] == "/srv/web/context"
+        assert payload["variables"][5]["value"] == "/irsol_db/docs/web-site/assets"
+        assert payload["variables"][6]["value"] == "piombo7.usi.ch"
 
     def test_prefect_variables_configure_returns_zero_when_skipping_all(
         self,
@@ -66,9 +65,7 @@ class TestPrefectVariablesCommand:
                     "",
                     "n",  # flow-run-expiration-hours
                     "",
-                    "n",  # web-asset-quicklook-image-root
-                    "",
-                    "n",  # web-asset-context-image-root
+                    "n",  # piombo-base-path
                     "",
                     "n",  # piombo-hostname (optional, default used, user declines)
                     "",  # piombo-username (required, empty)

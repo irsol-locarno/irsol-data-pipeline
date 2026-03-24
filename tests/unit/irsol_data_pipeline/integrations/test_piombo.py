@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 import pytest
 
 from irsol_data_pipeline.integrations.piombo import SftpRemoteFileSystem
@@ -30,6 +32,31 @@ class TestSftpRemoteFileSystemValidation:
         assert fs._username == "user"
         assert fs._password == "pass"
         assert fs._sftp_client is None
+        assert fs._base_path is None
+
+    def test_accepts_base_path(self) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="host",
+            username="user",
+            password="pass",
+            base_path="/irsol_db/docs/web-site/assets",
+        )
+        assert fs._base_path == PurePosixPath("/irsol_db/docs/web-site/assets")
+
+    def test_base_path_trailing_slash_is_normalised(self) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="host",
+            username="user",
+            password="pass",
+            base_path="/irsol_db/docs/web-site/assets/",
+        )
+        assert fs._base_path == PurePosixPath("/irsol_db/docs/web-site/assets")
+
+    def test_empty_base_path_leaves_no_prefix(self) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="host", username="user", password="pass", base_path=""
+        )
+        assert fs._base_path is None
 
     @pytest.mark.parametrize(
         ("hostname", "username", "password"),
@@ -66,3 +93,49 @@ class TestSftpRemoteFileSystemContextManager:
         # close() on a never-connected instance should not raise
         fs.close()
         fs.close()
+
+
+class TestSftpRemoteFileSystemResolve:
+    def test_resolve_without_base_path_returns_path_unchanged(self) -> None:
+        fs = SftpRemoteFileSystem(hostname="h", username="u", password="p")
+        assert fs._resolve("/absolute/path/file.jpg") == "/absolute/path/file.jpg"
+
+    def test_resolve_with_base_path_prepends_it(self) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="h",
+            username="u",
+            password="p",
+            base_path="/irsol_db/docs/web-site/assets",
+        )
+        assert (
+            fs._resolve("img_quicklook/day")
+            == "/irsol_db/docs/web-site/assets/img_quicklook/day"
+        )
+
+    def test_resolve_with_base_path_and_nested_subpath(self) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="h",
+            username="u",
+            password="p",
+            base_path="/irsol_db/docs/web-site/assets",
+        )
+        assert (
+            fs._resolve("img_quicklook/210211/image.jpg")
+            == "/irsol_db/docs/web-site/assets/img_quicklook/210211/image.jpg"
+        )
+
+    @pytest.mark.parametrize(
+        ("base_path", "sub_path", "expected"),
+        [
+            ("/base", "dir/file.jpg", "/base/dir/file.jpg"),
+            ("/base/", "dir/file.jpg", "/base/dir/file.jpg"),
+            ("/a/b/c", "d/e", "/a/b/c/d/e"),
+        ],
+    )
+    def test_resolve_parametrized(
+        self, base_path: str, sub_path: str, expected: str
+    ) -> None:
+        fs = SftpRemoteFileSystem(
+            hostname="h", username="u", password="p", base_path=base_path
+        )
+        assert fs._resolve(sub_path) == expected

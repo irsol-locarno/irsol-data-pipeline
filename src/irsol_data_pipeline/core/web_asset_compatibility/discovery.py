@@ -40,8 +40,6 @@ def discover_day_web_asset_sources(
     day: ObservationDay,
     quicklook_root: Path,
     context_root: Path,
-    deploy_quicklook: bool = True,
-    deploy_context: bool = True,
 ) -> list[WebAssetSource]:
     """Discover deployable PNG sources for one observation day.
 
@@ -49,8 +47,6 @@ def discover_day_web_asset_sources(
         day: Observation day context.
         quicklook_root: Root output directory for quicklook JPG files.
         context_root: Root output directory for context JPG files.
-        deploy_quicklook: Whether to include corrected profile quicklooks.
-        deploy_context: Whether to include slit-preview context images.
 
     Returns:
         Sorted list of deployable sources.
@@ -59,7 +55,7 @@ def discover_day_web_asset_sources(
     sources: list[WebAssetSource] = []
 
     with logger.contextualize(stage="quick-look"):
-        if deploy_quicklook and day.processed_dir.is_dir():
+        if day.processed_dir.is_dir():
             for source_path in sorted(
                 day.processed_dir.glob(f"*{PROFILE_CORRECTED_PNG_SUFFIX}")
             ):
@@ -80,7 +76,7 @@ def discover_day_web_asset_sources(
                 )
 
     with logger.contextualize(stage="context"):
-        if deploy_context and day.processed_dir.is_dir():
+        if day.processed_dir.is_dir():
             for source_path in sorted(
                 day.processed_dir.glob(f"*{SLIT_PREVIEW_PNG_SUFFIX}")
             ):

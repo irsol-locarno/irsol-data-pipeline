@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import shutil
-from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
@@ -18,100 +17,73 @@ from irsol_data_pipeline.core.web_asset_compatibility.conversion import (
 from irsol_data_pipeline.core.web_asset_compatibility.discovery import (
     discover_day_web_asset_sources,
 )
-from irsol_data_pipeline.core.web_asset_compatibility.models import WebAssetKind
+from irsol_data_pipeline.core.web_asset_compatibility.models import (
+    WebAssetFolderName,
+    WebAssetSource,
+)
 from irsol_data_pipeline.exceptions import WebAssetUploadError
 
 
-def _remote_join(*parts: str) -> str:
-    """Join path components using POSIX separators for remote paths."""
+@dataclass(frozen=True)
+class _DeploymentCandidate:
+    """One asset tracked across planning, conversion, and upload phases."""
 
-    return str(PurePosixPath(*parts))
+    source_png: Path
+    staged_jpeg: Path
+    target_path: str
 
 
-def _destination_for(
-    root: str | Path,
+def _build_deployment_candidates(
+    sources: list[WebAssetSource],
     day_name: str,
-    measurement_name: str,
-) -> Path:
-    """Build the expected destination path for one converted asset."""
+) -> list[_DeploymentCandidate]:
+    """Build deployment candidates with target paths for all discovered
+    assets."""
 
-    return Path(root) / day_name / f"{measurement_name}.jpg"
+    candidates: list[_DeploymentCandidate] = []
+    for source in sources:
+        target_path = str(
+            PurePosixPath(WebAssetFolderName.for_asset_kind(source.kind).value)
+            / day_name
+            / f"{source.measurement_name}.jpg"
+        )
+        candidates.append(
+            _DeploymentCandidate(
+                source_png=source.source_path,
+                staged_jpeg=source.target_path,
+                target_path=target_path,
+            )
+        )
+    return candidates
 
 
-def _upload_staged_day_assets(
-    staged_day_dir: Path,
-    destination_root: str | Path,
-    day_name: str,
-    force_overwrite: bool,
-    remote_fs: RemoteFileSystem | None = None,
+def _upload_candidate(
+    candidate: _DeploymentCandidate,
+    remote_fs: RemoteFileSystem,
+    ensured_remote_dirs: set[str],
 ) -> None:
-    """Upload staged JPG files for one day to a local or remote target.
+    """Upload one converted candidate to remote or local destination."""
 
-    Args:
-        staged_day_dir: Local day directory containing converted JPG files.
-        destination_root: Local or remote destination root path.
-        day_name: Observation day name used as destination subdirectory.
-        force_overwrite: Overwrite already-existing destination files.
-        remote_fs: Optional remote file-system adapter.  When provided, files
-            are transferred to the remote host via the adapter; when ``None``,
-            a plain local ``shutil.copy2`` is used instead.
-
-    Raises:
-        WebAssetUploadError: If transfer to local or remote destination fails.
-    """
-
-    if not staged_day_dir.is_dir():
-        return
-
-    if remote_fs is not None:
-        remote_root = str(destination_root).strip()
-        # Strip an optional rsync-like "user@host:/path" prefix
-        if ":" in remote_root and not remote_root.startswith("/"):
-            _, remote_root = remote_root.split(":", maxsplit=1)
-
-        remote_day_dir = _remote_join(remote_root, day_name)
-        remote_fs.ensure_dir(remote_day_dir)
-
-        for staged_file in sorted(staged_day_dir.glob("*.jpg")):
-            remote_file = _remote_join(remote_day_dir, staged_file.name)
-            if not force_overwrite and remote_fs.file_exists(remote_file):
-                continue
-            remote_fs.upload_file(str(staged_file), remote_file)
-        return
-
-    destination_day_dir = Path(destination_root) / day_name
-    destination_day_dir.mkdir(parents=True, exist_ok=True)
-    for staged_file in sorted(staged_day_dir.glob("*.jpg")):
-        target_file = destination_day_dir / staged_file.name
-        if target_file.exists() and not force_overwrite:
-            continue
-        shutil.copy2(staged_file, target_file)
+    remote_dir = str(PurePosixPath(candidate.target_path).parent)
+    if remote_dir not in ensured_remote_dirs:
+        remote_fs.ensure_dir(remote_dir)
+        ensured_remote_dirs.add(remote_dir)
+    remote_fs.upload_file(str(candidate.staged_jpeg), candidate.target_path)
 
 
 def process_day_web_asset_compatibility(
     day: ObservationDay,
-    quicklook_root: str | Path,
-    context_root: str | Path,
-    remote_fs: RemoteFileSystem | None = None,
+    remote_fs: RemoteFileSystem,
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
-    deploy_quicklook: bool = True,
-    deploy_context: bool = True,
 ) -> DayProcessingResult:
     """Convert and deploy web assets for one day.
 
     Args:
         day: Observation day to process.
-        quicklook_root: Root directory for quicklook output.
-        context_root: Root directory for context output.
         remote_fs: :class:`~irsol_data_pipeline.core.remote_filesystem.RemoteFileSystem`
-            or ``None``.  When provided, converted JPG files are transferred to
-            the remote host via the adapter.  When ``None``, files are copied to
-            a local destination directory.
         jpeg_quality: JPEG compression quality.
         force_overwrite: Overwrite existing JPG files when True.
-        deploy_quicklook: Deploy corrected profile images when True.
-        deploy_context: Deploy slit-preview images when True.
 
     Returns:
         DayProcessingResult with processed/skipped/failed counts.
@@ -120,12 +92,8 @@ def process_day_web_asset_compatibility(
         logger.info(
             "Starting web-assets compatibility processing",
             processed_dir=day.processed_dir,
-            quicklook_root=quicklook_root,
-            context_root=context_root,
             jpeg_quality=jpeg_quality,
             force_overwrite=force_overwrite,
-            deploy_quicklook=deploy_quicklook,
-            deploy_context=deploy_context,
         )
 
         _normalize_jpeg_quality(jpeg_quality)
@@ -134,98 +102,94 @@ def process_day_web_asset_compatibility(
         skipped = 0
         failed = 0
         errors: list[str] = []
-        staged_counts_by_kind: dict[WebAssetKind, int] = defaultdict(int)
 
         try:
             with TemporaryDirectory(prefix=f"web-assets-{day.name}-") as temp_dir:
                 staging_root = Path(temp_dir)
-                staging_quicklook_root = staging_root / "quicklook"
-                staging_context_root = staging_root / "context"
+                staging_quicklook_root = (
+                    staging_root / WebAssetFolderName.QUICK_LOOK.value
+                )
+                staging_context_root = staging_root / WebAssetFolderName.CONTEXT.value
 
                 sources = discover_day_web_asset_sources(
                     day=day,
                     quicklook_root=staging_quicklook_root,
                     context_root=staging_context_root,
-                    deploy_quicklook=deploy_quicklook,
-                    deploy_context=deploy_context,
                 )
 
-                for source in sources:
-                    destination_path = _destination_for(
-                        root=(
-                            quicklook_root
-                            if source.kind is WebAssetKind.QUICK_LOOK
-                            else context_root
-                        ),
-                        day_name=day.name,
-                        measurement_name=source.measurement_name,
-                    )
+                # 1) Gather all deployable assets with their ideal target path.
+                planned_assets = _build_deployment_candidates(
+                    sources=sources,
+                    day_name=day.name,
+                )
 
-                    try:
+                assets_to_convert: list[_DeploymentCandidate] = []
+
+                # 2) Check whether targets already exist and apply overwrite policy.
+                for candidate in planned_assets:
+                    with logger.contextualize(
+                        source=candidate.source_png,
+                        target=candidate.target_path,
+                    ):
                         if (
-                            remote_fs is None
-                            and destination_path.exists()
+                            remote_fs.file_exists(candidate.target_path)
                             and not force_overwrite
                         ):
                             skipped += 1
                             logger.info(
                                 "Skipping existing web asset",
-                                kind=source.kind,
-                                source=source.source_path,
-                                target=destination_path,
                             )
                             continue
+                        assets_to_convert.append(candidate)
 
-                        convert_png_to_jpeg(
-                            source_path=source.source_path,
-                            target_path=source.target_path,
-                            jpeg_quality=jpeg_quality,
-                        )
-                        processed += 1
-                        staged_counts_by_kind[source.kind] += 1
-                        logger.info(
-                            "Web asset converted to staging",
-                            kind=source.kind,
-                            source=source.source_path,
-                            staged_target=source.target_path,
-                            destination=destination_path,
-                        )
-                    except Exception as exc:  # pragma: no cover - defensive catch
-                        failed += 1
-                        error_message = (
-                            f"Failed {source.kind} for {source.measurement_name}: {exc}"
-                        )
-                        errors.append(error_message)
-                        logger.exception(
-                            "Web asset conversion failed",
-                            kind=source.kind,
-                            source=source.source_path,
-                            staged_target=source.target_path,
-                            destination=destination_path,
-                            error=error_message,
-                        )
+                assets_to_upload: list[_DeploymentCandidate] = []
 
-                if staged_counts_by_kind[WebAssetKind.QUICK_LOOK] > 0:
-                    _upload_staged_day_assets(
-                        staged_day_dir=staging_quicklook_root / day.name,
-                        destination_root=quicklook_root,
-                        day_name=day.name,
-                        force_overwrite=force_overwrite,
-                        remote_fs=remote_fs,
-                    )
+                # 3) Convert remaining PNG sources into staged JPG files.
+                for candidate in assets_to_convert:
+                    with logger.contextualize(
+                        source=candidate.source_png,
+                        staged_target=candidate.staged_jpeg,
+                        destination=candidate.target_path,
+                    ):
+                        try:
+                            convert_png_to_jpeg(
+                                source_path=candidate.source_png,
+                                target_path=candidate.staged_jpeg,
+                                jpeg_quality=jpeg_quality,
+                            )
+                            processed += 1
+                            assets_to_upload.append(candidate)
+                            logger.info(
+                                "Web asset converted to staging",
+                            )
+                        except Exception as exc:  # pragma: no cover - defensive catch
+                            failed += 1
+                            error_message = f"Failed conversion for {candidate.source_png.name}: {exc}"
+                            errors.append(error_message)
+                            logger.exception(
+                                "Web asset conversion failed",
+                            )
 
-                if staged_counts_by_kind[WebAssetKind.CONTEXT] > 0:
-                    _upload_staged_day_assets(
-                        staged_day_dir=staging_context_root / day.name,
-                        destination_root=context_root,
-                        day_name=day.name,
-                        force_overwrite=force_overwrite,
-                        remote_fs=remote_fs,
-                    )
+                # 4) Upload all converted files.
+                ensured_remote_dirs = set()
+                for candidate in assets_to_upload:
+                    with logger.contextualize(
+                        staged_source=candidate.staged_jpeg,
+                        destination=candidate.target_path,
+                    ):
+                        try:
+                            _upload_candidate(candidate, remote_fs, ensured_remote_dirs)
+                        except Exception as exc:
+                            failed += 1
+                            error_message = f"Failed upload for {candidate.staged_jpeg.name} to {candidate.target_path}: {exc}"
+                            errors.append(error_message)
+                            logger.exception(
+                                "Web asset upload failed",
+                            )
         except (ValueError, WebAssetUploadError) as exc:
             failed += 1
             errors.append(str(exc))
-            logger.exception("Web asset staging/upload failed", error=str(exc))
+            logger.exception("Web asset staging/upload failed")
 
         logger.success(
             "Web-assets compatibility processing complete",
