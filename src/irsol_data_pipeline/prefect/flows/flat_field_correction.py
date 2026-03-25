@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 
 from loguru import logger
-from prefect import flow, task
+from prefect import flow, task, unmapped
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.models import (
@@ -128,17 +128,14 @@ def process_unprocessed_measurements(
     )
 
     with ThreadPoolTaskRunner(max_workers=max_concurrent_days_to_process) as runner:
-        result_futures = []
-        for day_path in selected_day_paths:
-            future = runner.submit(
-                run_day_processing_subflow_task,
-                {
-                    "day_path": day_path,
-                    "max_delta_hours": max_delta_hours,
-                },
-            )
-            result_futures.append(future)
-        results = [result_future.result() for result_future in result_futures]
+        results = runner.map(
+            run_day_processing_subflow_task,
+            parameters={
+                "day_path": selected_day_paths,
+                "max_delta_hours": unmapped(max_delta_hours),
+            },
+        ).result()
+
     # Summary
     total_processed = sum(r.processed for r in results)
     total_failed = sum(r.failed for r in results)

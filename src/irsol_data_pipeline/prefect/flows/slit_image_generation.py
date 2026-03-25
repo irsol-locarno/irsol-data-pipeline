@@ -19,7 +19,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from loguru import logger
-from prefect import flow, task
+from prefect import flow, task, unmapped
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.config import DEFAULT_JSOC_DATA_DELAY_DAYS
@@ -210,19 +210,14 @@ def generate_slit_images(
     day_paths = [day.path for day in observation_days]
 
     with ThreadPoolTaskRunner(max_workers=max_concurrent_days) as runner:
-        result_futures = []
-        for day_path in day_paths:
-            future = runner.submit(
-                run_day_slit_generation_task,
-                {
-                    "day_path": day_path,
-                    "jsoc_email": email,
-                    "use_limbguider": use_limbguider,
-                },
-            )
-            result_futures.append(future)
-
-        results = [result_future.result() for result_future in result_futures]
+        results = runner.map(
+            run_day_slit_generation_task,
+            parameters={
+                "day_path": day_paths,
+                "jsoc_email": unmapped(email),
+                "use_limbguider": unmapped(use_limbguider),
+            },
+        ).result()
 
     total_processed = sum(r.processed for r in results)
     total_failed = sum(r.failed for r in results)

@@ -16,6 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from loguru import logger
+from prefect import unmapped
+from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.models import CacheCleanupDayResult, ObservationDay
 from irsol_data_pipeline.pipeline.cache_cleanup import (
@@ -89,9 +91,19 @@ def delete_old_day_cache_files(
     return cleanup_day_cache_files(day=day, hours=hours)
 
 
+@task(task_run_name="maintenance-cache/cache-cleanup/daily/{day_path.name}")
+def delete_old_day_cache_files_task(
+    day_path: Path,
+    hours: float,
+) -> CacheCleanupDayResult:
+    """Task wrapper for :func:`delete_old_day_cache_files`."""
+    return delete_old_day_cache_files(day_path=day_path, hours=hours)
+
+
 @flow(
     name="maintenance-cache-cleanup",
     flow_run_name="maintenance/cache-cleanup",
+    task_runner=ThreadPoolTaskRunner(max_workers=16),
     description=("Delete old cache files from processed/_cache"),
 )
 def delete_old_cache_files(
@@ -122,9 +134,9 @@ def delete_old_cache_files(
         logger.info("No observation days found for cache cleanup", root=root_path)
         return []
 
-    results = [
-        delete_old_day_cache_files(day_path=day.path, hours=hours) for day in days
-    ]
+    results = delete_old_day_cache_files_task.map(
+        day_path=[day.path for day in days], hours=unmapped(hours)
+    ).result()
 
     report = build_cache_cleanup_report(root=root_path, results=results, hours=hours)
     create_prefect_markdown_report(
