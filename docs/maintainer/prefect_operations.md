@@ -49,13 +49,31 @@ flowchart LR
    ```
    and restart your shell or source the completion script.
 
-4. **Start the Prefect server:**
+4. **Configure the default Prefect profile for the pipeline:**
+   ```bash
+   idp prefect configure
+   ```
+   This command creates or updates a `default` Prefect profile and sets:
+   - `PREFECT_API_DATABASE_CONNECTION_URL`
+   - `PREFECT_API_URL=http://127.0.0.1:4200/api`
+   - `PREFECT_SERVER_ANALYTICS_ENABLED=false`
+
+   During setup, you are prompted to:
+   - confirm the database path (default: `/data/.prefect/prefect.db`). This is the path where the prefect flows are stored and made visible in the dashboard. It should be on a persistent volume with sufficient space (a few hundred MB to a few GB depending on run history retention).When the default database path is accepted, its parent directory is created
+   automatically.
+
+   - select the API port (default: `4200`, from the pipeline Prefect config). This is the port where the Prefect server will be accessible from.
+
+   You only need to configure Prefect once. The resulting profile is stored in
+   `~/.prefect/profiles.toml` and will be used by all `idp prefect` commands.
+
+5. **Start the Prefect server:**
    ```bash
    idp prefect start
    ```
-   > This automatically configures the Prefect API URL and analytics settings.
+   The server port is inferred from the active profile's `PREFECT_API_URL`.
 
-5. **Configure variables:**
+6. **Configure variables:**
    ```bash
    idp prefect variables configure
    ```
@@ -66,14 +84,14 @@ flowchart LR
    - `cache-expiration-hours` — Cache file retention (default: 672 hours = 28 days).
    - `flow-run-expiration-hours` — Prefect run history retention (default: 672 hours).
 
-6. **Verify configuration:**
+7. **Verify configuration:**
    ```bash
    idp info
    idp prefect variables list
    idp prefect flows list
    ```
 
-7. **Upgrade the package:**
+8. **Upgrade the package:**
    ```bash
    uv tool upgrade irsol-data-pipeline --no-cache-dir --python 3.10
    ```

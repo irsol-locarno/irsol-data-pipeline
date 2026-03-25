@@ -88,4 +88,5 @@ class TestCliApp:
         assert "reset-database" in output
         assert "flows" in output
         assert "status" in output
+        assert "configure" in output
         assert "variables" in output
