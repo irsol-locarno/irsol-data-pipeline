@@ -77,13 +77,42 @@ Organize your data following the standard directory convention:
 
 ### Step 2 — Configure Prefect
 
-```bash
-# Start the Prefect server
-make prefect/dashboard
-# or: idp prefect start
+If you are the user who **runs the server** (maintainer), configure the full server profile first:
 
-# Configure variables
-uv run idp prefect variables configure
+```bash
+idp configure
+```
+This sets up the Prefect server profile and prompts you to confirm the database path and API port.
+
+Now you can start the server:
+
+```bash
+idp prefect start
+```
+
+Then configure the pipeline variables:
+
+```bash
+idp prefect variables configure
+```
+
+Check the server status and variable values:
+
+```bash
+idp prefect status
+idp prefect variables list
+idp info
+```
+
+If you are a **regular user** connecting to an already-running server, point your client at it:
+
+```bash
+idp setup
+```
+
+You can now try to check you connection via:
+```bash
+idp prefect status
 ```
 
 When prompted, provide:

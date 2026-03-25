@@ -51,7 +51,7 @@ flowchart LR
 
 4. **Configure the default Prefect profile for the pipeline:**
    ```bash
-   idp prefect configure
+   idp configure
    ```
    This command creates or updates a `default` Prefect profile and sets:
    - `PREFECT_API_DATABASE_CONNECTION_URL`
@@ -59,8 +59,7 @@ flowchart LR
    - `PREFECT_SERVER_ANALYTICS_ENABLED=false`
 
    During setup, you are prompted to:
-   - confirm the database path (default: `/dati/.prefect/prefect.db`). This is the path where the prefect flows are stored and made visible in the dashboard. It should be on a persistent volume with sufficient space (a few hundred MB to a few GB depending on run history retention).When the default database path is accepted, its parent directory is created
-   automatically.
+   - confirm the database path (default: `/dati/.prefect/prefect.db`). This is the path where the prefect flows are stored and made visible in the dashboard. It should be on a persistent volume with sufficient space (a few hundred MB to a few GB depending on run history retention). When the default database path is accepted, its parent directory is created automatically.
 
    - select the API port (default: `4200`, from the pipeline Prefect config). This is the port where the Prefect server will be accessible from.
 

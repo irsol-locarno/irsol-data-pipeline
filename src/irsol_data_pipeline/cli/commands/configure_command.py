@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from prefect.settings import (
+    PREFECT_API_DATABASE_CONNECTION_URL,
+    PREFECT_API_URL,
+    PREFECT_SERVER_ANALYTICS_ENABLED,
+    Profile,
+    load_profiles,
+    save_profiles,
+)
+
 from irsol_data_pipeline.prefect.config import (
     PREFECT_SERVER_HOST,
     PREFECT_SERVER_PORT,
@@ -95,20 +104,11 @@ def _prompt_api_port() -> int:
 
 
 def configure_prefect() -> int:
-    """Create or update the default Prefect profile for local operations.
+    """Create or update the IRSOL data pipeline and prefect server.
 
     Returns:
         Exit code for the command.
     """
-
-    from prefect.settings import (
-        PREFECT_API_DATABASE_CONNECTION_URL,
-        PREFECT_API_URL,
-        PREFECT_SERVER_ANALYTICS_ENABLED,
-        Profile,
-        load_profiles,
-        save_profiles,
-    )
 
     print("Prefect Profile Configuration\n")
 

@@ -12,6 +12,8 @@ idp [OPTIONS] <command> [SUBCOMMAND] [ARGS]
 flowchart TD
     IDP["idp"]
     INFO["info"]
+    SETUP["setup"]
+    CONFIGURE["configure"]
     PLOT["plot"]
     PREFECT["prefect"]
 
@@ -25,9 +27,11 @@ flowchart TD
     LIST_F["list"]
     SERVE["serve"]
     LIST_V["list"]
-    CONFIGURE["configure"]
+    CONFIGURE_V["configure"]
 
     IDP --> INFO
+    IDP --> SETUP
+    IDP --> CONFIGURE
     IDP --> PLOT
     IDP --> PREFECT
 
@@ -41,7 +45,7 @@ flowchart TD
     FLOWS --> LIST_F
     FLOWS --> SERVE
     VARS --> LIST_V
-    VARS --> CONFIGURE
+    VARS --> CONFIGURE_V
 ```
 
 ## Global Options
@@ -52,6 +56,49 @@ flowchart TD
 | `--log-level LEVEL` | | Explicit log level override (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
 
 ## Commands
+
+### `idp setup`
+
+Configure your local Prefect client profile to connect to the shared Prefect server.  Run this once after installing the package as a **regular user** who wants to interact with the server managed by someone else.
+
+```bash
+idp setup
+```
+
+You will be prompted for:
+
+| Prompt | Default | Description |
+|--------|---------|-------------|
+| Server host | `127.0.0.1` | Hostname or IP of the Prefect server |
+| Server port | `4200` | Port the Prefect server is listening on |
+
+The command writes a `default` Prefect profile to `~/.prefect/profiles.toml` with:
+- `PREFECT_API_URL` pointing to the specified server
+- `PREFECT_SERVER_ANALYTICS_ENABLED=false`
+
+After running this command, `idp info` should display Prefect variable values instead of `<unset>`.
+
+
+### `idp configure`
+
+Maintainer-level command to create or update the Prefect **server** profile, including database location.  Intended for the user who owns and runs the Prefect server process.
+
+```bash
+idp configure
+```
+
+You will be prompted for:
+
+| Prompt | Default | Description |
+|--------|---------|-------------|
+| Database path | `/dati/.prefect/prefect.db` | Path to the SQLite database used by the server |
+| API port | `4200` | Port the server will listen on |
+
+The command writes:
+- `PREFECT_API_DATABASE_CONNECTION_URL`
+- `PREFECT_API_URL`
+- `PREFECT_SERVER_ANALYTICS_ENABLED=false`
+
 
 ### `idp info`
 
@@ -65,7 +112,6 @@ idp info
 idp info --format json
 ```
 
----
 
 ### `idp plot`
 
@@ -121,7 +167,6 @@ idp plot slit /path/to/6302_m1.dat user@example.com --cache-dir /tmp/sdo_cache
 | `--show` | Display the plot interactively |
 | `--cache-dir PATH` | Directory for caching downloaded SDO FITS files |
 
----
 
 ### `idp prefect`
 
@@ -213,7 +258,6 @@ idp prefect variables configure --update-existing
 | `cache-expiration-hours` | Cache retention hours | Optional |
 | `flow-run-expiration-hours` | Run history retention hours | Optional |
 
----
 
 ## How the CLI Interacts with the Pipeline
 
@@ -243,6 +287,10 @@ flowchart LR
     CLI --> SERVE_CMD
     CLI --> STATUS_CMD
     CLI --> VARS_CMD
+    SETUP_CMD["setup → configure client profile"]
+    CONFIGURE_CMD["configure → configure server profile"]
+    CLI --> SETUP_CMD
+    CLI --> CONFIGURE_CMD
 
     PLOT_CMD --> IO_MOD
     PLOT_CMD --> CORE

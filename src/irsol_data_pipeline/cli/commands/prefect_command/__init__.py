@@ -78,12 +78,6 @@ prefect_app.command(
 )
 
 prefect_app.command(
-    "irsol_data_pipeline.cli.commands.prefect_command.configure_command:configure_prefect",
-    name="configure",
-    help="Create or update the default Prefect profile used by the CLI.",
-)
-
-prefect_app.command(
     "irsol_data_pipeline.cli.commands.prefect_command.variables_command:variables_app",
     name="variables",
     help="List and configure Prefect variables.",

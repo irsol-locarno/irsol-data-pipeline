@@ -36,6 +36,16 @@ app.command(
     name="plot",
     help="Render plots from observation files.",
 )
+app.command(
+    "irsol_data_pipeline.cli.commands.configure_command:configure_prefect",
+    name="configure",
+    help="(Maintainer) Create or update the Prefect server profile with database and API settings.",
+)
+app.command(
+    "irsol_data_pipeline.cli.commands.setup_command:setup",
+    name="setup",
+    help="(User) Configure your Prefect client profile to connect to the shared server.",
+)
 
 _VERBOSE_TO_LOG_LEVEL: dict[int, LOG_LEVEL] = {
     0: "INFO",
