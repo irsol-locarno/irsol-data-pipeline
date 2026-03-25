@@ -97,7 +97,7 @@ The pipeline defines four independent flow groups, each served as a separate Pre
 1. Resolves the dataset root from arguments or Prefect Variables.
 2. Scans the dataset for pending measurements.
 3. Creates a markdown scan report artifact.
-4. Dispatches day-processing subflows via `ThreadPoolTaskRunner` (max workers = CPU count − 1, capped at 12).
+4. Dispatches day-processing subflows via `ProcessPoolTaskRunner` (max workers = CPU count − 1, capped at 12).
 5. Collects results and logs a summary.
 
 **`process_daily_unprocessed_measurements`** (daily):
@@ -134,7 +134,7 @@ The pipeline defines four independent flow groups, each served as a separate Pre
 1. Resolves the dataset root from arguments or Prefect Variables.
 2. Scans all observation days for PNG outputs (`*_profile_corrected.png`, `*_slit_preview.png`).
 3. Creates JPEG targets for each PNG based on web asset configuration.
-4. Dispatches per-day asset conversion tasks via `ThreadPoolTaskRunner`.
+4. Dispatches per-day asset conversion tasks via `ProcessPoolTaskRunner`.
 5. Uploads converted JPEGs to Piombo SFTP via the configured `RemoteFileSystem` adapter.
 6. Collects results and logs a summary.
 

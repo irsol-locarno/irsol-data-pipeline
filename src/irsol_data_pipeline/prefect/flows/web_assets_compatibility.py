@@ -14,7 +14,7 @@ from pathlib import Path
 
 from loguru import logger
 from prefect import flow, task
-from prefect.task_runners import ThreadPoolTaskRunner
+from prefect.task_runners import ProcessPoolTaskRunner
 
 from irsol_data_pipeline.core.config import DEFAULT_PIOMBO_BASE_PATH
 from irsol_data_pipeline.core.models import DayProcessingResult, ObservationDay
@@ -212,7 +212,7 @@ def publish_web_assets_for_root(
         return []
 
     day_paths = [day.path for day in observation_days]
-    with ThreadPoolTaskRunner(max_workers=max_concurrent_days) as runner:
+    with ProcessPoolTaskRunner(max_workers=max_concurrent_days) as runner:
         result_futures = []
         for day_path in day_paths:
             result_futures.append(

@@ -22,7 +22,7 @@ from pathlib import Path
 
 from loguru import logger
 from prefect import flow, task
-from prefect.task_runners import ThreadPoolTaskRunner
+from prefect.task_runners import ProcessPoolTaskRunner
 
 from irsol_data_pipeline.core.models import (
     DayProcessingResult,
@@ -127,7 +127,7 @@ def process_unprocessed_measurements(
         max_concurrent_days_to_process=max_concurrent_days_to_process,
     )
 
-    with ThreadPoolTaskRunner(max_workers=max_concurrent_days_to_process) as runner:
+    with ProcessPoolTaskRunner(max_workers=max_concurrent_days_to_process) as runner:
         result_futures = []
         for day_path in selected_day_paths:
             future = runner.submit(
