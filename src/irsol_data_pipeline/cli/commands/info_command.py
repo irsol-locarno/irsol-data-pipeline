@@ -17,6 +17,7 @@ from irsol_data_pipeline.cli.common import (
 )
 from irsol_data_pipeline.cli.metadata import (
     PREFECT_FLOW_GROUPS,
+    PREFECT_SECRETS,
     PREFECT_VARIABLES,
     OutputFormat,
 )
@@ -24,6 +25,7 @@ from irsol_data_pipeline.cli.presentation import (
     distribution_versions,
     print_runtime_presentation,
 )
+from irsol_data_pipeline.prefect.secrets import get_secret
 from irsol_data_pipeline.prefect.variables import get_variable
 from irsol_data_pipeline.version import __version__
 
@@ -62,6 +64,20 @@ def _build_prefect_variables_payload() -> list[dict[str, Any]] | str:
         ]
     except httpx.ConnectError:
         return "Error: Unable to connect to Prefect server to retrieve variable values."
+
+
+def _build_prefect_secrets_payload() -> list[dict[str, str]]:
+    """Build the Prefect secrets section of the info payload, masking
+    values."""
+    return [
+        {
+            "name": secret_meta.prefect_name.value,
+            "value": "[REDACTED]"
+            if get_secret(secret_meta.prefect_name)
+            else "<unset>",
+        }
+        for secret_meta in PREFECT_SECRETS
+    ]
 
 
 def _build_distributions_payload() -> list[dict[str, Any]]:
@@ -104,7 +120,8 @@ def _build_info_payload(console: Optional[Console]) -> dict[str, Any]:
         result["flow_groups"] = _build_flow_groups_payload()
         update(status, "Loading prefect variables")
         result["prefect_variables"] = _build_prefect_variables_payload()
-
+        update(status, "Loading prefect secrets")
+        result["prefect_secrets"] = _build_prefect_secrets_payload()
     return result
 
 
@@ -150,19 +167,36 @@ def _render_info_table(payload: dict[str, Any]) -> None:
         get_console().print(
             "[bold red]Error retrieving Prefect variables: make sure prefect is running via 'idp prefect start'[/bold red]"
         )
-        return
-
-    variables_table = Table(
-        title="Prefect Variables", show_header=True, header_style="bold cyan"
-    )
-    variables_table.add_column("Variable", style="white", no_wrap=True)
-    variables_table.add_column("Value", style="white")
-    for variable in payload["prefect_variables"]:
-        variables_table.add_row(
-            str(variable["name"]),
-            str(variable["value"] if variable["value"] is not None else "<unset>"),
+    else:
+        variables_table = Table(
+            title="Prefect Variables", show_header=True, header_style="bold cyan"
         )
-    get_console().print(variables_table)
+        variables_table.add_column("Variable", style="white", no_wrap=True)
+        variables_table.add_column("Value", style="white")
+        for variable in payload["prefect_variables"]:
+            variables_table.add_row(
+                str(variable["name"]),
+                str(variable["value"] if variable["value"] is not None else "<unset>"),
+            )
+        get_console().print(variables_table)
+
+    has_prefect_secrets = isinstance(payload["prefect_secrets"], list)
+    if not has_prefect_secrets:
+        get_console().print(
+            "[bold red]Error retrieving Prefect secrets: make sure prefect is running via 'idp prefect start'[/bold red]"
+        )
+    else:
+        secrets_table = Table(
+            title="Prefect Secrets", show_header=True, header_style="bold cyan"
+        )
+        secrets_table.add_column("Secret", style="white", no_wrap=True)
+        secrets_table.add_column("Value", style="white")
+        for secret in payload["prefect_secrets"]:
+            secrets_table.add_row(
+                str(secret["name"]),
+                str(secret["value"]),
+            )
+        get_console().print(secrets_table)
 
 
 def info(format: OutputFormat = "table") -> None:

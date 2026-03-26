@@ -10,6 +10,7 @@ from irsol_data_pipeline.core.config import (
     DEFAULT_PIOMBO_HOST_NAME,
 )
 from irsol_data_pipeline.prefect.flows.tags import PrefectDeploymentTopicTag
+from irsol_data_pipeline.prefect.secrets import PrefectSecretName
 from irsol_data_pipeline.prefect.variables import PrefectVariableName
 
 OutputFormat = Literal["table", "json"]
@@ -78,6 +79,19 @@ class PrefectFlowGroupMetadata:
     flows: tuple[PrefectFlowMetadata, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class PrefectSecretMetadata:
+    """Metadata describing one configurable Prefect secret.
+
+    Attributes:
+        prefect_name: Canonical Prefect secret name (block name).
+        prompt_text: Prompt displayed during interactive configuration.
+    """
+
+    prefect_name: PrefectSecretName
+    prompt_text: str
+
+
 PREFECT_VARIABLES: tuple[PrefectVariableMetadata, ...] = (
     PrefectVariableMetadata(
         prefect_name=PrefectVariableName.DATA_ROOT_PATH,
@@ -140,11 +154,13 @@ PREFECT_VARIABLES: tuple[PrefectVariableMetadata, ...] = (
         required=True,
         topic_tags=(PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY,),
     ),
-    PrefectVariableMetadata(
-        prefect_name=PrefectVariableName.PIOMBO_PASSWORD,
-        prompt_text="SSH password used by Piombo for web-assets upload",
-        required=True,
-        topic_tags=(PrefectDeploymentTopicTag.WEB_ASSETS_COMPATIBILITY,),
+    # PIOMBO_PASSWORD is now managed as a Prefect Secret block, not a variable.
+)
+
+PREFECT_SECRETS: tuple[PrefectSecretMetadata, ...] = (
+    PrefectSecretMetadata(
+        prefect_name=PrefectSecretName.PIOMBO_PASSWORD,
+        prompt_text="SFTP password for Piombo uploads (used by web asset compatibility flows)",
     ),
 )
 

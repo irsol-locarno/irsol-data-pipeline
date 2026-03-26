@@ -8,12 +8,13 @@ from unittest.mock import patch
 import pytest
 
 from irsol_data_pipeline.cli import app
+from irsol_data_pipeline.prefect.secrets import PrefectSecretName
 from irsol_data_pipeline.prefect.variables import PrefectVariableName
 
 
 class TestInfoCommand:
     def test_info_json(self, capsys: pytest.CaptureFixture[str]) -> None:
-        value_by_name = {
+        variable_value_by_name = {
             PrefectVariableName.DATA_ROOT_PATH: "/srv/data",
             PrefectVariableName.JSOC_EMAIL: "operator@example.com",
             PrefectVariableName.JSOC_DATA_DELAY_DAYS: "14",
@@ -22,12 +23,20 @@ class TestInfoCommand:
             PrefectVariableName.PIOMBO_BASE_PATH: "/irsol_db/docs/web-site/assets",
             PrefectVariableName.PIOMBO_HOSTNAME: "piombo7.usi.ch",
             PrefectVariableName.PIOMBO_USERNAME: "<unset>",
-            PrefectVariableName.PIOMBO_PASSWORD: "<unset>",
+        }
+        secret_value_by_name = {
+            PrefectSecretName.PIOMBO_PASSWORD: "piombo_password_value",
         }
 
-        with patch(
-            "irsol_data_pipeline.prefect.variables.get_variable",
-            side_effect=value_by_name.__getitem__,
+        with (
+            patch(
+                "irsol_data_pipeline.prefect.variables.get_variable",
+                side_effect=variable_value_by_name.__getitem__,
+            ),
+            patch(
+                "irsol_data_pipeline.prefect.secrets.get_secret",
+                side_effect=secret_value_by_name.__getitem__,
+            ),
         ):
             app(
                 ["info", "--format", "json"],
@@ -42,4 +51,9 @@ class TestInfoCommand:
         assert payload["prefect_variables"][0] == {
             "name": "data-root-path",
             "value": "/srv/data",
+        }
+
+        assert payload["prefect_secrets"][0] == {
+            "name": "piombo-password",
+            "value": "[REDACTED]",
         }

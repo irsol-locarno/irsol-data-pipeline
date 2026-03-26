@@ -29,6 +29,10 @@ from irsol_data_pipeline.pipeline.web_asset_compatibility import (
     process_day_web_asset_compatibility,
 )
 from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.secrets import (
+    PrefectSecretName,
+    get_secret,
+)
 from irsol_data_pipeline.prefect.utils import create_prefect_markdown_report
 from irsol_data_pipeline.prefect.variables import (
     PrefectVariableName,
@@ -192,8 +196,8 @@ def publish_web_assets_for_root(
         PrefectVariableName.PIOMBO_USERNAME,
         default="",
     )
-    piombo_password = piombo_password or get_variable(
-        PrefectVariableName.PIOMBO_PASSWORD,
+    piombo_password = piombo_password or get_secret(
+        PrefectSecretName.PIOMBO_PASSWORD,
         default="",
     )
 
@@ -292,8 +296,8 @@ def publish_web_assets_for_day(
         PrefectVariableName.PIOMBO_USERNAME,
         default="",
     )
-    piombo_password = piombo_password or get_variable(
-        PrefectVariableName.PIOMBO_PASSWORD,
+    piombo_password = piombo_password or get_secret(
+        PrefectSecretName.PIOMBO_PASSWORD,
         default="",
     )
 

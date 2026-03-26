@@ -23,7 +23,6 @@ class PrefectVariableName(Enum):
     PIOMBO_BASE_PATH = "piombo-base-path"
     PIOMBO_HOSTNAME = "piombo-hostname"
     PIOMBO_USERNAME = "piombo-username"
-    PIOMBO_PASSWORD = "piombo-password"
 
 
 def get_variable(name: PrefectVariableName, default: Any = None) -> Any:

@@ -23,11 +23,14 @@ flowchart TD
     FLOWS["flows"]
     STATUS["status"]
     VARS["variables"]
+    SECRETS["secrets"]
 
     LIST_F["list"]
     SERVE["serve"]
     LIST_V["list"]
     CONFIGURE_V["configure"]
+    LIST_S["list"]
+    CONFIGURE_S["configure"]
 
     IDP --> INFO
     IDP --> SETUP
@@ -41,11 +44,14 @@ flowchart TD
     PREFECT --> FLOWS
     PREFECT --> STATUS
     PREFECT --> VARS
+    PREFECT --> SECRETS
 
     FLOWS --> LIST_F
     FLOWS --> SERVE
     VARS --> LIST_V
     VARS --> CONFIGURE_V
+    SECRETS --> LIST_S
+    SECRETS --> CONFIGURE_S
 ```
 
 ## Global Options
@@ -102,7 +108,9 @@ The command writes:
 
 ### `idp info`
 
-Display runtime and operational information including pipeline version, configured flow groups, Prefect variable status, and installed distributions.
+
+Display runtime and operational information including pipeline version, configured flow groups, Prefect variable status, Prefect secret status (masked), and installed distributions.
+
 
 ```bash
 # Table format (default)
@@ -111,6 +119,8 @@ idp info
 # JSON format
 idp info --format json
 ```
+
+The output now includes a "Prefect Secrets" section, listing all known Prefect secrets. Secret values are always masked as `[REDACTED]` if set, or `<unset>` if not configured. This helps operators verify which secrets are present without exposing sensitive values.
 
 
 ### `idp plot`

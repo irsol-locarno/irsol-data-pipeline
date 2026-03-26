@@ -7,7 +7,7 @@ paths = [
   '^.*\.(log|json|dat|sav|fits)$',
   '^\.venv/',
   '^htmlcov/',
-  '^results\.json$',
+  '^__pycache__/',
 ]
 
 [[rules]]

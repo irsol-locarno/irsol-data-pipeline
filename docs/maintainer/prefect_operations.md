@@ -75,9 +75,11 @@ flowchart LR
    ```
    The server port is inferred from the active profile's `PREFECT_API_URL`.
 
-6. **Configure variables:**
+
+6. **Configure variables and secrets:**
    ```bash
    idp prefect variables configure
+   idp prefect secrets configure
    ```
    Required variables:
    - `data-root-path` — Path to the dataset root directory.
@@ -86,10 +88,17 @@ flowchart LR
    - `cache-expiration-hours` — Cache file retention (default: 672 hours = 28 days).
    - `flow-run-expiration-hours` — Prefect run history retention (default: 672 hours).
 
+   Required secrets:
+   - `piombo-password` — SFTP password for Piombo uploads (used by web asset compatibility flows).
+
+   You will be prompted to enter the value for each secret. Secrets are stored securely in Prefect Secret blocks and are not shown in plaintext after entry.
+
+
 7. **Verify configuration:**
    ```bash
    idp info
    idp prefect variables list
+   idp prefect secrets list
    idp prefect flows list
    ```
 
@@ -253,7 +262,7 @@ This command will open an SSH connection from your local environment to sirius (
 - **Monitor the dashboard** — check daily for failed runs and unexpected patterns.
 - **Keep maintenance active** — ensure the maintenance flow runner is always serving to prevent cache and run history accumulation.
 - **Test upgrades** — always run a smoke test after upgrading before relying on scheduled runs.
-- **Back up Prefect variables** — document your variable configuration in case of database reset.
+- **Back up Prefect variables and secrets** — document your variable and secret configuration in case of database reset. Use `idp prefect variables list` and `idp prefect secrets list` to export current values (secrets will be redacted).
 
 ## Related Documentation
 

@@ -24,7 +24,6 @@ class TestPrefectVariablesCommand:
             PrefectVariableName.PIOMBO_BASE_PATH: "/irsol_db/docs/web-site/assets",
             PrefectVariableName.PIOMBO_HOSTNAME: "piombo7.usi.ch",
             PrefectVariableName.PIOMBO_USERNAME: "<unset>",
-            PrefectVariableName.PIOMBO_PASSWORD: "<unset>",
         }
 
         with patch(

@@ -82,3 +82,9 @@ prefect_app.command(
     name="variables",
     help="List and configure Prefect variables.",
 )
+
+prefect_app.command(
+    "irsol_data_pipeline.cli.commands.prefect_command.secrets_command:secrets_app",
+    name="secrets",
+    help="List and configure Prefect secrets.",
+)

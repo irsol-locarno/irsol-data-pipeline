@@ -11,7 +11,7 @@ Usage example::
     with SftpRemoteFileSystem(
         hostname="piombo7.usi.ch",
         username="user",
-        password="secret",
+        password="secret",  # gitleaks:allow
         base_path="/irsol_db/docs/web-site/assets",
     ) as remote_fs:
         result = process_day_web_asset_compatibility(
