@@ -3,7 +3,10 @@ name = "irsol-data-pipeline"
 dynamic = ["version"]
 description = "Solar observation data processing pipeline for IRSOL"
 readme = { text = "Solar observation data processing pipeline for IRSOL", content-type = "text/markdown" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Carlo Del Don", email = "deldoc@usi.ch" }]
+maintainers = [{ name = "Carlo Del Don", email = "deldoc@usi.ch" }]
 requires-python = ">=3.10, <=3.11"  # python >= 3.12 seems not to work with the dependencies
 dependencies = [
     "numpy<2",
@@ -22,9 +25,27 @@ dependencies = [
     "pillow>=12.1.1",
     "paramiko>=3.4.0",
 ]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
 
 [project.scripts]
 idp = "irsol_data_pipeline.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/IRSOL/irsol-data-pipeline"
+Repository = "https://github.com/IRSOL/irsol-data-pipeline"
+Documentation = "https://github.com/IRSOL/irsol-data-pipeline#readme"
+Issues = "https://github.com/IRSOL/irsol-data-pipeline/issues"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
