@@ -1,0 +1,19 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore generated artifacts and local virtualenv noise"
+paths = [
+  '^.*\.(log|json|dat|sav|fits)$',
+  '^\.venv/',
+  '^htmlcov/',
+  '^results\.json$',
+]
+
+[[rules]]
+id = "hardcoded-assignment-of-strings-to-variables-containing-password-like-name, add `# gitleaks:allow` at the end of the line if needed"
+description = "Detect hardcoded string assignments to password-like variables"
+regex = '''(?i)(?P<variable_name>\w*password\w*)\s*\)?\s*=\s*["'](?P<secret_value>[^"']+)["']'''
+
+[rules.allowlist]
+paths = ['^(tests)/']

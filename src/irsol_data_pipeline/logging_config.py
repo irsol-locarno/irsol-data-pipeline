@@ -47,7 +47,7 @@ LOG_LEVEL = Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 def setup_logging(
     level: LOG_LEVEL = "INFO",
-    log_file: str = "solar_pipeline.log",
+    log_file: str = "irsol-data-pipeline.log",
     rotation: str = "10 MB",
     retention: str = "1 week",
     force: bool = False,
