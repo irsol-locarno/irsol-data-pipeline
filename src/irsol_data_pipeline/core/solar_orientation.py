@@ -40,7 +40,10 @@ class SolarOrientationInfo:
 
     slit_angle_solar_deg: float
     """Angle of the slit direction in the solar reference frame, in degrees,
-    measured counter-clockwise from the solar west direction.
+    measured counter-clockwise from the solar west (positive Tx) direction.
+
+    This follows the standard heliographic convention where 0° points west
+    (positive Tx), 90° points north (positive Ty), and 180° points east.
 
     The solar north direction expressed in the (wavelength, spatial) plot
     frame is :math:`(\\cos\\theta,\\,\\sin\\theta)` where

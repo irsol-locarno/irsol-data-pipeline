@@ -61,9 +61,10 @@ def _require_vrange(vrange: Sequence[float] | Literal[False]) -> Sequence[float]
 def _draw_solar_north_arrow(ax: Axes, info: SolarOrientationInfo) -> None:
     """Draw a solar north arrow on a profile plot panel.
 
-    The arrow is drawn in the right margin of *ax* and points in the
-    direction of solar north along the (wavelength, spatial) plane.  A
-    ``"N"`` label is placed at the arrowhead.
+    The arrow is drawn near the right edge of *ax* (at ``center_x=0.96`` in
+    axes-fraction coordinates) and points in the direction of solar north
+    along the (wavelength, spatial) plane.  A ``"N"`` label is placed at
+    the arrowhead.
 
     Args:
         ax: Matplotlib :class:`~matplotlib.axes.Axes` to annotate.

@@ -15,7 +15,7 @@ from irsol_data_pipeline.core.solar_orientation import (
 )
 from tests.unit.utils import make_dat_array_info
 
-_BASE_INFO: dict[str, str] = {
+_BASE_MEASUREMENT_INFO: dict[str, str] = {
     "measurement.file": "/data/5886_m1.z3bd",
     "measurement.telescope name": "Gregory IRSOL",
     "measurement.instrument": "ZIMPOL3",
@@ -29,7 +29,7 @@ _BASE_INFO: dict[str, str] = {
 
 def _make_metadata(overrides: dict[str, str] | None = None) -> MeasurementMetadata:
     """Build a minimal MeasurementMetadata from a base dict with optional overrides."""
-    entries = dict(_BASE_INFO)
+    entries = dict(_BASE_MEASUREMENT_INFO)
     if overrides:
         entries.update(overrides)
     return MeasurementMetadata.from_info_array(make_dat_array_info(entries))
