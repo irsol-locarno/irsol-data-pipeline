@@ -189,7 +189,7 @@ journalctl -u irsol-prefect-server -n 200 --no-pager
 journalctl -u irsol-prefect-serve-flatfield -n 200 --no-pager
 
 # Pipeline application log (rotating)
-tail -f solar_pipeline.log
+tail -f irsol-data-pipeline.log
 ```
 
 ## Database Reset
