@@ -8,10 +8,15 @@ from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from irsol_data_pipeline.core.models import StokesParameters
+from irsol_data_pipeline.core.models import MeasurementMetadata, StokesParameters
+from irsol_data_pipeline.core.solar_orientation import (
+    SolarOrientationInfo,
+    compute_solar_orientation,
+)
 
 COLORBAR_TICK_LABEL_SIZE = 16
 AXIS_LABEL_FONT_SIZE = 16
@@ -53,6 +58,62 @@ def _require_vrange(vrange: Sequence[float] | Literal[False]) -> Sequence[float]
     return vrange
 
 
+def _draw_solar_north_arrow(ax: Axes, info: SolarOrientationInfo) -> None:
+    """Draw a solar north arrow on a profile plot panel.
+
+    The arrow is drawn in the right margin of *ax* and points in the
+    direction of solar north along the (wavelength, spatial) plane.  A
+    ``"N"`` label is placed at the arrowhead.
+
+    Args:
+        ax: Matplotlib :class:`~matplotlib.axes.Axes` to annotate.
+        info: Pre-computed solar orientation data.
+    """
+    angle_rad = np.radians(info.slit_angle_solar_deg)
+    dx = float(np.cos(angle_rad))
+    dy = float(np.sin(angle_rad))
+
+    # Length of the arrow in axes-fraction units.
+    arrow_half = 0.10
+
+    center_x, center_y = 0.96, 0.50
+
+    tip_x = center_x + arrow_half * dx
+    tip_y = center_y + arrow_half * dy
+    tail_x = center_x - arrow_half * dx
+    tail_y = center_y - arrow_half * dy
+
+    # Draw the arrow shaft and head (no text on the arrow itself).
+    ax.annotate(
+        "",
+        xy=(tip_x, tip_y),
+        xytext=(tail_x, tail_y),
+        xycoords="axes fraction",
+        textcoords="axes fraction",
+        arrowprops=dict(
+            arrowstyle="->,head_width=0.4,head_length=0.6",
+            color="yellow",
+            lw=1.5,
+        ),
+        annotation_clip=False,
+    )
+
+    # "N" label offset slightly beyond the arrowhead.
+    label_offset = 0.06
+    ax.text(
+        tip_x + label_offset * dx,
+        tip_y + label_offset * dy,
+        "N",
+        transform=ax.transAxes,
+        color="yellow",
+        fontsize=11,
+        fontweight="bold",
+        ha="center",
+        va="center",
+        clip_on=False,
+    )
+
+
 def plot(
     data: StokesParameters,
     /,
@@ -71,6 +132,7 @@ def plot(
     a0: float | None = None,
     a1: float | None = None,
     show: bool = False,
+    metadata: MeasurementMetadata | None = None,
 ) -> None:
     """Plot the four Stokes components for a measurement.
 
@@ -101,6 +163,9 @@ def plot(
             ``a1`` are provided, the x-axis is displayed in Angstrom instead of
             pixels.
         show: Display the figure interactively after rendering.
+        metadata: Optional measurement metadata. When provided, a solar north
+            arrow is drawn on the Stokes I panel to indicate the direction of
+            solar north in the spatial dimension.
     """
 
     si, sq, su, sv = data
@@ -182,6 +247,11 @@ def plot(
     )
     cbar0 = fig.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
     cbar0.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
+
+    # Draw solar north arrow on Stokes I panel when metadata is available.
+    if metadata is not None:
+        solar_orientation = compute_solar_orientation(metadata)
+        _draw_solar_north_arrow(axes[0], solar_orientation)
 
     # Plot Stokes Q/I.
     im1 = axes[1].imshow(
