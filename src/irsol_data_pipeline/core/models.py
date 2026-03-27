@@ -102,6 +102,45 @@ class Measurement(BaseModel):
         return self.metadata.name
 
 
+class SolarOrientationInfo(BaseModel):
+    """Solar orientation information computed from measurement metadata.
+
+    Encapsulates all values needed to render a solar north indicator on
+    a Stokes profile plot or other visualisations.
+
+    The solar north direction in the plot frame (wavelength × spatial) is:
+
+    .. code-block:: python
+
+        import numpy as np
+        angle_rad = np.radians(info.slit_angle_solar_deg)
+        dx = np.cos(angle_rad)  # component along the wavelength axis
+        dy = np.sin(angle_rad)  # component along the spatial axis
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    sun_p0_deg: float
+    """Position angle of the solar north pole (P0) in degrees, as returned by
+    :func:`sunpy.coordinates.sun.P`."""
+
+    slit_angle_solar_deg: float
+    """Angle of the slit direction in the solar reference frame, in degrees,
+    measured counter-clockwise from the solar west (positive Tx) direction.
+
+    This follows the standard heliographic convention where 0° points west
+    (positive Tx), 90° points north (positive Ty), and 180° points east.
+
+    The solar north direction expressed in the (wavelength, spatial) plot
+    frame is :math:`\\cos\\theta,\\,\\sin\\theta)` where
+    :math:`\\theta` = ``slit_angle_solar_deg`` in radians.
+    """
+
+    needs_rotation: bool
+    """True when the derotator coordinate system is equatorial and a P0
+    rotation was applied to bring the slit angle into the solar frame."""
+
+
 def _parse_yes_no(value: object) -> Optional[bool]:
     """Parse a yes/no string into a boolean."""
     if value is None:
