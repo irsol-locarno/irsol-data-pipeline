@@ -147,8 +147,5 @@ def configure_prefect() -> int:
     print("  PREFECT_SERVER_ANALYTICS_ENABLED=false")
     print("  PREFECT_RESULTS_PERSIST_BY_DEFAULT=false")
     print("  PREFECT_TASKS_DEFAULT_PERSIST_RESULT=false")
-    print(
-        "\nRun 'idp prefect automations configure' once the server is running "
-        "to register the built-in automations."
-    )
+
     return 0

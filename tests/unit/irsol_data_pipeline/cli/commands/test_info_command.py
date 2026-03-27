@@ -8,13 +8,15 @@ from unittest.mock import patch
 import pytest
 
 from irsol_data_pipeline.cli import app
+from irsol_data_pipeline.prefect.automations import AUTOMATIONS, Automation
 from irsol_data_pipeline.prefect.secrets import PrefectSecretName
 from irsol_data_pipeline.prefect.variables import PrefectVariableName
 
 
 class TestInfoCommand:
-    def test_info_json(self, capsys: pytest.CaptureFixture[str]) -> None:
-        variable_value_by_name = {
+    @pytest.fixture
+    def variable_value_by_name(self) -> dict[PrefectVariableName, str]:
+        return {
             PrefectVariableName.DATA_ROOT_PATH: "/srv/data",
             PrefectVariableName.JSOC_EMAIL: "operator@example.com",
             PrefectVariableName.JSOC_DATA_DELAY_DAYS: "14",
@@ -24,10 +26,24 @@ class TestInfoCommand:
             PrefectVariableName.PIOMBO_HOSTNAME: "piombo7.usi.ch",
             PrefectVariableName.PIOMBO_USERNAME: "<unset>",
         }
-        secret_value_by_name = {
+
+    @pytest.fixture
+    def secret_value_by_name(self) -> dict[PrefectSecretName, str]:
+        return {
             PrefectSecretName.PIOMBO_PASSWORD: "piombo_password_value",
         }
 
+    @pytest.fixture
+    def automation_by_name(self) -> dict[str, Automation]:
+        return {a.name: a for a in AUTOMATIONS}
+
+    def test_info_json(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        variable_value_by_name: dict[PrefectVariableName, str],
+        secret_value_by_name: dict[PrefectSecretName, str],
+        automation_by_name: dict[str, Automation],
+    ) -> None:
         with (
             patch(
                 "irsol_data_pipeline.prefect.variables.get_variable",
@@ -36,6 +52,10 @@ class TestInfoCommand:
             patch(
                 "irsol_data_pipeline.prefect.secrets.get_secret",
                 side_effect=secret_value_by_name.__getitem__,
+            ),
+            patch(
+                "irsol_data_pipeline.prefect.automations.get_automation",
+                side_effect=automation_by_name.__getitem__,
             ),
         ):
             app(
@@ -57,3 +77,10 @@ class TestInfoCommand:
             "name": "piombo-password",
             "value": "[REDACTED]",
         }
+
+        for i, automation in enumerate(AUTOMATIONS):
+            assert payload["prefect_automations"][i]["name"] == automation.name
+            assert (
+                payload["prefect_automations"][i]["description"]
+                == automation.description
+            )

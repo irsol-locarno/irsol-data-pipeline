@@ -16,6 +16,7 @@ from irsol_data_pipeline.cli.common import (
     print_json,
 )
 from irsol_data_pipeline.cli.metadata import (
+    PREFECT_AUTOMATIONS,
     PREFECT_FLOW_GROUPS,
     PREFECT_SECRETS,
     PREFECT_VARIABLES,
@@ -25,6 +26,7 @@ from irsol_data_pipeline.cli.presentation import (
     distribution_versions,
     print_runtime_presentation,
 )
+from irsol_data_pipeline.prefect.automations import get_automation
 from irsol_data_pipeline.prefect.secrets import get_secret
 from irsol_data_pipeline.prefect.variables import get_variable
 from irsol_data_pipeline.version import __version__
@@ -80,6 +82,38 @@ def _build_prefect_secrets_payload() -> list[dict[str, str]]:
     ]
 
 
+def _build_prefect_automations_payload() -> list[dict[str, str]]:
+    """Builds the Prefect automations section of the info payload."""
+    remote_automations = [
+        get_automation(automation.name) for automation in PREFECT_AUTOMATIONS
+    ]
+    remote_automations = [ra for ra in remote_automations if ra is not None]
+    missing_remote_automations = [
+        automation
+        for automation in PREFECT_AUTOMATIONS
+        if automation.name not in (ra.name for ra in remote_automations)
+    ]
+
+    result = []
+    for remote_automation in remote_automations:
+        result.append(
+            {
+                "name": remote_automation.name,
+                "description": remote_automation.description,
+                "deployed": True,
+            }
+        )
+    for missing_automation in missing_remote_automations:
+        result.append(
+            {
+                "name": missing_automation.name,
+                "description": missing_automation.description,
+                "deployed": False,
+            }
+        )
+    return result
+
+
 def _build_distributions_payload() -> list[dict[str, Any]]:
     """Build the distributions section of the info payload.
 
@@ -122,6 +156,8 @@ def _build_info_payload(console: Optional[Console]) -> dict[str, Any]:
         result["prefect_variables"] = _build_prefect_variables_payload()
         update(status, "Loading prefect secrets")
         result["prefect_secrets"] = _build_prefect_secrets_payload()
+        update(status, "Loading prefet automations")
+        result["prefect_automations"] = _build_prefect_automations_payload()
     return result
 
 
@@ -197,6 +233,28 @@ def _render_info_table(payload: dict[str, Any]) -> None:
                 str(secret["value"]),
             )
         get_console().print(secrets_table)
+
+    has_prefect_automations = isinstance(payload["prefect_automations"], list)
+    if not has_prefect_automations:
+        get_console().print(
+            "[bold red]Error retrieving Prefect automations: make sure prefect is running via 'idp prefect start'[/bold red]"
+        )
+    else:
+        automation_table = Table(
+            title="Prefect Automations", show_header=True, header_style="bold cyan"
+        )
+        automation_table.add_column("Automation", style="white", no_wrap=True)
+        automation_table.add_column("Description", style="white")
+        automation_table.add_column("Deployed", style="white")
+        for automation in payload["prefect_automations"]:
+            deployed = automation["deployed"]
+            color = "green" if deployed else "red"
+            automation_table.add_row(
+                f"[bold {color}]{automation['name']}[/bold {color}]",
+                str(automation["description"]),
+                f"[bold {color}]{deployed}[/bold {color}]",
+            )
+        get_console().print(automation_table)
 
 
 def info(format: OutputFormat = "table") -> None:

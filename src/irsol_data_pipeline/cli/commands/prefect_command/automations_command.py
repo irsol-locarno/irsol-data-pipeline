@@ -12,12 +12,10 @@ from irsol_data_pipeline.cli.common import (
     print_json,
 )
 from irsol_data_pipeline.cli.metadata import OutputFormat
-from irsol_data_pipeline.prefect.automations import (
-    delete_pending_flows_automation,
-    zombie_flow_automation,
-)
 
-automations_app = App(name="automations", help="List and configure Prefect automations.")
+automations_app = App(
+    name="automations", help="List and configure Prefect automations."
+)
 
 
 @dataclass(frozen=True)
@@ -27,12 +25,12 @@ class AutomationReportEntry:
     Attributes:
         name: Automation name.
         description: Human-readable description.
-        registered: Whether the automation is currently registered on the server.
+        deployed: Whether the automation is currently deployed on the server.
     """
 
     name: str
     description: str
-    registered: bool
+    deployed: bool
 
 
 def _get_automation_entries() -> list[AutomationReportEntry]:
@@ -44,23 +42,24 @@ def _get_automation_entries() -> list[AutomationReportEntry]:
         Current automation report entries.
     """
 
-    from prefect.automations import Automation
+    from irsol_data_pipeline.prefect.automations import AUTOMATIONS, get_automation
 
-    known_automations = [zombie_flow_automation, delete_pending_flows_automation]
-    entries: list[AutomationReportEntry] = []
-    for automation in known_automations:
-        try:
-            Automation.read(name=automation.name)
-            registered = True
-        except Exception:
-            registered = False
-        entries.append(
-            AutomationReportEntry(
+    entries = []
+    for automation in AUTOMATIONS:
+        remote_automation = get_automation(automation.name)
+        if remote_automation:
+            entry = AutomationReportEntry(
+                name=remote_automation.name,
+                description=remote_automation.description or "",
+                deployed=True,
+            )
+        else:
+            entry = AutomationReportEntry(
                 name=automation.name,
                 description=automation.description or "",
-                registered=registered,
+                deployed=False,
             )
-        )
+        entries.append(entry)
     return entries
 
 
@@ -74,13 +73,13 @@ def _render_automation_entries(entries: list[AutomationReportEntry]) -> None:
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Automation", style="white", no_wrap=True)
     table.add_column("Description", style="white")
-    table.add_column("Registered", style="magenta", no_wrap=True)
+    table.add_column("Deployed", style="magenta", no_wrap=True)
 
     for entry in entries:
         table.add_row(
             entry.name,
             entry.description,
-            "yes" if entry.registered else "no",
+            "yes" if entry.deployed else "no",
         )
 
     get_console().print(table)
@@ -103,7 +102,7 @@ def _serialize_automation_entries(
             {
                 "name": entry.name,
                 "description": entry.description,
-                "registered": entry.registered,
+                "deployed": entry.deployed,
             }
             for entry in entries
         ]
@@ -114,7 +113,8 @@ def _serialize_automation_entries(
 def list_automations(
     format: OutputFormat = "table",
 ) -> None:
-    """List built-in automation definitions and their server registration status.
+    """List built-in automation definitions and their server registration
+    status.
 
     Args:
         format: Output format for the report.
@@ -138,23 +138,17 @@ def configure_automations() -> int:
         Exit code for the command.
     """
 
-    from prefect.automations import Automation
-
-    automations: list[Automation] = [
-        zombie_flow_automation,
-        delete_pending_flows_automation,
-    ]
+    from irsol_data_pipeline.prefect.automations import AUTOMATIONS, get_automation
 
     failed_count = 0
-    for i, automation in enumerate(automations, start=1):
-        total = len(automations)
+    total = len(AUTOMATIONS)
+    for i, automation in enumerate(AUTOMATIONS, start=1):
         print(f"[{i}/{total}] Registering automation '{automation.name}'")
-        try:
-            existing_automation: Automation = Automation.read(name=automation.name)
-        except Exception:
+        existing_automation = get_automation(automation.name)
+        if not existing_automation:
             try:
                 automation.create()
-                print(f"  v Automation '{automation.name}' registered successfully.")
+                print(f"  v Automation '{automation.name}' deployed successfully.")
             except Exception as exc:
                 print(f"  x Failed to register '{automation.name}': {exc}")
                 failed_count += 1
@@ -171,7 +165,6 @@ def configure_automations() -> int:
                 failed_count += 1
 
     print()
-    total = len(automations)
     succeeded = total - failed_count
     print(f"Summary: {succeeded} configured, {failed_count} failed")
 

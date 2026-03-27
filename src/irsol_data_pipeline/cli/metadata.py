@@ -5,10 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from prefect.automations import Automation as PrefectAutomation
+
 from irsol_data_pipeline.core.config import (
     DEFAULT_PIOMBO_BASE_PATH,
     DEFAULT_PIOMBO_HOST_NAME,
 )
+from irsol_data_pipeline.prefect.automations import AUTOMATIONS
 from irsol_data_pipeline.prefect.flows.tags import PrefectDeploymentTopicTag
 from irsol_data_pipeline.prefect.secrets import PrefectSecretName
 from irsol_data_pipeline.prefect.variables import PrefectVariableName
@@ -273,3 +276,6 @@ PREFECT_FLOW_GROUPS: tuple[PrefectFlowGroupMetadata, ...] = (
         ),
     ),
 )
+
+
+PREFECT_AUTOMATIONS: tuple[PrefectAutomation, ...] = AUTOMATIONS

@@ -45,11 +45,11 @@ flowchart TD
     PLOT --> PROFILE
     PLOT --> SLIT
 
-    PREFECT --> AUTOMATIONS
-    PREFECT --> FLOWS
     PREFECT --> STATUS
+    PREFECT --> FLOWS
     PREFECT --> VARS
     PREFECT --> SECRETS
+    PREFECT --> AUTOMATIONS
 
     AUTOMATIONS --> LIST_A
     AUTOMATIONS --> CONFIGURE_A
@@ -127,8 +127,6 @@ The command writes:
 - `PREFECT_SERVER_ANALYTICS_ENABLED=false`
 
 This command does **not** require a running Prefect server.
-Once the server is up, run `idp prefect automations configure` to register the built-in automations.
-
 
 ### `idp info`
 
