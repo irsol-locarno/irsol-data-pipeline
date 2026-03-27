@@ -83,7 +83,11 @@ class TestCliPlot:
             patch(
                 "irsol_data_pipeline.io.fits.read",
                 return_value=ImportedFitsMeasurement(
-                    stokes=stokes, calibration=None, header=None, metadata=None
+                    stokes=stokes,
+                    calibration=None,
+                    header=None,
+                    metadata=None,
+                    solar_orientation=None,
                 ),
             ) as read_fits,
             patch("irsol_data_pipeline.plotting.profile.plot") as plot_profile,

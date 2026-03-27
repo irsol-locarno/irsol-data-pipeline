@@ -180,6 +180,7 @@ def _process_single_measurement(
             corrected_stokes,
             measurement_metadata,
             calibration=calibration,
+            solar_orientation=solar_orientation,
         )
 
         # 6. Save flat-field correction data (pickle)
