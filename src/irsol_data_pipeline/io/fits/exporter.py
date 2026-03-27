@@ -25,7 +25,57 @@ from sunpy.coordinates.sun import angular_radius
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
     MeasurementMetadata,
+    SolarOrientationInfo,
     StokesParameters,
+)
+from irsol_data_pipeline.io.fits.constants import (
+    FITS_KEY_CAMPOS,
+    FITS_KEY_DRANGL,
+    FITS_KEY_DRCSYS,
+    FITS_KEY_DROFFS,
+    FITS_KEY_FFSTAT,
+    FITS_KEY_GLBMEAN,
+    FITS_KEY_GLBNOISE,
+    FITS_KEY_GUIDST,
+    FITS_KEY_IMGLST,
+    FITS_KEY_IMGTYPE,
+    FITS_KEY_IMGTYPX,
+    FITS_KEY_IMGTYPY,
+    FITS_KEY_INSTPF,
+    FITS_KEY_LMGST,
+    FITS_KEY_MODTYPE,
+    FITS_KEY_PIGINT,
+    FITS_KEY_PLCST,
+    FITS_KEY_REDDCFL,
+    FITS_KEY_REDDCFT,
+    FITS_KEY_REDDMOD,
+    FITS_KEY_REDFILE,
+    FITS_KEY_REDMODE,
+    FITS_KEY_REDNFIL,
+    FITS_KEY_REDONAM,
+    FITS_KEY_REDPIXR,
+    FITS_KEY_REDROWS,
+    FITS_KEY_REDSOFT,
+    FITS_KEY_REDSTAT,
+    FITS_KEY_REDTCUM,
+    FITS_KEY_SBSEQLN,
+    FITS_KEY_SBSEQNM,
+    FITS_KEY_SEQLEN,
+    FITS_KEY_SLTANGL,
+    FITS_KEY_SOLAR_XY,
+    FITS_KEY_SPALPH,
+    FITS_KEY_SPGRTWL,
+    FITS_KEY_SPORD,
+    FITS_KEY_SPSLIT,
+    FITS_KEY_STOKVEC,
+    FITS_KEY_TCUMODE,
+    FITS_KEY_TCUPOSN,
+    FITS_KEY_TCURTRN,
+    FITS_KEY_TCURTRP,
+    FITS_KEY_ZCDESC,
+    FITS_KEY_ZCFILE,
+    FITS_KEY_ZCSOFT,
+    FITS_KEY_ZCSTAT,
 )
 from irsol_data_pipeline.version import __version__
 
@@ -40,7 +90,8 @@ def write_stokes_fits(
     output_path: Path,
     stokes: StokesParameters,
     info: MeasurementMetadata,
-    calibration: Optional[CalibrationResult] = None,
+    calibration: Optional[CalibrationResult],
+    solar_orientation: Optional[SolarOrientationInfo],
 ) -> Path:
     """Write processed Stokes data to a FITS file.
 
@@ -49,6 +100,10 @@ def write_stokes_fits(
         stokes: Stokes data to serialize.
         info: Measurement metadata used to derive FITS headers.
         calibration: Optional precomputed wavelength calibration.
+        solar_orientation: Optional pre-computed solar orientation.
+            :attr:`~irsol_data_pipeline.core.models.SolarOrientationInfo.slit_angle_solar_deg`
+            is stored in the primary HDU header so it can be recovered on
+            re-import without re-computing P0.
 
     Returns:
         The path written to.
@@ -67,6 +122,7 @@ def write_stokes_fits(
             stokes=stokes,
             info=info,
             calibration=calibration,
+            solar_orientation=solar_orientation,
         )
         hdu_list.writeto(output_path, output_verify="ignore", overwrite=True)
         logger.debug("Stokes FITS written")
@@ -76,7 +132,8 @@ def write_stokes_fits(
 def _build_fits_hdu_list(
     stokes: StokesParameters,
     info: MeasurementMetadata,
-    calibration: Optional[CalibrationResult] = None,
+    calibration: Optional[CalibrationResult],
+    solar_orientation: Optional[SolarOrientationInfo],
 ) -> fits.HDUList:
     """Build a FITS HDU list from Stokes data and raw info metadata.
 
@@ -84,7 +141,7 @@ def _build_fits_hdu_list(
     object is provided.
     """
     a1, a0, a1_err, a0_err = _calibration_values(calibration)
-    return _build_hdu_list(stokes, info, a1, a0, a1_err, a0_err)
+    return _build_hdu_list(stokes, info, a1, a0, a1_err, a0_err, solar_orientation)
 
 
 def _calibration_values(
@@ -110,6 +167,7 @@ def _build_hdu_list(
     a0: Optional[float],
     a1_err: Optional[float],
     a0_err: Optional[float],
+    solar_orientation: Optional[SolarOrientationInfo],
 ) -> fits.HDUList:
     """Build a complete multi-extension FITS HDU list."""
 
@@ -130,7 +188,7 @@ def _build_hdu_list(
     su_hdu = fits.ImageHDU(su)
     sv_hdu = fits.ImageHDU(sv)
 
-    _fill_primary_header(hdu_primary.header, metadata)
+    _fill_primary_header(hdu_primary.header, metadata, solar_orientation)
     _fill_data_header(
         si_hdu.header,
         metadata,
@@ -198,7 +256,11 @@ def _build_hdu_list(
     return fits.HDUList([hdu_primary, si_hdu, sq_hdu, su_hdu, sv_hdu])
 
 
-def _fill_primary_header(header: fits.Header, metadata: MeasurementMetadata) -> None:
+def _fill_primary_header(
+    header: fits.Header,
+    metadata: MeasurementMetadata,
+    solar_orientation: Optional[SolarOrientationInfo],
+) -> None:
     """Fill the primary HDU header."""
     header["EXTNAME"] = ("PRIMARY", "Name of HDU")
     header["SOLARNET"] = (1, "file is solarnet compliant")
@@ -226,6 +288,142 @@ def _fill_primary_header(header: fits.Header, metadata: MeasurementMetadata) -> 
     if header["SOLAR_P0"] is None:
         t = Time(metadata.datetime_start)
         header["SOLAR_P0"] = sun.P(t).value
+
+    _fill_extended_metadata_primary_header(header, metadata, solar_orientation)
+
+
+def _fill_extended_metadata_primary_header(
+    header: fits.Header,
+    metadata: MeasurementMetadata,
+    solar_orientation: Optional[SolarOrientationInfo],
+) -> None:
+    """Write extended measurement metadata to the primary HDU header.
+
+    All pipeline-specific fields that are not part of the standard FITS WCS
+    vocabulary are written here using the keys defined in
+    :mod:`~irsol_data_pipeline.io.fits.constants`.  The primary HDU is used
+    so that the metadata is written once per file rather than being repeated
+    in each of the four Stokes extension headers.
+    """
+    # Top-level measurement fields
+    header[FITS_KEY_INSTPF] = (metadata.instrument_post_focus, "Post-focus instrument")
+    header[FITS_KEY_MODTYPE] = (metadata.modulator_type, "Modulator type")
+    header[FITS_KEY_SEQLEN] = (metadata.sequence_length, "Sequence length")
+    header[FITS_KEY_SBSEQLN] = (metadata.sub_sequence_length, "Sub-sequence length")
+    header[FITS_KEY_SBSEQNM] = (metadata.sub_sequence_name, "Sub-sequence name")
+    header[FITS_KEY_STOKVEC] = (metadata.stokes_vector, "Stokes vector")
+    images_str = " ".join(str(n) for n in metadata.images) if metadata.images else None
+    header[FITS_KEY_IMGLST] = (images_str, "Image counts (space-separated)")
+    header[FITS_KEY_IMGTYPE] = (metadata.image_type, "Image type")
+    header[FITS_KEY_IMGTYPX] = (metadata.image_type_x, "Image type X axis")
+    header[FITS_KEY_IMGTYPY] = (metadata.image_type_y, "Image type Y axis")
+    header[FITS_KEY_GUIDST] = (metadata.guiding_status, "Guiding system status")
+    header[FITS_KEY_PIGINT] = (metadata.pig_intensity, "PIG intensity level")
+    header[FITS_KEY_SOLAR_XY] = (
+        metadata.solar_disc_coordinates,
+        "Solar disc coordinates [arcsec] 'X Y'",
+    )
+    header[FITS_KEY_LMGST] = (metadata.limbguider_status, "Limb guider status")
+    header[FITS_KEY_PLCST] = (
+        metadata.polcomp_status,
+        "Polarization compensator status",
+    )
+
+    # Camera
+    header[FITS_KEY_CAMPOS] = (metadata.camera.position, "Camera position")
+
+    # Spectrograph
+    header[FITS_KEY_SPALPH] = (metadata.spectrograph.alpha, "Spectrograph alpha angle")
+    header[FITS_KEY_SPGRTWL] = (metadata.spectrograph.grtwl, "Grating wavelength")
+    header[FITS_KEY_SPORD] = (metadata.spectrograph.order, "Diffraction order")
+    header[FITS_KEY_SPSLIT] = (metadata.spectrograph.slit, "Slit width in mm")
+
+    # Derotator
+    header[FITS_KEY_DRCSYS] = (
+        metadata.derotator.coordinate_system,
+        "Derotator coordinate system (0=solar, 1=equatorial)",
+    )
+    header[FITS_KEY_DRANGL] = (
+        metadata.derotator.position_angle,
+        "[deg] Derotator position angle",
+    )
+    header[FITS_KEY_DROFFS] = (metadata.derotator.offset, "Derotator offset")
+
+    # TCU
+    header[FITS_KEY_TCUMODE] = (metadata.tcu.mode, "TCU mode")
+    header[FITS_KEY_TCURTRN] = (metadata.tcu.retarder_name, "TCU retarder name")
+    header[FITS_KEY_TCURTRP] = (
+        metadata.tcu.retarder_wl_parameter,
+        "TCU retarder wavelength parameters",
+    )
+    header[FITS_KEY_TCUPOSN] = (metadata.tcu.positions, "TCU positions")
+
+    # Reduction
+    header[FITS_KEY_REDSOFT] = (metadata.reduction.software, "Reduction software")
+    header[FITS_KEY_REDSTAT] = (metadata.reduction.status, "Reduction status")
+    header[FITS_KEY_REDFILE] = (metadata.reduction.file, "Reduction input file")
+    header[FITS_KEY_REDNFIL] = (
+        metadata.reduction.number_of_files,
+        "Number of reduced files",
+    )
+    header[FITS_KEY_REDDCFL] = (
+        metadata.reduction.file_dc_used,
+        "Dark correction file used",
+    )
+    header[FITS_KEY_REDDCFT] = (metadata.reduction.dcfit, "Dark current fit method")
+    header[FITS_KEY_REDDMOD] = (
+        metadata.reduction.demodulation_matrix,
+        "Demodulation matrix",
+    )
+    rows_str = (
+        " ".join(str(r) for r in metadata.reduction.order_of_rows)
+        if metadata.reduction.order_of_rows
+        else None
+    )
+    header[FITS_KEY_REDROWS] = (rows_str, "Order of rows (space-separated ints)")
+    header[FITS_KEY_REDMODE] = (metadata.reduction.mode, "Reduction mode")
+    header[FITS_KEY_REDTCUM] = (metadata.reduction.tcu_method, "TCU reduction method")
+    header[FITS_KEY_REDPIXR] = (
+        metadata.reduction.pixels_replaced,
+        "Pixels replaced count",
+    )
+    header[FITS_KEY_REDONAM] = (
+        metadata.reduction.outfname,
+        "Reduction output filename",
+    )
+
+    # CalibrationInfo (ZIMPOL calibration — not wavelength CalibrationResult)
+    header[FITS_KEY_ZCSOFT] = (metadata.calibration.software, "ZIMPOL cal. software")
+    header[FITS_KEY_ZCFILE] = (metadata.calibration.file, "ZIMPOL cal. file")
+    header[FITS_KEY_ZCSTAT] = (metadata.calibration.status, "ZIMPOL cal. status")
+    header[FITS_KEY_ZCDESC] = (
+        metadata.calibration.description,
+        "ZIMPOL cal. description",
+    )
+
+    # Top-level flags
+    header[FITS_KEY_FFSTAT] = (
+        metadata.flatfield_status,
+        "Flat-field correction status",
+    )
+    header[FITS_KEY_GLBNOISE] = (metadata.global_noise, "Global noise levels")
+    header[FITS_KEY_GLBMEAN] = (metadata.global_mean, "Global mean values")
+
+    # Solar orientation — compute if not explicitly supplied
+    slit_angle = _resolve_slit_angle(solar_orientation)
+    header[FITS_KEY_SLTANGL] = (
+        slit_angle,
+        "[deg] Slit angle in solar reference frame",
+    )
+
+
+def _resolve_slit_angle(
+    solar_orientation: Optional[SolarOrientationInfo],
+) -> Optional[float]:
+    """Return slit_angle_solar_deg from *solar_orientation* or None."""
+    if solar_orientation is not None:
+        return solar_orientation.slit_angle_solar_deg
+    return None
 
 
 def _fill_data_header(

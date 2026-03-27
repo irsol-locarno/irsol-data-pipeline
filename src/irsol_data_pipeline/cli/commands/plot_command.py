@@ -10,6 +10,7 @@ from cyclopts.exceptions import ValidationError
 
 from irsol_data_pipeline.cli.common import ensure_display_available
 from irsol_data_pipeline.core.models import (
+    CalibrationResult,
     MeasurementMetadata,
     SolarOrientationInfo,
     StokesParameters,
@@ -38,7 +39,11 @@ _SLIT_INPUT = Parameter(
 )
 _OUTPUT_PATH_OPTION = Parameter(
     name="output-path",
-    validator=validators.Path(ext="png", dir_okay=False),
+    validator=validators.Path(ext=("png", "jpg", "jpeg"), dir_okay=False),
+)
+_AUTOCALIBRATE_OPTION = Parameter(
+    name="autocalibrate",
+    help="Whether to apply wavelength auto-calibration before plotting",
 )
 
 
@@ -88,25 +93,24 @@ def _configure_backend_for_show(show: bool) -> None:
 
 
 def _load_stokes_and_calibration_and_solar_orientation(
-    input_path: Path,
+    input_path: Path, autocalibrate: bool
 ) -> tuple[
     tuple[StokesParameters, MeasurementMetadata | None],
-    tuple[float, float] | tuple[None, None],
+    CalibrationResult | None,
     SolarOrientationInfo | None,
 ]:
     """Load Stokes data from supported input formats.
 
     Args:
         input_path: Input measurement path.
+        autocalibrate: Wheter to perform an auto-calibration of the data if the loaded data has no information about wavelength calibration. Only applies to .fits files, .dat and .sav files are always auto-calibrated.
 
     Returns:
-        A tuple containing Stokes parameters, an optional (a0, a1)
-        wavelength calibration values, and optional solar orientation information.
+        A tuple containing Stokes parameters, an optional calibration result, and optional solar orientation information.
 
     Raises:
         ValidationError: If the input extension is unsupported.
     """
-
     suffix = input_path.suffix.lower()
     if suffix in {".dat", ".sav"}:
         from irsol_data_pipeline.io import dat as dat_io
@@ -114,7 +118,16 @@ def _load_stokes_and_calibration_and_solar_orientation(
         stokes, info = dat_io.read(input_path)
         metadata = MeasurementMetadata.from_info_array(info)
         solar_orientation = compute_solar_orientation(metadata)
-        return (stokes, metadata), (None, None), solar_orientation
+        if autocalibrate:
+            from irsol_data_pipeline.core.calibration.autocalibrate import (
+                calibrate_measurement,
+            )
+
+            calibration = calibrate_measurement(stokes)
+        else:
+            calibration = None
+
+        return (stokes, metadata), calibration, solar_orientation
 
     if suffix in {
         ".fits",
@@ -122,19 +135,22 @@ def _load_stokes_and_calibration_and_solar_orientation(
         from irsol_data_pipeline.io import fits as fits_io
 
         imported = fits_io.read(input_path)
+        stokes = imported.stokes
         calibration = imported.calibration
-        # TODO: load this from the imported header
-        solar_orientation = None
-        if calibration is None:
-            return (imported.stokes, None), (None, None), solar_orientation
-        return (
-            (imported.stokes, None),
-            (calibration.wavelength_offset, calibration.pixel_scale),
-            solar_orientation,
+        metadata = imported.metadata
+        solar_orientation = (
+            compute_solar_orientation(metadata) if metadata is not None else None
         )
+        if calibration is None and autocalibrate:
+            from irsol_data_pipeline.core.calibration.autocalibrate import (
+                calibrate_measurement,
+            )
 
+            calibration = calibrate_measurement(stokes)
+
+        return (stokes, metadata), calibration, solar_orientation
     raise ValidationError(
-        "Unsupported input extension. Expected one of: .dat, .sav, .fits, .fit, .fts"
+        "Unsupported input extension. Expected one of: .dat, .sav, .fits"
     )
 
 
@@ -146,6 +162,7 @@ def profile(
     input_file_path: Annotated[Path, _MEASUREMENT_INPUT],
     /,
     *,
+    autocalibrate_option: Annotated[bool, _AUTOCALIBRATE_OPTION] = False,
     output_path_option: Annotated[Path | None, _OUTPUT_PATH_OPTION] = None,
     show: bool = False,
 ) -> None:
@@ -153,6 +170,7 @@ def profile(
 
     Args:
         input_file_path: Existing input measurement file to load.
+        autocalibrate_option: Whether to apply wavelength auto-calibration before plotting.
         output_path_option: Optional output .png file passed with `--output-path`.
         show: Display the rendered figure after saving it.
     """
@@ -173,9 +191,16 @@ def profile(
         if output_path_option is not None
         else None
     )
-    (stokes, metadata), (a0, a1), solar_orientation = (
-        _load_stokes_and_calibration_and_solar_orientation(input_path)
+    (stokes, metadata), calibration, solar_orientation = (
+        _load_stokes_and_calibration_and_solar_orientation(
+            input_path, autocalibrate_option
+        )
     )
+
+    if calibration is not None:
+        a0, a1 = calibration.wavelength_offset, calibration.pixel_scale
+    else:
+        a0, a1 = None, None
 
     plot_profile(
         stokes,
