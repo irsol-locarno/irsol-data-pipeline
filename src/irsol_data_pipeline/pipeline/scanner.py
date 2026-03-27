@@ -2,7 +2,7 @@
 
 Scans the dataset root to discover observation days that need
 processing. Provides scanners for both flat-field correction and slit
-image generation.
+image generation, backed by a shared scanning helper.
 """
 
 from __future__ import annotations
@@ -21,22 +21,36 @@ from irsol_data_pipeline.pipeline.filesystem import (
 )
 
 ObservationDayPredicate = Callable[[ObservationDay], bool]
+MeasurementDonePredicate = Callable[[Path, str], bool]
 
 
-def scan_dataset(root: Path) -> ScanResult:
-    """Scan the dataset root and find measurements that need processing.
+def _scan_dataset(
+    root: Path,
+    *,
+    is_done: MeasurementDonePredicate,
+    day_predicate: ObservationDayPredicate | None = None,
+) -> ScanResult:
+    """Core dataset scan implementation.
 
-    For each observation day, checks the ``reduced/`` folder for
-    measurement files and the ``processed/`` folder for existing outputs.
-    Only measurements without processed outputs are reported.
+    Discovers observation days (optionally filtered by ``day_predicate``) and,
+    for each day, collects the measurements that still need work according to
+    the ``is_done`` callable.
 
     Args:
         root: The dataset root directory.
+        is_done: Callable ``(processed_dir, source_name) -> bool`` that returns
+            ``True`` when a measurement already has its output (e.g.
+            :func:`~irsol_data_pipeline.pipeline.filesystem.is_measurement_processed`
+            for flat-field correction or
+            :func:`~irsol_data_pipeline.pipeline.filesystem.is_slit_preview_generated`
+            for slit images).
+        day_predicate: Optional filter returning ``True`` for observation days
+            that should be included in the scan.
 
     Returns:
         ScanResult with discovered days and pending measurements.
     """
-    days = discover_observation_days(root)
+    days = discover_observation_days(root, predicate=day_predicate)
     pending: dict[str, list[Path]] = {}
     total = 0
     total_pending = 0
@@ -46,9 +60,7 @@ def scan_dataset(root: Path) -> ScanResult:
         total += len(measurements)
 
         unprocessed = [
-            m
-            for m in measurements
-            if not is_measurement_processed(day.processed_dir, m.name)
+            m for m in measurements if not is_done(day.processed_dir, m.name)
         ]
 
         if unprocessed:
@@ -68,6 +80,23 @@ def scan_dataset(root: Path) -> ScanResult:
         total_measurements=total,
         total_pending=total_pending,
     )
+
+
+def scan_dataset(root: Path) -> ScanResult:
+    """Scan the dataset root and find measurements that need flat-field
+    correction.
+
+    For each observation day, checks the ``reduced/`` folder for
+    measurement files and the ``processed/`` folder for existing outputs.
+    Only measurements without processed outputs are reported.
+
+    Args:
+        root: The dataset root directory.
+
+    Returns:
+        ScanResult with discovered days and pending measurements.
+    """
+    return _scan_dataset(root, is_done=is_measurement_processed)
 
 
 def build_scan_report_markdown(root: Path, scan_result: ScanResult) -> str:
@@ -132,37 +161,10 @@ def scan_slit_dataset(
     Returns:
         ScanResult with discovered days and pending slit-preview measurements.
     """
-    days = discover_observation_days(root, predicate=predicate)
-    pending: dict[str, list[Path]] = {}
-    total = 0
-    total_pending = 0
-
-    for day in days:
-        measurements = discover_measurement_files(day.reduced_dir)
-        total += len(measurements)
-
-        unprocessed = [
-            m
-            for m in measurements
-            if not is_slit_preview_generated(day.processed_dir, m.name)
-        ]
-
-        if unprocessed:
-            pending[day.name] = unprocessed
-            total_pending += len(unprocessed)
-
-        logger.info(
-            "Scanned observation day for slit previews",
-            day=day.name,
-            measurements=len(measurements),
-            pending=len(unprocessed),
-        )
-
-    return ScanResult(
-        observation_days=days,
-        pending_measurements=pending,
-        total_measurements=total,
-        total_pending=total_pending,
+    return _scan_dataset(
+        root,
+        is_done=is_slit_preview_generated,
+        day_predicate=predicate,
     )
 
 
