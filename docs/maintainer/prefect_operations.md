@@ -37,8 +37,9 @@ flowchart LR
 
 1. **Install the pipeline:**
    ```bash
-   uv tool install irsol-data-pipeline --no-cache-dir --python 3.10
+   uv tool install irsol-data-pipeline-cli --no-cache-dir --python 3.10
    ```
+   Note: we recommend installing `irsol-data-pipeline-cli` instead of the `irsol-data-pipeline` pip package. The CLI flavour of the package will come with pinned dependencies, including a compatible Prefect version, and will receive updates on a more stable cadence. The CLI package is designed for managing the Prefect server and flows in production, while the main package is intended for development and local usage.
 
 2. **Verify installation:**
    ```bash
