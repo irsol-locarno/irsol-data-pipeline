@@ -9,7 +9,12 @@ from cyclopts import App, Parameter, validators
 from cyclopts.exceptions import ValidationError
 
 from irsol_data_pipeline.cli.common import ensure_display_available
-from irsol_data_pipeline.core.models import MeasurementMetadata, StokesParameters
+from irsol_data_pipeline.core.models import (
+    MeasurementMetadata,
+    SolarOrientationInfo,
+    StokesParameters,
+)
+from irsol_data_pipeline.core.solar_orientation import compute_solar_orientation
 
 plot_app = App(name="plot", help="Render plots from observation files.")
 
@@ -82,17 +87,21 @@ def _configure_backend_for_show(show: bool) -> None:
             continue
 
 
-def _load_stokes_and_calibration(
+def _load_stokes_and_calibration_and_solar_orientation(
     input_path: Path,
-) -> tuple[StokesParameters, float | None, float | None]:
+) -> tuple[
+    tuple[StokesParameters, MeasurementMetadata | None],
+    tuple[float, float] | tuple[None, None],
+    SolarOrientationInfo | None,
+]:
     """Load Stokes data from supported input formats.
 
     Args:
         input_path: Input measurement path.
 
     Returns:
-        A tuple containing Stokes parameters and optional (a0, a1)
-        wavelength calibration values.
+        A tuple containing Stokes parameters, an optional (a0, a1)
+        wavelength calibration values, and optional solar orientation information.
 
     Raises:
         ValidationError: If the input extension is unsupported.
@@ -102,8 +111,10 @@ def _load_stokes_and_calibration(
     if suffix in {".dat", ".sav"}:
         from irsol_data_pipeline.io import dat as dat_io
 
-        stokes, _ = dat_io.read(input_path)
-        return stokes, None, None
+        stokes, info = dat_io.read(input_path)
+        metadata = MeasurementMetadata.from_info_array(info)
+        solar_orientation = compute_solar_orientation(metadata)
+        return (stokes, metadata), (None, None), solar_orientation
 
     if suffix in {
         ".fits",
@@ -112,9 +123,15 @@ def _load_stokes_and_calibration(
 
         imported = fits_io.read(input_path)
         calibration = imported.calibration
+        # TODO: load this from the imported header
+        solar_orientation = None
         if calibration is None:
-            return imported.stokes, None, None
-        return imported.stokes, calibration.wavelength_offset, calibration.pixel_scale
+            return (imported.stokes, None), (None, None), solar_orientation
+        return (
+            (imported.stokes, None),
+            (calibration.wavelength_offset, calibration.pixel_scale),
+            solar_orientation,
+        )
 
     raise ValidationError(
         "Unsupported input extension. Expected one of: .dat, .sav, .fits, .fit, .fts"
@@ -156,21 +173,18 @@ def profile(
         if output_path_option is not None
         else None
     )
-    stokes, a0, a1 = _load_stokes_and_calibration(input_path)
-    if a0 is not None and a1 is not None:
-        plot_profile(
-            stokes,
-            filename_save=resolved_output_path,
-            show=show,
-            a0=a0,
-            a1=a1,
-        )
-        return
+    (stokes, metadata), (a0, a1), solar_orientation = (
+        _load_stokes_and_calibration_and_solar_orientation(input_path)
+    )
 
     plot_profile(
         stokes,
         filename_save=resolved_output_path,
         show=show,
+        a0=a0,
+        a1=a1,
+        metadata=metadata,
+        solar_orientation=solar_orientation,
     )
 
 

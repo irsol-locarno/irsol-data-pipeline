@@ -121,8 +121,8 @@ class SolarOrientationInfo(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sun_p0_deg: float
-    """Position angle of the solar north pole (P0) in degrees, as returned
-    by :func:`sunpy.coordinates.sun.P`."""
+    """Position angle of the solar north pole (P0) in degrees, as returned by
+    :func:`sunpy.coordinates.sun.P`."""
 
     slit_angle_solar_deg: float
     """Angle of the slit direction in the solar reference frame, in degrees,

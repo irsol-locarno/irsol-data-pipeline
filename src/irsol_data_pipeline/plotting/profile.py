@@ -8,21 +8,19 @@ from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Ellipse, FancyArrow, Rectangle
 
 from irsol_data_pipeline.core.models import (
     MeasurementMetadata,
     SolarOrientationInfo,
     StokesParameters,
 )
-from irsol_data_pipeline.core.solar_orientation import (
-    compute_solar_orientation,
-)
 
 COLORBAR_TICK_LABEL_SIZE = 16
 AXIS_LABEL_FONT_SIZE = 16
+TITLE_FONT_SIZE = 16
 
 
 def _resolve_vrange(
@@ -61,61 +59,129 @@ def _require_vrange(vrange: Sequence[float] | Literal[False]) -> Sequence[float]
     return vrange
 
 
-def _draw_solar_north_arrow(ax: Axes, info: SolarOrientationInfo) -> None:
+def _draw_solar_north_arrow(fig: Figure, info: SolarOrientationInfo) -> None:
     """Draw a solar north arrow on a profile plot panel.
 
-    The arrow is drawn near the right edge of *ax* (at ``center_x=0.96`` in
+    The arrow is drawn near the right edge of *fig* (at ``center_x=0.96`` in
     axes-fraction coordinates) and points in the direction of solar north
     along the (wavelength, spatial) plane.  A ``"N"`` label is placed at
     the arrowhead.
 
     Args:
-        ax: Matplotlib :class:`~matplotlib.axes.Axes` to annotate.
+        fig: Matplotlib :class:`~matplotlib.figure.Figure` to annotate.
         info: Pre-computed solar orientation data.
     """
-    angle_rad = np.radians(info.slit_angle_solar_deg)
-    dx = float(np.cos(angle_rad))
-    dy = float(np.sin(angle_rad))
+    x_pos = 0.55
+    y_pos = 0.973
+    radius = 0.04
+    height = 0.002
 
-    # Length of the arrow in axes-fraction units.
-    arrow_half = 0.10
-
-    center_x, center_y = 0.96, 0.50
-
-    tip_x = center_x + arrow_half * dx
-    tip_y = center_y + arrow_half * dy
-    tail_x = center_x - arrow_half * dx
-    tail_y = center_y - arrow_half * dy
-
-    # Draw the arrow shaft and head (no text on the arrow itself).
-    ax.annotate(
-        "",
-        xy=(tip_x, tip_y),
-        xytext=(tail_x, tail_y),
-        xycoords="axes fraction",
-        textcoords="axes fraction",
-        arrowprops=dict(
-            arrowstyle="->,head_width=0.4,head_length=0.6",
-            color="yellow",
-            lw=1.5,
-        ),
-        annotation_clip=False,
+    rectangle = Rectangle(
+        (x_pos - radius / 2, y_pos - height / 2),
+        width=radius,
+        height=height,
+        transform=fig.transFigure,
+        edgecolor="red",
+        facecolor="red",
+        linestyle="-",
+        angle=info.slit_angle_solar_deg,
+        rotation_point="center",
     )
+    fig.add_artist(rectangle)
 
-    # "N" label offset slightly beyond the arrowhead.
-    label_offset = 0.06
-    ax.text(
-        tip_x + label_offset * dx,
-        tip_y + label_offset * dy,
+    angle_rad = np.radians(info.slit_angle_solar_deg)
+    # small arrow for direction
+    dx = (radius / 2) * np.cos(angle_rad)
+    dy = (radius / 2) * np.sin(angle_rad)
+    arrow = FancyArrow(
+        x_pos - dx,
+        y_pos - dy,
+        dx,
+        dy,
+        width=radius / 50,
+        length_includes_head=False,
+        head_width=radius / 5,
+        head_length=radius / 5,
+        transform=fig.transFigure,
+        edgecolor="red",
+        facecolor="red",
+    )
+    fig.add_artist(arrow)
+
+    ellipse = Ellipse(
+        (x_pos, y_pos),
+        width=radius,
+        height=radius,
+        transform=fig.transFigure,
+        edgecolor="red",
+        facecolor="none",
+        linestyle="-",
+    )
+    fig.add_artist(ellipse)
+
+    fig.text(
+        x_pos,
+        y_pos + radius / 2,
         "N",
-        transform=ax.transAxes,
-        color="yellow",
-        fontsize=11,
-        fontweight="bold",
+        transform=fig.transFigure,
         ha="center",
         va="center",
-        clip_on=False,
+        fontsize=12,
     )
+    fig.text(
+        x_pos + radius / 2,
+        y_pos,
+        "W",
+        transform=fig.transFigure,
+        ha="center",
+        va="center",
+        fontsize=12,
+    )
+    fig.text(
+        x_pos - radius / 2,
+        y_pos,
+        "E",
+        transform=fig.transFigure,
+        ha="center",
+        va="center",
+        fontsize=12,
+    )
+    fig.text(
+        x_pos,
+        y_pos - radius / 2,
+        "S",
+        transform=fig.transFigure,
+        ha="center",
+        va="center",
+        fontsize=12,
+    )
+
+
+def _draw_metadata(fig: Figure, metadata: MeasurementMetadata):
+    if start := metadata.datetime_start:
+        date_string = start.isoformat()
+        if end := metadata.datetime_end:
+            date_string += f" - {end.isoformat()}"
+        fig.text(
+            0.01,
+            0.99,
+            date_string,
+            transform=fig.transFigure,
+            ha="left",
+            va="top",
+            fontsize=TITLE_FONT_SIZE,
+        )
+
+    if meas_name := metadata.name:
+        fig.text(
+            0.91,
+            0.99,
+            meas_name,
+            transform=fig.transFigure,
+            ha="right",
+            va="top",
+            fontsize=TITLE_FONT_SIZE,
+        )
 
 
 def plot(
@@ -125,7 +191,6 @@ def plot(
     vrange_sq: Sequence[float] | Literal[False] = False,
     vrange_su: Sequence[float] | Literal[False] = False,
     vrange_sv: Sequence[float] | Literal[False] = False,
-    title: str | None = None,
     filename_save: str | Path | None = None,
     pix_low: Sequence[float] | None = None,
     pix_high: Sequence[float] | None = None,
@@ -135,8 +200,9 @@ def plot(
     colors_lines: Sequence[str] | None = None,
     a0: float | None = None,
     a1: float | None = None,
-    show: bool = False,
     metadata: MeasurementMetadata | None = None,
+    solar_orientation: SolarOrientationInfo | None = None,
+    show: bool = False,
 ) -> None:
     """Plot the four Stokes components for a measurement.
 
@@ -153,7 +219,6 @@ def plot(
             When False, a narrow range around the mean is derived automatically.
         vrange_sv: Optional ``[vmin, vmax]`` range for the Stokes V/I panel.
             When False, a narrow range around the mean is derived automatically.
-        title: Optional figure title.
         filename_save: Output path passed to ``Figure.savefig``.
         pix_low: Optional lower pixel bounds for highlighted spatial regions.
         pix_high: Optional upper pixel bounds for highlighted spatial regions.
@@ -166,10 +231,9 @@ def plot(
         a1: Wavelength dispersion in Angstrom per pixel. When both ``a0`` and
             ``a1`` are provided, the x-axis is displayed in Angstrom instead of
             pixels.
+        metadata: Optional measurement metadata to annotate on the figure.
+        solar_orientation: Optional pre-computed solar orientation information, used to draw a solar north arrow on the Stokes I panel when available.
         show: Display the figure interactively after rendering.
-        metadata: Optional measurement metadata. When provided, a solar north
-            arrow is drawn on the Stokes I panel to indicate the direction of
-            solar north in the spatial dimension.
     """
 
     si, sq, su, sv = data
@@ -178,17 +242,32 @@ def plot(
 
     # If no TCU has been used, Q, U and V might have an offset to consider.
     if vrange_sq is False:
-        dq = 0.01
-        mean_sq = np.mean(sq)
-        vrange_sq = [mean_sq - dq, mean_sq + dq]
+        center = np.median(sq)
+        upper_limit = center + max(
+            abs(np.percentile(sq, 99) - center), abs(np.percentile(sq, 1) - center)
+        )
+        lower_limit = center - max(
+            abs(np.percentile(sq, 99) - center), abs(np.percentile(sq, 1) - center)
+        )
+        vrange_sq = [lower_limit, upper_limit]
     if vrange_su is False:
-        du = 0.01
-        mean_su = np.mean(su)
-        vrange_su = [mean_su - du, mean_su + du]
+        center = np.median(su)
+        upper_limit = center + max(
+            abs(np.percentile(su, 99) - center), abs(np.percentile(su, 1) - center)
+        )
+        lower_limit = center - max(
+            abs(np.percentile(su, 99) - center), abs(np.percentile(su, 1) - center)
+        )
+        vrange_su = [lower_limit, upper_limit]
     if vrange_sv is False:
-        dv = 0.01
-        mean_sv = np.mean(sv)
-        vrange_sv = [mean_sv - dv, mean_sv + dv]
+        center = np.median(sv)
+        upper_limit = center + max(
+            abs(np.percentile(sv, 99) - center), abs(np.percentile(sv, 1) - center)
+        )
+        lower_limit = center - max(
+            abs(np.percentile(sv, 99) - center), abs(np.percentile(sv, 1) - center)
+        )
+        vrange_sv = [lower_limit, upper_limit]
 
     resolved_vrange_si = _resolve_vrange(vrange_si)
     resolved_vrange_sq = _require_vrange(vrange_sq)
@@ -198,15 +277,12 @@ def plot(
     # Use pyplot-managed figure only if interactive display is needed.
     # For thread/subprocess safety, avoid pyplot state machine otherwise.
     if show:
-        fig = plt.figure(figsize=(16, 14))
+        fig = plt.figure(figsize=(14, 14))
     else:
-        fig = Figure(figsize=(16, 14))
+        fig = Figure(figsize=(14, 14))
         FigureCanvasAgg(fig)
     axes = fig.subplots(4, 1, sharex=True)
-    fig.subplots_adjust(hspace=0)
-
-    if title is not None:
-        fig.suptitle(title, fontsize=24, y=0.97)
+    fig.subplots_adjust(hspace=0.1)
 
     # Define extent for imshow to set proper axes.
     if a0 is not None and a1 is not None:
@@ -227,6 +303,7 @@ def plot(
             aspect="auto",
             extent=extent,
             origin="lower",
+            interpolation="none",
         )
     else:
         im0 = axes[0].imshow(
@@ -235,10 +312,10 @@ def plot(
             aspect="auto",
             extent=extent,
             origin="lower",
+            interpolation="none",
             vmin=resolved_vrange_si[0],
             vmax=resolved_vrange_si[1],
         )
-    axes[0].set_ylabel("Spatial dimension [px]")
     axes[0].text(
         0.02,
         0.9,
@@ -252,10 +329,12 @@ def plot(
     cbar0 = fig.colorbar(im0, ax=axes[0], orientation="vertical", pad=0.01)
     cbar0.ax.tick_params(labelsize=COLORBAR_TICK_LABEL_SIZE)
 
-    # Draw solar north arrow on Stokes I panel when metadata is available.
+    # Draw solar north arrow on Stokes I panel when solar orientation is available.
+    if solar_orientation is not None:
+        _draw_solar_north_arrow(fig, solar_orientation)
+
     if metadata is not None:
-        solar_orientation = compute_solar_orientation(metadata)
-        _draw_solar_north_arrow(axes[0], solar_orientation)
+        _draw_metadata(fig, metadata)
 
     # Plot Stokes Q/I.
     im1 = axes[1].imshow(
@@ -266,8 +345,8 @@ def plot(
         vmin=resolved_vrange_sq[0],
         vmax=resolved_vrange_sq[1],
         origin="lower",
+        interpolation="none",
     )
-    axes[1].set_ylabel("Spatial dimension [px]")
     axes[1].text(
         0.02,
         0.9,
@@ -290,8 +369,8 @@ def plot(
         vmin=resolved_vrange_su[0],
         vmax=resolved_vrange_su[1],
         origin="lower",
+        interpolation="none",
     )
-    axes[2].set_ylabel("Spatial dimension [px]")
     axes[2].text(
         0.02,
         0.9,
@@ -314,9 +393,9 @@ def plot(
         vmin=resolved_vrange_sv[0],
         vmax=resolved_vrange_sv[1],
         origin="lower",
+        interpolation="none",
     )
     axes[3].set_xlabel(str_wlt_axis)
-    axes[3].set_ylabel("Spatial dimension [px]")
     axes[3].text(
         0.02,
         0.9,
@@ -440,9 +519,10 @@ def plot(
             axis="y", which="major", direction="in", length=7, width=1.5, right=True
         )
 
-    fig.tight_layout(h_pad=-0.7, w_pad=0)
+    fig.supylabel("Spatial dimension [px]", fontsize=AXIS_LABEL_FONT_SIZE)
+    # fig.tight_layout()
     if filename_save is not None:
-        fig.savefig(filename_save, dpi=100, bbox_inches="tight")
+        fig.savefig(filename_save)
     if show:
         plt.show()
         plt.close(fig)

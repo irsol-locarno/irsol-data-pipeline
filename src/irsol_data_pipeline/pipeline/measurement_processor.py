@@ -18,6 +18,10 @@ from irsol_data_pipeline.core.models import (
     MeasurementMetadata,
     StokesParameters,
 )
+from irsol_data_pipeline.core.solar_orientation import (
+    SolarOrientationInfo,
+    compute_solar_orientation,
+)
 from irsol_data_pipeline.exceptions import FlatFieldAssociationNotFoundException
 from irsol_data_pipeline.io import dat as dat_io
 from irsol_data_pipeline.io import flatfield as flatfield_io
@@ -59,25 +63,26 @@ def process_single_measurement(
 
 def _plot_data(
     stokes: StokesParameters,
+    metadata: MeasurementMetadata,
+    solar_orientation: SolarOrientationInfo,
     calibration: CalibrationResult,
-    title: str,
     filename_save: Path,
 ) -> None:
     wavelength_offset = calibration.wavelength_offset
     pixel_scale = calibration.pixel_scale
     logger.debug(
         "Plotting profile",
-        title=title,
         output_path=str(filename_save),
         wavelength_offset=wavelength_offset,
         pixel_scale=pixel_scale,
     )
     plot_profile(
         stokes,
-        title=title,
         filename_save=filename_save,
         a0=wavelength_offset,
         a1=pixel_scale,
+        metadata=metadata,
+        solar_orientation=solar_orientation,
     )
 
 
@@ -111,6 +116,7 @@ def _process_single_measurement(
             metadata=measurement_metadata,
             stokes=stokes,
         )
+        solar_orientation = compute_solar_orientation(measurement_metadata)
 
         with NamedTemporaryFile(suffix=".json") as f:
             with open(f.name, "w") as json_file:
@@ -213,7 +219,8 @@ def _process_single_measurement(
         _plot_data(
             stokes=corrected_stokes,
             calibration=calibration,
-            title=f"{stem} - Corrected",
+            metadata=measurement_metadata,
+            solar_orientation=solar_orientation,
             filename_save=processed_output_path(
                 processed_dir,
                 meas_path.name,
@@ -223,7 +230,8 @@ def _process_single_measurement(
         _plot_data(
             stokes=measurement.stokes,
             calibration=calibration,
-            title=f"{stem} - Original",
+            metadata=measurement_metadata,
+            solar_orientation=solar_orientation,
             filename_save=processed_output_path(
                 processed_dir,
                 meas_path.name,
