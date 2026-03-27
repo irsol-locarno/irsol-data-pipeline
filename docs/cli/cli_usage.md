@@ -61,6 +61,17 @@ flowchart TD
 | `--verbose` | `-v` | Increase log verbosity. Use `-v` for DEBUG, `-vv` for TRACE. |
 | `--log-level LEVEL` | | Explicit log level override (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
 
+
+## Automations
+
+The IRSOL Data Pipeline includes built-in Prefect Automations to monitor and manage flow runs. Automations are registered and updated automatically when you run:
+
+```bash
+idp configure
+```
+
+This ensures the Prefect server is always running the latest automation rules. See [Automations](./automations.md) for details on available automations and customization.
+
 ## Commands
 
 ### `idp setup`

@@ -59,6 +59,7 @@ flowchart TB
 | **Pipeline** | |
 | [Pipeline Overview](pipeline/pipeline_overview.md) | End-to-end processing flow |
 | [Prefect Integration](pipeline/prefect_integration.md) | Orchestration, flows, and task structure |
+| [Prefect Automations](prefect/automations.md) | Automated flow run cleanup and monitoring |
 | **CLI** | |
 | [CLI Usage](cli/cli_usage.md) | Commands, arguments, and examples |
 | **User Guides** | |

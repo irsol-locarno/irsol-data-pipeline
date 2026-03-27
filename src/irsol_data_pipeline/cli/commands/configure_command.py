@@ -105,6 +105,42 @@ def _prompt_api_port() -> int:
         print("  x Port must be in range 1-65535.")
 
 
+def _manage_automations():
+
+    from prefect.automations import Automation
+
+    from irsol_data_pipeline.prefect.automations import (
+        delete_pending_flows_automation,
+        zombie_flow_automation,
+    )
+
+    automations: list[Automation] = [
+        zombie_flow_automation,
+        delete_pending_flows_automation,
+    ]
+    for i, automation in enumerate(automations, start=1):
+        print(f"{i}/{len(automations)}) Registering automation '{automation.name}'")
+        try:
+            existing_automation: Automation = Automation.read(name=automation.name)  # noqa
+        except Exception:
+            automation.create()
+            print(
+                f"{i}/{len(automations)}) Automation '{automation.name}' registered successfully."
+            )
+        else:
+            print(
+                f"{i}/{len(automations)}) Automation '{automation.name}' already exists. Updating it."
+            )
+            existing_automation.name = automation.name
+            existing_automation.description = automation.description
+            existing_automation.trigger = automation.trigger
+            existing_automation.actions = automation.actions
+            existing_automation.update()
+            print(
+                f"{i}/{len(automations)}) Automation '{automation.name}' updated successfully."
+            )
+
+
 def configure_prefect() -> int:
     """Create or update the IRSOL data pipeline and prefect server.
 
@@ -147,4 +183,6 @@ def configure_prefect() -> int:
     print("  PREFECT_SERVER_ANALYTICS_ENABLED=false")
     print("  PREFECT_RESULTS_PERSIST_BY_DEFAULT=false")
     print("  PREFECT_TASKS_DEFAULT_PERSIST_RESULT=false")
+
+    _manage_automations()
     return 0
