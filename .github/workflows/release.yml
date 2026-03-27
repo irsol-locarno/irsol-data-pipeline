@@ -8,7 +8,7 @@ on:
 jobs:
 
   publish-library:
-    name: Publish Standard Library
+    name: Publish Python Package (library)
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -31,7 +31,7 @@ jobs:
 
 
   publish-cli:
-    name: Publish Pinned CLI
+    name: Publish Python Package (CLI)
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -50,10 +50,11 @@ jobs:
 
           # 2. Patch pyproject.toml using a Python one-liner
           # Note: we use 'tomli-w' via uvx to keep the runner clean
-          uvx --with tomli-w python -c "
-          import tomllib, tomli_w
+          # Note2: we use 'tomli' as tomllib i s not available on python3.10
+          uvx --with tomli --with tomli-w python -c "
+          import tomli, tomli_w
           with open('pyproject.toml', 'rb') as f:
-              data = tomllib.load(f)
+              data = tomli.load(f)
           with open('locked_deps.txt', 'r') as f:
               locked = [l.strip() for l in f if l.strip()]
               locked = [l for l in locked if not l.startswith('#')]
