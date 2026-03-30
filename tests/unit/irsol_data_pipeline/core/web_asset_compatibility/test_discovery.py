@@ -13,7 +13,9 @@ from irsol_data_pipeline.core.config import (
 from irsol_data_pipeline.core.models import ObservationDay
 from irsol_data_pipeline.core.web_asset_compatibility.discovery import (
     _extract_measurement_name,
+    discover_assets_for_measurement,
     discover_day_web_asset_sources,
+    discover_measurement_names,
 )
 from irsol_data_pipeline.core.web_asset_compatibility.models import (
     WebAssetKind,
@@ -73,6 +75,123 @@ def observation_day(tmp_path: Path) -> ObservationDay:
     )
 
 
+class TestDiscoverMeasurementNames:
+    def test_returns_empty_when_dir_missing(self, tmp_path: Path) -> None:
+        result = discover_measurement_names(tmp_path / "nonexistent")
+        assert result == []
+
+    def test_discovers_from_quicklook_suffix(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == ["5876_m01"]
+
+    def test_discovers_from_context_suffix(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == ["5876_m01"]
+
+    def test_deduplicates_names(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == ["5876_m01"]
+
+    def test_result_is_sorted(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        for name in ["5876_m03", "5876_m01", "5876_m02"]:
+            (
+                observation_day.processed_dir / f"{name}{PROFILE_CORRECTED_PNG_SUFFIX}"
+            ).touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == sorted(result)
+
+    def test_ignores_non_matching_files(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (observation_day.processed_dir / "5876_m01.fits").touch()
+        (observation_day.processed_dir / "5876_m01.dat").touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == []
+
+
+class TestDiscoverAssetsForMeasurement:
+    def test_returns_empty_when_no_files(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        assert result == []
+
+    def test_discovers_quicklook(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        assert len(result) == 1
+        assert result[0].kind is WebAssetKind.QUICK_LOOK
+        assert result[0].measurement_name == "5876_m01"
+
+    def test_discovers_context(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        assert len(result) == 1
+        assert result[0].kind is WebAssetKind.CONTEXT
+
+    def test_discovers_both_kinds(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        kinds = {s.kind for s in result}
+        assert kinds == {WebAssetKind.QUICK_LOOK, WebAssetKind.CONTEXT}
+
+    def test_observation_name_set_correctly(
+        self, tmp_path: Path, observation_day: ObservationDay
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        assert result[0].observation_name == observation_day.name
+
+
 class TestDiscoverDayWebAssetSources:
     def test_returns_empty_when_processed_dir_missing(self, tmp_path: Path) -> None:
         day_path = tmp_path / "250101"
@@ -83,11 +202,7 @@ class TestDiscoverDayWebAssetSources:
             reduced_dir=day_path / "reduced",
             processed_dir=day_path / "processed",  # does not exist
         )
-        result = discover_day_web_asset_sources(
-            day=day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=day)
         assert result == []
 
     def test_discovers_quicklook_sources(
@@ -100,11 +215,7 @@ class TestDiscoverDayWebAssetSources:
             observation_day.processed_dir / f"5876_m02{PROFILE_CORRECTED_PNG_SUFFIX}"
         ).touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=observation_day)
 
         assert len(result) == 2
         assert all(s.kind is WebAssetKind.QUICK_LOOK for s in result)
@@ -117,11 +228,7 @@ class TestDiscoverDayWebAssetSources:
     ) -> None:
         (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=observation_day)
 
         assert len(result) == 1
         assert result[0].kind is WebAssetKind.CONTEXT
@@ -135,11 +242,7 @@ class TestDiscoverDayWebAssetSources:
         ).touch()
         (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=observation_day)
 
         assert len(result) == 2
         kinds = {s.kind for s in result}
@@ -153,11 +256,7 @@ class TestDiscoverDayWebAssetSources:
                 observation_day.processed_dir / f"{name}{PROFILE_CORRECTED_PNG_SUFFIX}"
             ).touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=observation_day)
 
         names = [s.measurement_name for s in result]
         assert names == sorted(names)
@@ -169,11 +268,7 @@ class TestDiscoverDayWebAssetSources:
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
         ).touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
+        result = discover_day_web_asset_sources(day=observation_day)
 
         assert result[0].observation_name == observation_day.name
 
@@ -183,10 +278,5 @@ class TestDiscoverDayWebAssetSources:
         (observation_day.processed_dir / "5876_m01.fits").touch()
         (observation_day.processed_dir / "5876_m01.dat").touch()
 
-        result = discover_day_web_asset_sources(
-            day=observation_day,
-            quicklook_root=tmp_path / "ql",
-            context_root=tmp_path / "ctx",
-        )
-
+        result = discover_day_web_asset_sources(day=observation_day)
         assert result == []

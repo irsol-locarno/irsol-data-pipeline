@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from irsol_data_pipeline.core.web_asset_compatibility.models import (
+    WebAssetFolderName,
     WebAssetKind,
     WebAssetSource,
 )
@@ -28,7 +29,6 @@ class TestWebAssetSource:
             "observation_name": "250101",
             "measurement_name": "5876_m01",
             "source_path": Path("/tmp/src.png"),
-            "target_path": Path("/tmp/dst.jpg"),
         }
         defaults.update(kwargs)
         return WebAssetSource(**defaults)  # type: ignore[arg-type]
@@ -48,3 +48,32 @@ class TestWebAssetSource:
     def test_accepts_both_kinds(self, kind: WebAssetKind) -> None:
         src = self._make(kind=kind)
         assert src.kind is kind
+
+    @pytest.mark.parametrize(
+        "kind,expected_folder",
+        [
+            (WebAssetKind.QUICK_LOOK, WebAssetFolderName.QUICK_LOOK.value),
+            (WebAssetKind.CONTEXT, WebAssetFolderName.CONTEXT.value),
+        ],
+    )
+    def test_remote_target_path_uses_correct_folder(
+        self, kind: WebAssetKind, expected_folder: str
+    ) -> None:
+        src = self._make(
+            kind=kind, observation_name="250101", measurement_name="5876_m01"
+        )
+        assert src.remote_target_path.startswith(expected_folder + "/")
+
+    def test_remote_target_path_contains_observation_and_measurement(self) -> None:
+        src = self._make(
+            kind=WebAssetKind.QUICK_LOOK,
+            observation_name="250101",
+            measurement_name="5876_m01",
+        )
+        assert "250101" in src.remote_target_path
+        assert "5876_m01.jpg" in src.remote_target_path
+
+    def test_remote_target_path_is_posix(self) -> None:
+        src = self._make(observation_name="250101", measurement_name="5876_m01")
+        # Should use forward slashes, not backslashes
+        assert "\\" not in src.remote_target_path

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from pydantic import BaseModel, ConfigDict
 
@@ -35,7 +35,6 @@ class WebAssetSource(BaseModel):
         observation_name: Observation day folder name (YYMMDD).
         measurement_name: Canonical measurement name.
         source_path: Path to the generated PNG source file.
-        target_path: Path to the destination JPG.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -44,4 +43,17 @@ class WebAssetSource(BaseModel):
     observation_name: str
     measurement_name: str
     source_path: Path
-    target_path: Path
+
+    @property
+    def remote_target_path(self) -> str:
+        """Compute the POSIX remote target path for this asset.
+
+        Returns:
+            Relative POSIX path of the form
+            ``<folder>/<observation_name>/<measurement_name>.jpg``.
+        """
+        return str(
+            PurePosixPath(WebAssetFolderName.for_asset_kind(self.kind).value)
+            / self.observation_name
+            / f"{self.measurement_name}.jpg"
+        )
