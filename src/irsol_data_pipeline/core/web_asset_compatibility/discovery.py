@@ -123,24 +123,27 @@ def discover_day_web_asset_sources(day: ObservationDay) -> list[WebAssetSource]:
         kind, and measurement name.
     """
 
-    sources: list[WebAssetSource] = []
+    with logger.contextualize(day=day.name):
+        sources: list[WebAssetSource] = []
 
-    measurement_names = discover_measurement_names(day.processed_dir)
-    for measurement_name in measurement_names:
-        with logger.contextualize(measurement=measurement_name):
-            assets = discover_assets_for_measurement(
-                measurement_name=measurement_name,
-                observation_name=day.name,
-                processed_dir=day.processed_dir,
-            )
-            sources.extend(assets)
+        measurement_names = discover_measurement_names(day.processed_dir)
+        if not measurement_names:
+            logger.info("No measurements found")
+        for measurement_name in measurement_names:
+            with logger.contextualize(measurement=measurement_name):
+                assets = discover_assets_for_measurement(
+                    measurement_name=measurement_name,
+                    observation_name=day.name,
+                    processed_dir=day.processed_dir,
+                )
+                sources.extend(assets)
 
-    logger.info("Collected web asset sources", day=day.name, count=len(sources))
-    return sorted(
-        sources,
-        key=lambda source: (
-            source.observation_name,
-            source.kind.value,
-            source.measurement_name,
-        ),
-    )
+        logger.info("Collected web asset sources", day=day.name, count=len(sources))
+        return sorted(
+            sources,
+            key=lambda source: (
+                source.observation_name,
+                source.kind.value,
+                source.measurement_name,
+            ),
+        )
