@@ -15,46 +15,22 @@ from irsol_data_pipeline.core.web_asset_compatibility.conversion import (
     convert_png_to_jpeg,
 )
 from irsol_data_pipeline.core.web_asset_compatibility.discovery import (
-    discover_day_web_asset_sources,
+    discover_assets_for_measurement,
+    discover_measurement_names,
 )
 from irsol_data_pipeline.core.web_asset_compatibility.models import (
     WebAssetFolderName,
-    WebAssetSource,
 )
 from irsol_data_pipeline.exceptions import WebAssetUploadError
 
 
 @dataclass(frozen=True)
 class _DeploymentCandidate:
-    """One asset tracked across planning, conversion, and upload phases."""
+    """One asset tracked across conversion and upload phases."""
 
     source_png: Path
     staged_jpeg: Path
     target_path: str
-
-
-def _build_deployment_candidates(
-    sources: list[WebAssetSource],
-    day_name: str,
-) -> list[_DeploymentCandidate]:
-    """Build deployment candidates with target paths for all discovered
-    assets."""
-
-    candidates: list[_DeploymentCandidate] = []
-    for source in sources:
-        target_path = str(
-            PurePosixPath(WebAssetFolderName.for_asset_kind(source.kind).value)
-            / day_name
-            / f"{source.measurement_name}.jpg"
-        )
-        candidates.append(
-            _DeploymentCandidate(
-                source_png=source.source_path,
-                staged_jpeg=source.target_path,
-                target_path=target_path,
-            )
-        )
-    return candidates
 
 
 def _upload_candidate(
@@ -79,10 +55,21 @@ def process_day_web_asset_compatibility(
 ) -> DayProcessingResult:
     """Convert and deploy web assets for one day.
 
+    The pipeline proceeds in three phases:
+
+    1. **Plan** — iterate over measurements in the day, identify context and
+       quick-look assets for each, determine the remote target path, and
+       check whether the remote file already exists.  Assets whose remote
+       target already exists are skipped (unless *force_overwrite* is set).
+    2. **Convert** — convert every pending asset PNG to JPEG inside a
+       temporary staging directory.
+    3. **Upload** — upload all successfully converted assets to the remote
+       file system in a single batch.
+
     Args:
         day: Observation day to process.
         remote_fs: :class:`~irsol_data_pipeline.core.remote_filesystem.RemoteFileSystem`
-        jpeg_quality: JPEG compression quality.
+        jpeg_quality: JPEG compression quality (1–95).
         force_overwrite: Overwrite existing JPG files when True.
 
     Returns:
@@ -106,86 +93,110 @@ def process_day_web_asset_compatibility(
         try:
             with TemporaryDirectory(prefix=f"web-assets-{day.name}-") as temp_dir:
                 staging_root = Path(temp_dir)
-                staging_quicklook_root = (
-                    staging_root / WebAssetFolderName.QUICK_LOOK.value
-                )
-                staging_context_root = staging_root / WebAssetFolderName.CONTEXT.value
 
-                sources = discover_day_web_asset_sources(
-                    day=day,
-                    quicklook_root=staging_quicklook_root,
-                    context_root=staging_context_root,
-                )
-
-                # 1) Gather all deployable assets with their ideal target path.
-                planned_assets = _build_deployment_candidates(
-                    sources=sources,
-                    day_name=day.name,
-                )
-
+                # 1) For each measurement, identify assets and decide what
+                #    needs converting based on remote existence.
                 assets_to_convert: list[_DeploymentCandidate] = []
 
-                # 2) Check whether targets already exist and apply overwrite policy.
-                for candidate in planned_assets:
-                    with logger.contextualize(
-                        source=candidate.source_png,
-                        target=candidate.target_path,
-                    ):
-                        if (
-                            remote_fs.file_exists(candidate.target_path)
-                            and not force_overwrite
-                        ):
-                            skipped += 1
-                            logger.info(
-                                "Skipping existing web asset",
+                measurement_names = discover_measurement_names(day.processed_dir)
+                if not measurement_names:
+                    logger.info("No measurements found")
+                else:
+                    logger.info(
+                        "Found measurements to convert", count=len(measurement_names)
+                    )
+                    for measurement_name in measurement_names:
+                        with logger.contextualize(measurement=measurement_name):
+                            sources = discover_assets_for_measurement(
+                                measurement_name=measurement_name,
+                                observation_name=day.name,
+                                processed_dir=day.processed_dir,
                             )
-                            continue
-                        assets_to_convert.append(candidate)
+                            for source in sources:
+                                target_path = source.remote_target_path
+                                staged_jpeg = (
+                                    staging_root
+                                    / WebAssetFolderName.for_asset_kind(
+                                        source.kind
+                                    ).value
+                                    / day.name
+                                    / f"{measurement_name}.jpg"
+                                )
+                                with logger.contextualize(
+                                    source=source.source_path,
+                                    target=target_path,
+                                ):
+                                    if (
+                                        remote_fs.file_exists(target_path)
+                                        and not force_overwrite
+                                    ):
+                                        skipped += 1
+                                        logger.info("Skipping existing web asset")
+                                        continue
+                                    assets_to_convert.append(
+                                        _DeploymentCandidate(
+                                            source_png=source.source_path,
+                                            staged_jpeg=staged_jpeg,
+                                            target_path=target_path,
+                                        )
+                                    )
 
-                assets_to_upload: list[_DeploymentCandidate] = []
+                    if not assets_to_convert:
+                        logger.info(
+                            "All assets seem to be already deployed, nothing to convert/upload"
+                        )
+                    else:
+                        logger.info(
+                            "Planned web assets for conversion/upload",
+                            count=len(assets_to_convert),
+                        )
+                        # 2) Convert all pending assets to JPEG in the staging area.
+                        assets_to_upload: list[_DeploymentCandidate] = []
+                        for candidate in assets_to_convert:
+                            with logger.contextualize(
+                                source=candidate.source_png,
+                                staged_target=candidate.staged_jpeg,
+                                destination=candidate.target_path,
+                            ):
+                                try:
+                                    convert_png_to_jpeg(
+                                        source_path=candidate.source_png,
+                                        target_path=candidate.staged_jpeg,
+                                        jpeg_quality=jpeg_quality,
+                                    )
+                                    processed += 1
+                                    assets_to_upload.append(candidate)
+                                    logger.info(
+                                        "Web asset converted to staging",
+                                    )
+                                except (
+                                    Exception
+                                ) as exc:  # pragma: no cover - defensive catch
+                                    failed += 1
+                                    error_message = f"Failed conversion for {candidate.source_png.name}: {exc}"
+                                    errors.append(error_message)
+                                    logger.exception(
+                                        "Web asset conversion failed",
+                                    )
 
-                # 3) Convert remaining PNG sources into staged JPG files.
-                for candidate in assets_to_convert:
-                    with logger.contextualize(
-                        source=candidate.source_png,
-                        staged_target=candidate.staged_jpeg,
-                        destination=candidate.target_path,
-                    ):
-                        try:
-                            convert_png_to_jpeg(
-                                source_path=candidate.source_png,
-                                target_path=candidate.staged_jpeg,
-                                jpeg_quality=jpeg_quality,
-                            )
-                            processed += 1
-                            assets_to_upload.append(candidate)
-                            logger.info(
-                                "Web asset converted to staging",
-                            )
-                        except Exception as exc:  # pragma: no cover - defensive catch
-                            failed += 1
-                            error_message = f"Failed conversion for {candidate.source_png.name}: {exc}"
-                            errors.append(error_message)
-                            logger.exception(
-                                "Web asset conversion failed",
-                            )
-
-                # 4) Upload all converted files.
-                ensured_remote_dirs = set()
-                for candidate in assets_to_upload:
-                    with logger.contextualize(
-                        staged_source=candidate.staged_jpeg,
-                        destination=candidate.target_path,
-                    ):
-                        try:
-                            _upload_candidate(candidate, remote_fs, ensured_remote_dirs)
-                        except Exception as exc:
-                            failed += 1
-                            error_message = f"Failed upload for {candidate.staged_jpeg.name} to {candidate.target_path}: {exc}"
-                            errors.append(error_message)
-                            logger.exception(
-                                "Web asset upload failed",
-                            )
+                        # 3) Upload all converted files.
+                        ensured_remote_dirs: set[str] = set()
+                        for candidate in assets_to_upload:
+                            with logger.contextualize(
+                                staged_source=candidate.staged_jpeg,
+                                destination=candidate.target_path,
+                            ):
+                                try:
+                                    _upload_candidate(
+                                        candidate, remote_fs, ensured_remote_dirs
+                                    )
+                                except Exception as exc:
+                                    failed += 1
+                                    error_message = f"Failed upload for {candidate.staged_jpeg.name} to {candidate.target_path}: {exc}"
+                                    errors.append(error_message)
+                                    logger.exception(
+                                        "Web asset upload failed",
+                                    )
         except (ValueError, WebAssetUploadError) as exc:
             failed += 1
             errors.append(str(exc))

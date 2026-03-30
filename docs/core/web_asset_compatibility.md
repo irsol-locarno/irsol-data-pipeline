@@ -6,11 +6,11 @@ This document describes the web asset compatibility subsystem, which converts an
 
 The web asset compatibility system enables integration between the IRSOL data pipeline and web-based visualization platforms. It:
 
-1. **Discovers** PNG outputs from processed measurements (profile plots and slit previews)
-2. **Validates** which assets need deployment or update
-3. **Converts** PNG images to JPEG format (configurable quality)
-4. **Stages** converted assets in a temporary directory
-5. **Deploys** JPEGs to a remote SFTP server (Piombo) for web consumption
+1. **Discovers** measurements in the observation day's processed directory
+2. **Identifies** which assets exist per measurement (profile plots and slit previews)
+3. **Validates** which assets need deployment or update (by checking the remote file system)
+4. **Converts** PNG images to JPEG format (configurable quality) into a staging area
+5. **Deploys** JPEGs to a remote SFTP server (Piombo) for web consumption in a single batch upload
 
 The system is transport-agnostic via a protocol abstraction (`RemoteFileSystem`), allowing different deployment backends.
 
@@ -41,7 +41,7 @@ The core layer contains the domain models and business logic:
 ```
 src/irsol_data_pipeline/core/web_asset_compatibility/
 ├── models.py       # Domain types: WebAssetKind, WebAssetFolderName, WebAssetSource
-├── discovery.py    # Scan measurement outputs to discover PNG assets
+├── discovery.py    # Measurement-centric discovery of PNG assets
 └── conversion.py   # PNG → JPEG conversion via Pillow
 ```
 
@@ -56,26 +56,33 @@ src/irsol_data_pipeline/core/web_asset_compatibility/
 - `img_data` — Legacy folder for context assets
 
 **`WebAssetSource`** (immutable Pydantic model):
-Represents a single PNG-to-JPEG mapping for a measurement:
+Represents a single deployable PNG asset for a measurement:
 
 ```python
 class WebAssetSource(BaseModel):
-    measurement_name: str          # e.g., "6302_m1"
-    observation_day: date
     kind: WebAssetKind
-    source_png_path: Path          # Input PNG
-    target_jpg_filename: str       # Output JPEG filename
+    observation_name: str          # e.g., "250101"
+    measurement_name: str          # e.g., "5876_m01"
+    source_path: Path              # Input PNG in processed/
+
+    @property
+    def remote_target_path(self) -> str:
+        """Compute the POSIX remote path, e.g. img_quicklook/250101/5876_m01.jpg"""
 ```
 
 #### Discovery
 
-**Function:** `discover_web_assets_for_day(day: ObservationDay) -> list[WebAssetSource]`
+**`discover_measurement_names(processed_dir: Path) -> list[str]`**
 
-Scans the `processed/` folder for PNG outputs and builds asset source mappings:
+Scans the `processed/` directory for all PNG files matching any known output suffix and returns a deduplicated, sorted list of measurement base names.
 
-- Matches `*_profile_corrected.png` → `quicklook` JPG targets
-- Matches `*_slit_preview.png` → `context` JPG targets
-- Returns sorted list indexed by measurement and asset kind
+**`discover_assets_for_measurement(measurement_name, observation_name, processed_dir) -> list[WebAssetSource]`**
+
+For a single measurement name, checks which asset PNGs exist on disk and returns a `WebAssetSource` for each one found.
+
+**`discover_day_web_asset_sources(day: ObservationDay) -> list[WebAssetSource]`**
+
+Combines the above two helpers: iterates all measurements in the day's processed directory, and collects all available assets. Returns a sorted list.
 
 #### Conversion
 
@@ -92,33 +99,33 @@ result.save(target, format="JPEG", quality=quality, optimize=True)
 
 **Module:** `pipeline.web_asset_compatibility`
 
-Orchestration and state management:
+The main orchestration entry point is:
 
 ```python
-def plan_web_assets_for_day(
+def process_day_web_asset_compatibility(
     day: ObservationDay,
-    overwrite_existing: bool = False,
-) -> DayWebAssetPlan:
-    """Plan assets for a single day, checking remote inventories."""
-
-def stage_and_upload_assets(
-    plan: DayWebAssetPlan,
     remote_fs: RemoteFileSystem,
-    jpeg_quality: int = 85,
-) -> WebAssetUploadResult:
-    """Convert PNGs, stage JPEGs, upload to remote server."""
+    jpeg_quality: int = 50,
+    force_overwrite: bool = False,
+) -> DayProcessingResult:
 ```
 
-**`DayWebAssetPlan`** (immutable):
-- `day: ObservationDay`
-- `assets_to_upload: list[WebAssetSource]`
-- `assets_already_exist: list[WebAssetSource]` (skipped unless `overwrite_existing`)
-- `missing_png_sources: list[str]` (PNG not found locally)
+The pipeline runs in three sequential phases:
 
-**`WebAssetUploadResult`** (immutable):
-- `uploaded_count: int`
-- `skipped_count: int`
-- `failed_assets: list[tuple[WebAssetSource, str]]` (asset, error message)
+1. **Plan** — Iterate over each measurement in the day. For each measurement, identify
+   available assets (context and quick-look). For each asset, compute its remote target
+   path and check whether it already exists on the remote file system. Assets that already
+   exist are skipped (unless `force_overwrite` is set). All others are queued for conversion.
+
+2. **Convert** — Convert every queued asset PNG to JPEG inside a temporary staging
+   directory. Each staged file is placed under
+   `<staging_root>/<folder_name>/<day_name>/<measurement_name>.jpg`.
+
+3. **Upload** — Upload all successfully converted assets to the remote file system in a
+   single batch.
+
+The `DayProcessingResult` accumulates `processed`, `skipped`, and `failed` counts along
+with any error messages.
 
 ### Remote File System Protocol
 
@@ -128,19 +135,9 @@ Transport-agnostic abstraction for remote file operations:
 
 ```python
 class RemoteFileSystem(Protocol):
-    """Protocol for remote file system operations (SFTP, S3, etc.)."""
-
-    def upload_file(self, local_path: Path, remote_path: str) -> None:
-        """Upload a file from local storage to remote location."""
-
-    def list_files(self, remote_dir: str) -> list[str]:
-        """List all files in a remote directory."""
-
-    def file_exists(self, remote_path: str) -> bool:
-        """Check if a file exists on the remote server."""
-
-    def delete_file(self, remote_path: str) -> None:
-        """Delete a file from the remote server."""
+    def ensure_dir(self, remote_dir: str) -> None: ...
+    def file_exists(self, remote_path: str) -> bool: ...
+    def upload_file(self, local_path: str, remote_path: str) -> None: ...
 ```
 
 ### Integration Layer
@@ -150,21 +147,16 @@ class RemoteFileSystem(Protocol):
 Concrete implementation for Piombo SFTP deployment:
 
 ```python
-class SftpRemoteFileSystem(RemoteFileSystem):
-    """SFTP adapter for Piombo web asset deployment."""
+class SftpRemoteFileSystem:
+    """Paramiko-based SFTP adapter implementing RemoteFileSystem."""
 
     def __init__(
         self,
         hostname: str,
         username: str,
         password: str,
-        base_path: str = "/web/assets/zimpol",
-    ):
-        ...
-
-    def upload_file(self, local_path: Path, remote_path: str) -> None:
-        # Use Paramiko to upload via SFTP
-        ...
+        base_path: str = "/irsol_db/docs/web-site/assets",
+    ): ...
 ```
 
 Configuration is read from Prefect Variables:
@@ -181,11 +173,10 @@ Prefect flow: `publish_web_assets_for_root()`
 
 1. Query Prefect Variables to resolve dataset root and Piombo credentials
 2. Scan dataset for all observation days
-3. For each day:
-   a. Discover PNG assets
-   b. Plan SFTPupload (check remote inventory)
-   c. Convert PNGs → JPEGs (parallel tasks)
-   d. Upload JPEGs to Piombo and log results
+3. For each day, run `process_day_web_asset_compatibility`:
+   a. Iterate measurements → identify assets → plan which to convert
+   b. Convert PNGs → JPEGs in a staging directory
+   c. Upload all converted JPEGs to Piombo in one batch
 4. Aggregate results and report summary
 
 ### Daily Trigger (web-assets-compatibility-daily)
@@ -193,11 +184,8 @@ Prefect flow: `publish_web_assets_for_root()`
 Prefect flow: `publish_web_assets_for_day(day_path: str)`
 
 1. Construct `ObservationDay` from the provided path argument
-2. Discover PNG assets for the day
-3. Plan assets for upload (optionally overwriting existing)
-4. Convert and stage JPEGs in a temporary directory
-5. Upload to Piombo SFTP server
-6. Log success/failure per asset
+2. Run `process_day_web_asset_compatibility` for the single day
+3. Log success/failure per asset
 
 ## Configuration & Deployment
 
@@ -213,29 +201,16 @@ Prefect flow: `publish_web_assets_for_day(day_path: str)`
 
 ### Scheduling
 
-The flow deployment is registered in `cli.metadata`:
-
-```python
-METADATA.register_flow_group(
-    name="web-assets-compatibility",
-    flows=[
-        publish_web_assets_for_root,
-        publish_web_assets_for_day,
-    ],
-    tags=["web-assets-compatibility"],
-)
-```
-
 Schedule the `web-assets-compatibility-full` to run daily after other pipelines complete.
 
 ## Error Handling
 
-- **Missing PNG sources** — Logged as warnings, measurement skipped, pipeline continues
-- **Conversion failures** — PNG malformed or incompatible; error recorded per asset
-- **SFTP upload failures** — Network error, authentication, or permissions; failure logged with retry logic
-- **Validation errors** — Invalid Prefect variables or missing required config; flow fails fast
+- **Missing PNG sources** — Assets not present on disk are silently omitted during discovery
+- **Conversion failures** — PNG malformed or incompatible; error recorded per asset, pipeline continues
+- **SFTP upload failures** — Network error, authentication, or permissions; failure logged and counted
+- **Validation errors** — Invalid JPEG quality or missing required config; fails fast before staging
 
-All errors are recorded in `WebAssetUploadResult.failed_assets` and reported to the user.
+All errors are recorded in `DayProcessingResult.errors` and reported to the caller.
 
 ## Testing
 
@@ -243,22 +218,19 @@ Tests are located in:
 
 ```
 tests/unit/irsol_data_pipeline/core/web_asset_compatibility/
-├── test_models.py       # Domain model validation
-├── test_discovery.py    # PNG asset discovery
+├── test_models.py       # Domain model validation, remote_target_path computation
+├── test_discovery.py    # Measurement name discovery, per-measurement asset discovery
 └── test_conversion.py   # PNG → JPEG conversion
 
 tests/unit/irsol_data_pipeline/pipeline/
-└── test_web_asset_compatibility.py  # Planning and staging logic
-
-tests/unit/irsol_data_pipeline/integrations/
-└── test_piombo.py       # SFTP adapter integration tests
+└── test_web_asset_compatibility.py  # Full pipeline orchestration (plan/convert/upload)
 ```
 
 Test patterns:
 - Mock the `RemoteFileSystem` protocol for unit tests
-- Construct test PNG files in-memory via Pillow (do not use real .dat files)
+- Construct test PNG files in-memory via Pillow (do not use real `.dat` files)
 - Validate that discovered assets match expected naming conventions
-- Verify proper error handling when PNGs are missing or malformed
+- Verify proper error handling when uploads fail
 
 ## Related Documentation
 

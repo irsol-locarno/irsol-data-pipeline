@@ -16,6 +16,12 @@ from irsol_data_pipeline.core.web_asset_compatibility.models import (
     WebAssetSource,
 )
 
+# Maps each asset kind to the PNG suffix used to identify its source file.
+_KIND_SUFFIX_MAP: list[tuple[WebAssetKind, str]] = [
+    (WebAssetKind.QUICK_LOOK, PROFILE_CORRECTED_PNG_SUFFIX),
+    (WebAssetKind.CONTEXT, SLIT_PREVIEW_PNG_SUFFIX),
+]
+
 
 def _extract_measurement_name(filename: str, suffix: str) -> str:
     """Extract the measurement base name by stripping a known suffix.
@@ -36,72 +42,108 @@ def _extract_measurement_name(filename: str, suffix: str) -> str:
     return filename[: -len(suffix)]
 
 
-def discover_day_web_asset_sources(
-    day: ObservationDay,
-    quicklook_root: Path,
-    context_root: Path,
-) -> list[WebAssetSource]:
-    """Discover deployable PNG sources for one observation day.
+def discover_measurement_names(processed_dir: Path) -> list[str]:
+    """Discover unique measurement names from a processed output directory.
+
+    Scans for PNG files matching any known output suffix and extracts the
+    measurement base names. Files that do not match any known suffix are
+    ignored.
 
     Args:
-        day: Observation day context.
-        quicklook_root: Root output directory for quicklook JPG files.
-        context_root: Root output directory for context JPG files.
+        processed_dir: Directory containing processed pipeline outputs.
 
     Returns:
-        Sorted list of deployable sources.
+        Sorted list of unique measurement names found in the directory.
+        Returns an empty list when the directory does not exist.
+    """
+
+    if not processed_dir.is_dir():
+        return []
+
+    names: set[str] = set()
+    for _kind, suffix in _KIND_SUFFIX_MAP:
+        for path in processed_dir.glob(f"*{suffix}"):
+            names.add(_extract_measurement_name(path.name, suffix))
+
+    return sorted(names)
+
+
+def discover_assets_for_measurement(
+    measurement_name: str,
+    observation_name: str,
+    processed_dir: Path,
+) -> list[WebAssetSource]:
+    """Discover web assets available for a single measurement.
+
+    Checks for the existence of each known PNG output file for the given
+    measurement name and returns a :class:`~irsol_data_pipeline.core.web_asset_compatibility.models.WebAssetSource`
+    for each file that is present.
+
+    Args:
+        measurement_name: Canonical measurement name (e.g. ``"5876_m01"``).
+        observation_name: Observation day folder name (YYMMDD).
+        processed_dir: Directory containing processed pipeline outputs.
+
+    Returns:
+        List of web assets found for the measurement (may be empty).
     """
 
     sources: list[WebAssetSource] = []
+    for kind, suffix in _KIND_SUFFIX_MAP:
+        source_path = processed_dir / f"{measurement_name}{suffix}"
+        if source_path.exists():
+            logger.trace(
+                "Found web asset source",
+                kind=kind.value,
+                source_path=source_path,
+            )
+            sources.append(
+                WebAssetSource(
+                    kind=kind,
+                    observation_name=observation_name,
+                    measurement_name=measurement_name,
+                    source_path=source_path,
+                )
+            )
+    return sources
 
-    with logger.contextualize(stage="quick-look"):
-        if day.processed_dir.is_dir():
-            for source_path in sorted(
-                day.processed_dir.glob(f"*{PROFILE_CORRECTED_PNG_SUFFIX}")
-            ):
-                logger.trace("Found quick-look source", source_path=source_path)
-                measurement_name = _extract_measurement_name(
-                    source_path.name,
-                    PROFILE_CORRECTED_PNG_SUFFIX,
-                )
-                target_path = quicklook_root / day.name / f"{measurement_name}.jpg"
-                sources.append(
-                    WebAssetSource(
-                        kind=WebAssetKind.QUICK_LOOK,
-                        observation_name=day.name,
-                        measurement_name=measurement_name,
-                        source_path=source_path,
-                        target_path=target_path,
-                    )
-                )
 
-    with logger.contextualize(stage="context"):
-        if day.processed_dir.is_dir():
-            for source_path in sorted(
-                day.processed_dir.glob(f"*{SLIT_PREVIEW_PNG_SUFFIX}")
-            ):
-                logger.trace("Found context source", source_path=source_path)
-                measurement_name = _extract_measurement_name(
-                    source_path.name,
-                    SLIT_PREVIEW_PNG_SUFFIX,
-                )
-                target_path = context_root / day.name / f"{measurement_name}.jpg"
-                sources.append(
-                    WebAssetSource(
-                        kind=WebAssetKind.CONTEXT,
-                        observation_name=day.name,
-                        measurement_name=measurement_name,
-                        source_path=source_path,
-                        target_path=target_path,
-                    )
-                )
+def discover_day_web_asset_sources(day: ObservationDay) -> list[WebAssetSource]:
+    """Discover deployable PNG sources for one observation day.
 
-    logger.info("Collected web asset sources", day=day.name, count=len(sources))
-    return sorted(
-        sources,
-        key=lambda source: (
-            source.observation_name,
-            source.kind.value,
-            source.measurement_name,
-        ),
-    )
+    Iterates over all unique measurement names found in the processed
+    directory and, for each measurement, identifies the available web assets
+    (quicklook profile plot and context slit preview).
+
+    Args:
+        day: Observation day context.
+
+    Returns:
+        Sorted list of deployable sources, ordered by observation name, asset
+        kind, and measurement name.
+    """
+
+    with logger.contextualize(day=day.name):
+        sources: list[WebAssetSource] = []
+
+        measurement_names = discover_measurement_names(day.processed_dir)
+        if not measurement_names:
+            logger.info("No measurements found")
+        for measurement_name in measurement_names:
+            with logger.contextualize(measurement=measurement_name):
+                assets = discover_assets_for_measurement(
+                    measurement_name=measurement_name,
+                    observation_name=day.name,
+                    processed_dir=day.processed_dir,
+                )
+                sources.extend(assets)
+
+        logger.info("Collected web asset sources", day=day.name, count=len(sources))
+        return sorted(
+            sources,
+            key=lambda source: (
+                source.observation_name,
+                source.kind.value,
+                source.measurement_name,
+            ),
+        )
