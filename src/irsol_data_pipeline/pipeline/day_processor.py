@@ -16,7 +16,7 @@ from irsol_data_pipeline.pipeline.filesystem import (
     discover_flatfield_files,
     discover_measurement_files,
     get_processed_stem,
-    is_measurement_processed,
+    is_measurement_flat_field_processed,
     processed_output_path,
 )
 from irsol_data_pipeline.pipeline.flatfield_cache import (
@@ -91,7 +91,9 @@ def process_observation_day(
         for meas_i, meas_path in enumerate(sorted(measurement_paths)):
             with logger.contextualize(file=meas_path.name):
                 update_progress(meas_i)
-                if is_measurement_processed(day.processed_dir, meas_path.name):
+                if is_measurement_flat_field_processed(
+                    day.processed_dir, meas_path.name
+                ):
                     logger.debug("Skipping already processed", file=meas_path.name)
                     result.skipped += 1
                     continue

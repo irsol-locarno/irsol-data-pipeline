@@ -2,7 +2,8 @@
 
 Two flows:
 1. generate_slit_images (slit-images-full) — Scans dataset root and generates slit
-   previews for all observation days.
+   previews only for observation days that have at least one pending measurement
+   (i.e. a measurement without an existing slit preview or error file).
 2. generate_daily_slit_images (slit-images-daily) — Generates slit previews for a
    single observation day.
 
@@ -28,10 +29,14 @@ from irsol_data_pipeline.core.models import (
     ObservationDay,
 )
 from irsol_data_pipeline.pipeline.filesystem import (
-    discover_observation_days,
     processed_dir_for_day,
     raw_dir_for_day,
     reduced_dir_for_day,
+)
+from irsol_data_pipeline.pipeline.scanner import (
+    ScanResult,
+    build_slit_scan_report_markdown,
+    scan_slit_dataset,
 )
 from irsol_data_pipeline.pipeline.slit_images_processor import (
     generate_slit_images_for_day,
@@ -103,34 +108,29 @@ def _resolve_jsoc_data_delay_days(raw_value: object) -> int:
 
 
 @task(task_run_name="slit-images/scan-dataset/{root}")
-def scan_observation_days_task(
+def scan_slit_dataset_task(
     root: Path,
     jsoc_data_delay_days: int,
-) -> list[ObservationDay]:
-    """Prefect task: discover all observation days under the dataset root."""
-    observation_days = discover_observation_days(
+) -> ScanResult:
+    """Prefect task: scan the dataset root for pending slit preview work.
+
+    Discovers all observation days that satisfy the JSOC data delay predicate
+    and identifies which measurements still need a slit preview image.
+    """
+    scan_result = scan_slit_dataset(
         root,
         predicate=_build_min_age_day_predicate(
             min_age_days=jsoc_data_delay_days,
             today=datetime.datetime.now(datetime.timezone.utc).date(),
         ),
     )
-    summary_lines = [
-        "# Slit Image Generation Scan",
-        "",
-        f"**Root**: `{root}`",
-        f"**JSOC delay (days)**: {jsoc_data_delay_days}",
-        f"**Eligible observation days**: {len(observation_days)}",
-    ]
-    if observation_days:
-        summary_lines += ["", "## Days found", ""]
-        summary_lines += [f"- `{day.name}`" for day in observation_days]
+    markdown = build_slit_scan_report_markdown(root=root, scan_result=scan_result)
     create_prefect_markdown_report(
-        content="\n".join(summary_lines),
+        content=markdown,
         description="Slit image generation scan summary",
         key=f"slit-image-generation-scan-{root.name}",
     )
-    return observation_days
+    return scan_result
 
 
 @task(task_run_name="slit-images/generate-day/{day_path.name}")
@@ -154,7 +154,7 @@ def run_day_slit_generation_task(
 @flow(
     name="slit-images-full",
     flow_run_name="slit-images/full/{root}",
-    description="Scans the dataset and generates slit preview images for all observation days",
+    description="Scans the dataset and generates slit preview images for all observation days with pending work",
 )
 def generate_slit_images(
     root: str = "",
@@ -162,7 +162,13 @@ def generate_slit_images(
     use_limbguider: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
 ) -> list[DayProcessingResult]:
-    """Scan the dataset and generate slit preview images for all days.
+    """Scan the dataset and generate slit preview images for all days with
+    pending work.
+
+    Observation days for which every measurement already has a slit preview
+    (or a slit preview error file) are skipped entirely — no sub-task is
+    submitted for those days.  This mirrors the behaviour of the flat-field
+    correction pipeline.
 
     Args:
         root: Dataset root path. If not set, the default path from Prefect Variable is used.
@@ -197,21 +203,26 @@ def generate_slit_images(
     )
     logger.info("Starting slit image generation", root=dataset_root, jsoc_email=email)
 
-    observation_days = scan_observation_days_task(
+    scan_result = scan_slit_dataset_task(
         root=dataset_root,
         jsoc_data_delay_days=jsoc_data_delay_days,
     )
     logger.info(
         "Scan complete",
-        days=len(observation_days),
+        days=len(scan_result.observation_days),
+        pending=scan_result.total_pending,
         jsoc_data_delay_days=jsoc_data_delay_days,
     )
 
-    if not observation_days:
-        logger.info("No observation days found")
+    if scan_result.total_pending == 0:
+        logger.info("No pending slit preview measurements found")
         return []
 
-    day_paths = [day.path for day in observation_days]
+    day_paths = [
+        day.path
+        for day in scan_result.observation_days
+        if day.name in scan_result.pending_measurements
+    ]
 
     with ThreadPoolTaskRunner(max_workers=max_concurrent_days) as runner:
         results = runner.map(

@@ -23,7 +23,7 @@ from irsol_data_pipeline.io import dat as dat_io
 from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
 from irsol_data_pipeline.pipeline.filesystem import (
     discover_measurement_files,
-    is_slit_preview_generated,
+    is_measurement_slit_preview_generated,
     processed_output_path,
     sdo_cache_dir_path,
 )
@@ -163,7 +163,9 @@ def generate_slit_images_for_day(
         errors: list[str] = []
 
         for measurement_path in measurement_files:
-            if is_slit_preview_generated(day.processed_dir, measurement_path.name):
+            if is_measurement_slit_preview_generated(
+                day.processed_dir, measurement_path.name
+            ):
                 logger.debug(
                     "Slit preview already exists, skipping", file=measurement_path.name
                 )

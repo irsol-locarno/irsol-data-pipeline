@@ -39,8 +39,8 @@ from irsol_data_pipeline.pipeline.filesystem import (
 )
 from irsol_data_pipeline.pipeline.scanner import (
     ScanResult,
-    build_scan_report_markdown,
-    scan_dataset,
+    build_scan_flatfield_report_markdown,
+    scan_flatfield_dataset,
 )
 from irsol_data_pipeline.prefect.patch_logging import setup_logging
 from irsol_data_pipeline.prefect.utils import create_prefect_markdown_report
@@ -50,8 +50,8 @@ from irsol_data_pipeline.prefect.variables import resolve_dataset_root
 @task(task_run_name="ff-correction/scan-dataset/{root}")
 def scan_dataset_task(root: Path) -> ScanResult:
     """Prefect task: scan the dataset root."""
-    scan_result = scan_dataset(root)
-    markdown = build_scan_report_markdown(root=root, scan_result=scan_result)
+    scan_result = scan_flatfield_dataset(root)
+    markdown = build_scan_flatfield_report_markdown(root=root, scan_result=scan_result)
     create_prefect_markdown_report(
         content=markdown,
         description="Dataset scan summary: pending and already processed measurements",
