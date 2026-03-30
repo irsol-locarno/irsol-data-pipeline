@@ -56,6 +56,7 @@ flowchart TB
 | [Slit Image Creation](core/slit_image_creation.md) | SDO context image generation |
 | **IO** | |
 | [IO Modules](io/io_modules.md) | Data loading, saving, and format support |
+| [Output Artefacts](io/output_artefacts.md) | Structure and content of every file the pipeline exports (FITS headers, JSON, PNGs) |
 | **Pipeline** | |
 | [Pipeline Overview](pipeline/pipeline_overview.md) | End-to-end processing flow |
 | [Prefect Integration](pipeline/prefect_integration.md) | Orchestration, flows, and task structure |

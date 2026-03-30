@@ -25,7 +25,7 @@ from irsol_data_pipeline.pipeline.filesystem import (
     discover_observation_days,
     flatfield_correction_cache_path,
     get_processed_stem,
-    is_measurement_processed,
+    is_measurement_flat_field_processed,
     processed_cache_dir_for_day,
     processed_dir_for_day,
     processed_dir_for_measurement,
@@ -235,15 +235,15 @@ class TestProcessedOutputPath:
 
 class TestIsMeasurementProcessed:
     def test_not_processed(self, tmp_path: Path):
-        assert not is_measurement_processed(tmp_path, "6302_m1.dat")
+        assert not is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_corrected_fits_exists(self, tmp_path: Path):
         processed_output_path(tmp_path, "6302_m1.dat", kind="corrected_fits").touch()
-        assert is_measurement_processed(tmp_path, "6302_m1.dat")
+        assert is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_error_exists(self, tmp_path: Path):
         processed_output_path(tmp_path, "6302_m1.dat", kind="error_json").touch()
-        assert is_measurement_processed(tmp_path, "6302_m1.dat")
+        assert is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_prefers_centralized_output_builder(self, tmp_path: Path):
         corrected_path = processed_output_path(
@@ -252,7 +252,7 @@ class TestIsMeasurementProcessed:
             kind="corrected_fits",
         )
         corrected_path.touch()
-        assert is_measurement_processed(tmp_path, "4078_m12.dat")
+        assert is_measurement_flat_field_processed(tmp_path, "4078_m12.dat")
 
 
 class TestDeleteEmptyDirs:

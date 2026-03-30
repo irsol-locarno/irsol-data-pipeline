@@ -270,7 +270,7 @@ def get_processed_stem(source_name: str) -> str:
     return Path(source_name).stem
 
 
-def is_measurement_processed(processed_dir: Path, source_name: str) -> bool:
+def is_measurement_flat_field_processed(processed_dir: Path, source_name: str) -> bool:
     """Check whether a measurement has already been processed.
 
     A measurement is considered processed if either a canonical
@@ -305,7 +305,9 @@ def is_measurement_processed(processed_dir: Path, source_name: str) -> bool:
         return is_processed
 
 
-def is_slit_preview_generated(processed_dir: Path, source_name: str) -> bool:
+def is_measurement_slit_preview_generated(
+    processed_dir: Path, source_name: str
+) -> bool:
     """Check whether a slit preview has already been generated.
 
     A slit preview is considered generated if either a

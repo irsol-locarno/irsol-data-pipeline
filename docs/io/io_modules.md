@@ -2,6 +2,8 @@
 
 The `io/` package handles all data loading and saving, providing a clean abstraction layer between the pipeline logic and the various file formats used by the IRSOL data pipeline.
 
+> For a detailed description of the structure and content of every file the pipeline exports — including all FITS header keywords — see [Output Artefacts](output_artefacts.md).
+
 ## Supported Formats
 
 | Format | Module | Read | Write | Description |
