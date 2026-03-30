@@ -244,11 +244,16 @@ def _download_and_load_map(
         if cache_dir is not None:
             cache_dir.mkdir(parents=True, exist_ok=True)
             target = cache_dir / filename
+            logger.debug("Checking for cached SDO file", target=target)
 
         if target is not None and target.is_file():
             logger.debug("Using cached SDO file", target=target)
         else:
-            logger.info("Downloading SDO data", url=url)
+            logger.info(
+                "Cache unavailable, or cached file not found. Downloading SDO data",
+                target=target,
+                url=url,
+            )
             try:
                 resp = requests.get(url, timeout=120)
                 resp.raise_for_status()
@@ -257,12 +262,18 @@ def _download_and_load_map(
                 return None
 
             if target is not None:
+                logger.debug("Writing response to target file", target=target)
                 target.write_bytes(resp.content)
             else:
                 # Use a temp approach; write to cache_dir if available
-                tmp = Path(tempfile.mktemp(suffix=".fits"))
-                tmp.write_bytes(resp.content)
-                target = tmp
+                with tempfile.NamedTemporaryFile(
+                    suffix=".fits", delete=False, dir=cache_dir
+                ) as tmp_file:
+                    logger.debug(
+                        "Writing response to temporary file", temp_path=tmp_file.name
+                    )
+                    tmp_file.write(resp.content)
+                    target = Path(tmp_file.name)
 
         try:
             data, header = fits.getdata(str(target), header=True)

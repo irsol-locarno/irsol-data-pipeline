@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import time
 from contextlib import nullcontext
 from typing import Any, Optional
@@ -145,19 +146,32 @@ def _build_info_payload(console: Optional[Console]) -> dict[str, Any]:
 
         time.sleep(0.2)
 
-    result: dict[str, Any] = {}
-    with context as status:
-        result["version"] = __version__
-        update(status, "Loading distributions")
-        result["distributions"] = _build_distributions_payload()
-        update(status, "Loading flow groups")
-        result["flow_groups"] = _build_flow_groups_payload()
-        update(status, "Loading prefect variables")
-        result["prefect_variables"] = _build_prefect_variables_payload()
-        update(status, "Loading prefect secrets")
-        result["prefect_secrets"] = _build_prefect_secrets_payload()
-        update(status, "Loading prefet automations")
-        result["prefect_automations"] = _build_prefect_automations_payload()
+    try:
+        result: dict[str, Any] = {}
+        with context as status:
+            result["version"] = __version__
+            update(status, "Loading distributions")
+            result["distributions"] = _build_distributions_payload()
+            update(status, "Loading flow groups")
+            result["flow_groups"] = _build_flow_groups_payload()
+            update(status, "Loading prefect variables")
+            result["prefect_variables"] = _build_prefect_variables_payload()
+            update(status, "Loading prefect secrets")
+            result["prefect_secrets"] = _build_prefect_secrets_payload()
+            update(status, "Loading prefect automations")
+            result["prefect_automations"] = _build_prefect_automations_payload()
+    except httpx.NetworkError:
+        if console is not None:
+            console.print(
+                "[bold red]Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?[/bold red]"
+            )
+        else:
+            print_json(
+                {
+                    "error": "Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?"
+                }
+            )
+        sys.exit(1)
     return result
 
 

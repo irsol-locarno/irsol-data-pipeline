@@ -2,8 +2,6 @@ from pathlib import Path
 
 import pytest
 
-from irsol_data_pipeline.logging_config import setup_logging
-
 
 @pytest.fixture(scope="session")
 def fixture_dir() -> Path:
@@ -14,4 +12,6 @@ def fixture_dir() -> Path:
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_logging() -> None:
     """Configure logging for tests."""
+    from irsol_data_pipeline.logging_config import setup_logging
+
     setup_logging(level="DEBUG")
