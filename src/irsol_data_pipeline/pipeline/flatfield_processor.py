@@ -27,7 +27,6 @@ from irsol_data_pipeline.pipeline.measurement_processor import (
 )
 from irsol_data_pipeline.prefect.utils import (
     create_prefect_json_report,
-    create_prefect_progress_callback,
 )
 
 
@@ -94,13 +93,8 @@ def process_observation_day(
             wavelengths=ff_cache.wavelengths,
         )
 
-        update_progress = create_prefect_progress_callback(
-            name=day.name, total=len(measurement_paths)
-        )
-
-        for meas_i, meas_path in enumerate(sorted(measurement_paths)):
+        for meas_path in sorted(measurement_paths):
             with logger.contextualize(file=meas_path.name):
-                update_progress(meas_i)
                 if not force and is_measurement_flat_field_processed(
                     day.processed_dir, meas_path.name
                 ):

@@ -1,7 +1,6 @@
 import json
 import string
 from pathlib import Path
-from typing import Callable
 
 from irsol_data_pipeline.prefect.decorators import prefect_enabled
 
@@ -22,27 +21,6 @@ def create_prefect_markdown_report(content: str, description: str, key: str):
             description=description,
             key=sanitize_artifact_title(key),
         )
-
-
-def create_prefect_progress_callback(name: str, total: int) -> Callable[[int], None]:
-    if prefect_enabled():
-        from prefect.artifacts import create_progress_artifact, update_progress_artifact
-
-        progress_id = create_progress_artifact(
-            0.0,
-            key=sanitize_artifact_title(f"progress-{name}"),
-            description=f"Processing progress for {name}",
-        )
-
-        def update_progress(processed: int):
-            percent = (processed + 1) / total * 100
-            update_progress_artifact(artifact_id=progress_id, progress=percent)
-    else:
-
-        def update_progress(processed: int):
-            pass  # No-op if not using Prefect
-
-    return update_progress
 
 
 def _flatten_dict(d: dict, prefix: str = "") -> list[dict[str, str]]:
