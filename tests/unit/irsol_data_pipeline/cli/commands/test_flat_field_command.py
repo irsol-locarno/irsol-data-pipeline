@@ -28,10 +28,15 @@ def _make_ff_cache(*wavelengths: int) -> FlatFieldCache:
                 offset_map=None,
                 desmiled=np.ones((4, 5)),
                 timestamp=datetime.datetime(
-                    2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc
+                    2024,
+                    7,
+                    13,
+                    10,
+                    0,
+                    tzinfo=datetime.timezone.utc,
                 ),
                 wavelength=wl,
-            )
+            ),
         )
     return cache
 
@@ -80,7 +85,8 @@ class TestFlatFieldApply:
         assert call_kwargs.kwargs["processed_dir"] == output_dir.resolve()
 
     def test_apply_passes_cache_dir_to_build_flatfield_cache(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """--cache-dir is forwarded to build_flatfield_cache."""
         measurement = tmp_path / "6302_m1.dat"
@@ -319,7 +325,10 @@ class TestFlatFieldApplyDay:
         output_dir = tmp_path / "output"
 
         day_result = DayProcessingResult(
-            day_name="240713", processed=3, skipped=0, failed=0
+            day_name="240713",
+            processed=3,
+            skipped=0,
+            failed=0,
         )
 
         with patch(
@@ -347,7 +356,8 @@ class TestFlatFieldApplyDay:
         assert call_kwargs["force"] is False
 
     def test_apply_day_defaults_output_dir_to_day_processed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """When --output-dir is omitted, processed_dir defaults to
         <day>/processed."""
@@ -455,7 +465,8 @@ class TestFlatFieldApplyDay:
         assert exc_info.value.code == 1
 
     def test_apply_day_force_skips_prompt_and_passes_force_to_processor(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """--force skips the confirmation and passes force=True to the processor."""
         day_dir = tmp_path / "240713"

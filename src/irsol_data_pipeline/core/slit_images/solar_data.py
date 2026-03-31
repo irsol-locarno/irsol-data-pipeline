@@ -9,7 +9,6 @@ from __future__ import annotations
 import datetime
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import astropy.units as u
 import drms
@@ -35,12 +34,17 @@ def _fetch_sdo_map_for_product_wavelength(
     wavelength: int,
     mid_time: datetime.datetime,
     time_fmt: str,
-    cache_dir: Optional[Path],
-) -> tuple[Optional[str], Optional[sunpy.map.Map]]:
+    cache_dir: Path | None,
+) -> tuple[str | None, sunpy.map.Map | None]:
     """Fetch a single SDO map for one product/wavelength combination."""
     with logger.contextualize(series=series, wavelength=wavelength):
         best = _find_closest_record(
-            keys_df, segs_df, segment, wavelength, mid_time, time_fmt
+            keys_df,
+            segs_df,
+            segment,
+            wavelength,
+            mid_time,
+            time_fmt,
         )
         if best is None:
             logger.warning("No SDO data found")
@@ -51,7 +55,12 @@ def _fetch_sdo_map_for_product_wavelength(
         url = JSOC_BASE_URL + slug
 
         smap = _download_and_load_map(
-            series, wavelength, data_time, url, metadata, cache_dir
+            series,
+            wavelength,
+            data_time,
+            url,
+            metadata,
+            cache_dir,
         )
         return (data_time, smap)
 
@@ -64,8 +73,8 @@ def _fetch_sdo_maps_for_product(
     time_fmt: str,
     time_range: str,
     mid_time: datetime.datetime,
-    cache_dir: Optional[Path],
-) -> list[tuple[Optional[str], Optional[sunpy.map.Map]]]:
+    cache_dir: Path | None,
+) -> list[tuple[str | None, sunpy.map.Map | None]]:
     """Fetch SDO maps for all wavelengths of a single data product."""
     query = _query_drms(client, series, time_range, segment)
     if query is None:
@@ -93,8 +102,8 @@ def fetch_sdo_maps(
     start_time: datetime.datetime,
     end_time: datetime.datetime,
     jsoc_email: str,
-    cache_dir: Optional[Path] = None,
-) -> list[tuple[Optional[str], Optional[sunpy.map.Map]]]:
+    cache_dir: Path | None = None,
+) -> list[tuple[str | None, sunpy.map.Map | None]]:
     """Fetch SDO/AIA and SDO/HMI images for the observation time window.
 
     Queries the JSOC DRMS service for AIA 1600/131/193/304 and
@@ -114,24 +123,25 @@ def fetch_sdo_maps(
     Raises:
         RuntimeError: If the DRMS client cannot connect to JSOC.
     """
-
     mid_time = start_time + (end_time - start_time) / 2
     with logger.contextualize(
-        start_time=start_time, end_time=end_time, mid_time=mid_time
+        start_time=start_time,
+        end_time=end_time,
+        mid_time=mid_time,
     ):
         logger.info("Fetching SDO data")
 
         # Build time range with 5-minute padding
         padded_start = (start_time - datetime.timedelta(minutes=5)).strftime(
-            "%Y.%m.%d_%H:%M:%S"
+            "%Y.%m.%d_%H:%M:%S",
         )
         padded_end = (end_time + datetime.timedelta(minutes=5)).strftime(
-            "%Y.%m.%d_%H:%M:%S"
+            "%Y.%m.%d_%H:%M:%S",
         )
         time_range = f"{padded_start}-{padded_end}"
 
         client = drms.Client(email=jsoc_email)
-        results: list[tuple[Optional[str], Optional[sunpy.map.Map]]] = []
+        results: list[tuple[str | None, sunpy.map.Map | None]] = []
 
         for series, wavelengths, segment, time_fmt in SDO_DATA_PRODUCTS:
             logger.trace(
@@ -150,7 +160,7 @@ def fetch_sdo_maps(
                     time_range,
                     mid_time,
                     cache_dir,
-                )
+                ),
             )
 
         return results
@@ -188,7 +198,7 @@ def _find_closest_record(
     wavelength: int,
     mid_time: datetime.datetime,
     time_fmt: str,
-) -> Optional[tuple[int, str, dict]]:
+) -> tuple[int, str, dict] | None:
     """Find the DRMS record closest in time to the observation midpoint."""
     closest_index = None
     closest_diff = None
@@ -231,16 +241,18 @@ def _download_and_load_map(
     data_time: str,
     url: str,
     metadata: dict,
-    cache_dir: Optional[Path],
-) -> Optional[sunpy.map.Map]:
+    cache_dir: Path | None,
+) -> sunpy.map.Map | None:
     """Download a FITS file and return a SunPy Map."""
     with logger.contextualize(
-        series=series, wavelength=wavelength, data_time=data_time
+        series=series,
+        wavelength=wavelength,
+        data_time=data_time,
     ):
         safe_time = data_time.replace("/", "-").replace(":", "-").replace(" ", "_")
         filename = f"{series}_{wavelength}_{safe_time}.fits"
 
-        target: Optional[Path] = None
+        target: Path | None = None
         if cache_dir is not None:
             cache_dir.mkdir(parents=True, exist_ok=True)
             target = cache_dir / filename
@@ -267,10 +279,13 @@ def _download_and_load_map(
             else:
                 # Use a temp approach; write to cache_dir if available
                 with tempfile.NamedTemporaryFile(
-                    suffix=".fits", delete=False, dir=cache_dir
+                    suffix=".fits",
+                    delete=False,
+                    dir=cache_dir,
                 ) as tmp_file:
                     logger.debug(
-                        "Writing response to temporary file", temp_path=tmp_file.name
+                        "Writing response to temporary file",
+                        temp_path=tmp_file.name,
                     )
                     tmp_file.write(resp.content)
                     target = Path(tmp_file.name)

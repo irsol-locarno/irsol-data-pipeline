@@ -200,7 +200,10 @@ class TestSlitImageGenerateDay:
         output_dir = tmp_path / "output"
 
         day_result = DayProcessingResult(
-            day_name="240713", processed=3, skipped=0, failed=0
+            day_name="240713",
+            processed=3,
+            skipped=0,
+            failed=0,
         )
 
         with patch(
@@ -231,7 +234,8 @@ class TestSlitImageGenerateDay:
         assert call_kwargs["force"] is False
 
     def test_generate_day_defaults_output_dir_to_day_processed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """When --output-dir is omitted, processed_dir defaults to
         <day>/processed."""
@@ -322,7 +326,8 @@ class TestSlitImageGenerateDay:
         mock_confirm.assert_called_once()
 
     def test_generate_day_existing_output_dir_decline_exits(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generate-day exits with code 1 when user declines confirmation."""
         day_dir = tmp_path / "240713"
@@ -357,7 +362,8 @@ class TestSlitImageGenerateDay:
         assert exc_info.value.code == 1
 
     def test_generate_day_force_skips_prompt_and_passes_force(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """--force skips confirmation and passes force=True to the processor."""
         day_dir = tmp_path / "240713"

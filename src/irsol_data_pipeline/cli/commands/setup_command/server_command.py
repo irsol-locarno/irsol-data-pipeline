@@ -35,7 +35,6 @@ def _confirm(prompt_text: str, *, default: bool = False) -> bool:
     Returns:
         True when the operator confirmed.
     """
-
     response = input(prompt_text).strip().lower()
     if not response:
         return default
@@ -51,7 +50,6 @@ def _build_sqlite_connection_url(database_path: Path) -> str:
     Returns:
         Sqlite connection URL.
     """
-
     return f"sqlite+aiosqlite:///{database_path.expanduser().resolve().as_posix()}"
 
 
@@ -61,7 +59,6 @@ def _prompt_database_path() -> Path:
     Returns:
         Selected path to the Prefect sqlite database.
     """
-
     if _confirm(
         (
             "Use default Prefect database location "
@@ -87,7 +84,6 @@ def _prompt_api_port() -> int:
     Returns:
         Selected API port.
     """
-
     while True:
         raw_port = input(f"Prefect API port [{PREFECT_SERVER_PORT}]: ").strip()
         if not raw_port:
@@ -99,10 +95,12 @@ def _prompt_api_port() -> int:
             print("  x Port must be an integer.")
             continue
 
-        if 1 <= port <= 65535:
+        MIN_PORT = 1
+        MAX_PORT = 65535
+        if MIN_PORT <= port <= MAX_PORT:
             return port
 
-        print("  x Port must be in range 1-65535.")
+        print(f"  x Port must be in range {MIN_PORT}-{MAX_PORT}.")
 
 
 def setup_server() -> int:
@@ -115,7 +113,6 @@ def setup_server() -> int:
     Returns:
         Exit code for the command.
     """
-
     print("Prefect Profile Configuration\n")
 
     database_path = _prompt_database_path()
@@ -138,7 +135,7 @@ def setup_server() -> int:
         profiles.update_profile(DEFAULT_PREFECT_PROFILE_NAME, settings)
     else:
         profiles.add_profile(
-            Profile(name=DEFAULT_PREFECT_PROFILE_NAME, settings=settings)
+            Profile(name=DEFAULT_PREFECT_PROFILE_NAME, settings=settings),
         )
 
     profiles.set_active(DEFAULT_PREFECT_PROFILE_NAME)

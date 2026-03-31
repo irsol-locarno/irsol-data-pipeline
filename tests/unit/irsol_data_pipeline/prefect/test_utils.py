@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from irsol_data_pipeline.prefect.utils import _flatten_dict
 
 
@@ -42,9 +44,9 @@ class TestFlattenDict:
         assert _flatten_dict({"a": {}}) == []
 
     def test_non_string_values_are_stringified(self):
-        result = _flatten_dict({"a": 3.14, "b": True, "c": None})
+        result = _flatten_dict({"a": math.pi, "b": True, "c": None})
         assert result == [
-            {"key": "a", "value": "3.14"},
+            {"key": "a", "value": "3.141592653589793"},
             {"key": "b", "value": "True"},
             {"key": "c", "value": "None"},
         ]

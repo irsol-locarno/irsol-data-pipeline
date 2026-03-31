@@ -49,7 +49,7 @@ def write_processing_metadata(
             "flat_field_time_delta_seconds": flat_field_time_delta_seconds,
             "auto_calibrated_wavelength": calibration_info,
             "processing_timestamp": datetime.datetime.now(
-                datetime.timezone.utc
+                datetime.timezone.utc,
             ).isoformat(),
             "pipeline_version": pipeline_version,
         }
@@ -85,7 +85,7 @@ def write_error_metadata(
             "source_file": source_file,
             "error": error,
             "processing_timestamp": datetime.datetime.now(
-                datetime.timezone.utc
+                datetime.timezone.utc,
             ).isoformat(),
             "pipeline_version": pipeline_version,
         }

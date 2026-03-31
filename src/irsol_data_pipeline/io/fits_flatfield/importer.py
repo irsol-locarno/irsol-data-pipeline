@@ -49,7 +49,7 @@ def load_correction_data(path: Path | str) -> FlatFieldCorrection:
                 source_flatfield_path = Path(str(primary_hdr["SRCFFPTH"]))
                 wavelength = int(primary_hdr["WAVELEN"])
                 timestamp = datetime.datetime.fromisoformat(
-                    str(primary_hdr["TIMESTMP"])
+                    str(primary_hdr["TIMESTMP"]),
                 )
                 dust_flat = np.array(hdul["DUSTFLAT"].data, dtype=np.float64)
                 desmiled = np.array(hdul["DESMILED"].data, dtype=np.float64)
@@ -58,7 +58,7 @@ def load_correction_data(path: Path | str) -> FlatFieldCorrection:
             raise
         except Exception as exc:
             raise FlatfieldCorrectionImportError(
-                f"Failed to load FlatFieldCorrection from {resolved}: {exc}"
+                f"Failed to load FlatFieldCorrection from {resolved}: {exc}",
             ) from exc
 
         offset_map: OffsetMap | None = None
@@ -68,7 +68,7 @@ def load_correction_data(path: Path | str) -> FlatFieldCorrection:
                 offset_map = OffsetMap.from_file(str(offset_map_path))
             except Exception as exc:
                 raise FlatfieldCorrectionImportError(
-                    f"Failed to load OffsetMap from {offset_map_path}: {exc}"
+                    f"Failed to load OffsetMap from {offset_map_path}: {exc}",
                 ) from exc
 
         logger.debug("Loaded flat-field correction FITS")

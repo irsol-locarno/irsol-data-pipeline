@@ -40,7 +40,8 @@ class TestCorrectionConfig:
 
     @pytest.mark.parametrize("shape", [(100,), (1, 100, 100, 100)])
     def test_create_config_for_data_fails_on_invalid_shape(
-        self, shape: tuple[int, ...]
+        self,
+        shape: tuple[int, ...],
     ):
         stokes_i = np.empty(shape=shape)
         with pytest.raises(InvalidMeasurementDataException):

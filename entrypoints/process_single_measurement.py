@@ -26,7 +26,7 @@ def _parse_args() -> argparse.Namespace:
         description=(
             "Run correction and calibration for a single measurement .dat file "
             "using flat-fields from a reduced directory."
-        )
+        ),
     )
     parser.add_argument("measurement_path", type=Path, help="Path to measurement .dat")
     parser.add_argument(
@@ -84,7 +84,7 @@ def main() -> None:
         raise RuntimeError(f"No flat-field files found in: {flatfield_dir}")
 
     max_delta_policy = MaxDeltaPolicy(
-        default_max_delta=datetime.timedelta(hours=args.max_delta_hours)
+        default_max_delta=datetime.timedelta(hours=args.max_delta_hours),
     )
     ff_cache = build_flatfield_cache(
         flatfield_paths=flatfield_paths,
@@ -103,7 +103,9 @@ def main() -> None:
     logger.success(
         "Generated FITS",
         path=processed_output_path(
-            output_dir, measurement_path.name, kind="corrected_fits"
+            output_dir,
+            measurement_path.name,
+            kind="corrected_fits",
         ),
     )
 

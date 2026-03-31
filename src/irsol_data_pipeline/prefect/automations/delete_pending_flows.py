@@ -32,6 +32,6 @@ automation = Automation(
         ChangeFlowRunState(
             state=StateType.CANCELLED,
             message="Flow was scheduled but did not start within 12 hours and is being cancelled.",
-        )
+        ),
     ],
 )

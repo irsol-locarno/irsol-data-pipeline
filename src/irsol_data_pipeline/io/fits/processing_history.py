@@ -9,8 +9,6 @@ argument of :func:`~irsol_data_pipeline.io.fits.exporter.write_stokes_fits`.
 
 from __future__ import annotations
 
-from typing import Any
-
 
 class ProcessingHistory:
     """Records processing steps and serialises them as FITS header entries.
@@ -51,7 +49,7 @@ class ProcessingHistory:
         """
         self._steps.append((step, details))
 
-    def to_fits_header_entries(self) -> dict[str, tuple[Any, str]]:
+    def to_fits_header_entries(self) -> dict[str, tuple[str, str]]:
         """Return the recorded steps as FITS primary-header key-value pairs.
 
         Each entry is a ``(value, comment)`` tuple compatible with the
@@ -64,7 +62,7 @@ class ProcessingHistory:
         Returns:
             Ordered mapping from FITS keyword to ``(value, comment)`` tuple.
         """
-        entries: dict[str, tuple[Any, str]] = {}
+        entries: dict[str, tuple[str, str]] = {}
         for i, (step, details) in enumerate(self._steps, start=1):
             key = f"PROC_{i:03d}"
             value = f"{step}: {details}" if details is not None else step

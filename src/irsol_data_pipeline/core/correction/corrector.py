@@ -29,7 +29,7 @@ def apply_correction(
         Corrected StokesParameters.
     """
     # Handle extra dimension in dust_flat
-    if dust_flat.ndim == 3:
+    if dust_flat.ndim == 3:  # noqa: PLR2004 - magic numbers are ok in this case
         dust_flat = np.squeeze(dust_flat, axis=0)
 
     si_corrected = _desmile(stokes.i / dust_flat, offset_map)

@@ -44,7 +44,10 @@ class TestExtractMeasurementName:
         ],
     )
     def test_strips_known_suffix(
-        self, filename: str, suffix: str, expected: str
+        self,
+        filename: str,
+        suffix: str,
+        expected: str,
     ) -> None:
         assert _extract_measurement_name(filename, suffix) == expected
 
@@ -55,7 +58,8 @@ class TestExtractMeasurementName:
     def test_raises_on_partial_suffix(self) -> None:
         with pytest.raises(ValueError):
             _extract_measurement_name(
-                "5876_m01_profile_corrected", PROFILE_CORRECTED_PNG_SUFFIX
+                "5876_m01_profile_corrected",
+                PROFILE_CORRECTED_PNG_SUFFIX,
             )
 
 
@@ -81,7 +85,9 @@ class TestDiscoverMeasurementNames:
         assert result == []
 
     def test_discovers_from_quicklook_suffix(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -90,14 +96,18 @@ class TestDiscoverMeasurementNames:
         assert result == ["5876_m01"]
 
     def test_discovers_from_context_suffix(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
         result = discover_measurement_names(observation_day.processed_dir)
         assert result == ["5876_m01"]
 
     def test_deduplicates_names(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -107,7 +117,9 @@ class TestDiscoverMeasurementNames:
         assert result == ["5876_m01"]
 
     def test_result_is_sorted(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         for name in ["5876_m03", "5876_m01", "5876_m02"]:
             (
@@ -117,7 +129,9 @@ class TestDiscoverMeasurementNames:
         assert result == sorted(result)
 
     def test_ignores_non_matching_files(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (observation_day.processed_dir / "5876_m01.fits").touch()
         (observation_day.processed_dir / "5876_m01.dat").touch()
@@ -127,7 +141,9 @@ class TestDiscoverMeasurementNames:
 
 class TestDiscoverAssetsForMeasurement:
     def test_returns_empty_when_no_files(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         result = discover_assets_for_measurement(
             measurement_name="5876_m01",
@@ -137,7 +153,9 @@ class TestDiscoverAssetsForMeasurement:
         assert result == []
 
     def test_discovers_quicklook(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -152,7 +170,9 @@ class TestDiscoverAssetsForMeasurement:
         assert result[0].measurement_name == "5876_m01"
 
     def test_discovers_context(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
         result = discover_assets_for_measurement(
@@ -164,7 +184,9 @@ class TestDiscoverAssetsForMeasurement:
         assert result[0].kind is WebAssetKind.CONTEXT
 
     def test_discovers_both_kinds(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -179,7 +201,9 @@ class TestDiscoverAssetsForMeasurement:
         assert kinds == {WebAssetKind.QUICK_LOOK, WebAssetKind.CONTEXT}
 
     def test_observation_name_set_correctly(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -206,7 +230,9 @@ class TestDiscoverDayWebAssetSources:
         assert result == []
 
     def test_discovers_quicklook_sources(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -224,7 +250,9 @@ class TestDiscoverDayWebAssetSources:
         assert "5876_m02" in measurement_names
 
     def test_discovers_context_sources(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (observation_day.processed_dir / f"5876_m01{SLIT_PREVIEW_PNG_SUFFIX}").touch()
 
@@ -235,7 +263,9 @@ class TestDiscoverDayWebAssetSources:
         assert result[0].measurement_name == "5876_m01"
 
     def test_discovers_both_kinds(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -249,7 +279,9 @@ class TestDiscoverDayWebAssetSources:
         assert kinds == {WebAssetKind.QUICK_LOOK, WebAssetKind.CONTEXT}
 
     def test_result_is_sorted(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         for name in ["5876_m03", "5876_m01", "5876_m02"]:
             (
@@ -262,7 +294,9 @@ class TestDiscoverDayWebAssetSources:
         assert names == sorted(names)
 
     def test_observation_name_matches_day_name(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (
             observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
@@ -273,7 +307,9 @@ class TestDiscoverDayWebAssetSources:
         assert result[0].observation_name == observation_day.name
 
     def test_ignores_non_png_files(
-        self, tmp_path: Path, observation_day: ObservationDay
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
     ) -> None:
         (observation_day.processed_dir / "5876_m01.fits").touch()
         (observation_day.processed_dir / "5876_m01.dat").touch()

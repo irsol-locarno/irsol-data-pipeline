@@ -25,9 +25,8 @@ def _prompt_server_host() -> str:
     Returns:
         Selected server host.
     """
-
     raw = input(f"Prefect server host [{PREFECT_SERVER_HOST}]: ").strip()
-    return raw if raw else PREFECT_SERVER_HOST
+    return raw or PREFECT_SERVER_HOST
 
 
 def _prompt_server_port() -> int:
@@ -36,7 +35,6 @@ def _prompt_server_port() -> int:
     Returns:
         Selected server port.
     """
-
     while True:
         raw = input(f"Prefect server port [{PREFECT_SERVER_PORT}]: ").strip()
         if not raw:
@@ -48,10 +46,12 @@ def _prompt_server_port() -> int:
             print("  x Port must be an integer.")
             continue
 
-        if 1 <= port <= 65535:
+        MIN_PORT = 1
+        MAX_PORT = 65535
+        if MIN_PORT <= port <= MAX_PORT:
             return port
 
-        print("  x Port must be in range 1-65535.")
+        print(f"  x Port must be in range {MIN_PORT}-{MAX_PORT}.")
 
 
 def setup_user() -> int:
@@ -69,11 +69,10 @@ def setup_user() -> int:
     Returns:
         Exit code for the command.
     """
-
     print("Prefect Client Setup\n")
     print(
         "This command configures your local Prefect profile so that `idp` commands\n"
-        "connect to the shared Prefect server on this machine.\n"
+        "connect to the shared Prefect server on this machine.\n",
     )
 
     host = _prompt_server_host()
@@ -92,7 +91,7 @@ def setup_user() -> int:
         profiles.update_profile(DEFAULT_PREFECT_PROFILE_NAME, settings)
     else:
         profiles.add_profile(
-            Profile(name=DEFAULT_PREFECT_PROFILE_NAME, settings=settings)
+            Profile(name=DEFAULT_PREFECT_PROFILE_NAME, settings=settings),
         )
 
     profiles.set_active(DEFAULT_PREFECT_PROFILE_NAME)

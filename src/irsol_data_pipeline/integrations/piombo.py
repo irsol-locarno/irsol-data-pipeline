@@ -82,7 +82,7 @@ class SftpRemoteFileSystem:
         if not all(provided):
             raise ValueError(
                 "SftpRemoteFileSystem requires hostname, username, and password "
-                "to all be provided together"
+                "to all be provided together",
             )
 
         self._hostname = hostname
@@ -130,7 +130,7 @@ class SftpRemoteFileSystem:
         except Exception as exc:
             self.close()
             raise WebAssetUploadError(
-                f"Failed to open SFTP connection to {self._hostname}"
+                f"Failed to open SFTP connection to {self._hostname}",
             ) from exc
         self._logger.info("SFTP connection established")
 
@@ -142,15 +142,20 @@ class SftpRemoteFileSystem:
         if self._sftp_client is not None:
             try:
                 self._sftp_client.close()
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                logger.warning(
+                    "Exception raised while closingsftp client", exception=str(exc)
+                )
             self._sftp_client = None
 
         if self._transport is not None:
             try:
                 self._transport.close()
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                logger.warning(
+                    "Exception raised while closing piombo transport",
+                    exception=str(exc),
+                )
             self._transport = None
 
         self._logger.info("SFTP connection closed")
@@ -241,9 +246,11 @@ class SftpRemoteFileSystem:
             )
             self._sftp_client.put(local_path, resolved)
             self._logger.debug(
-                "File upload successful", local_path=local_path, remote_path=resolved
+                "File upload successful",
+                local_path=local_path,
+                remote_path=resolved,
             )
         except Exception as exc:
             raise WebAssetUploadError(
-                f"Failed to upload {local_path} to {self._hostname}:{resolved}"
+                f"Failed to upload {local_path} to {self._hostname}:{resolved}",
             ) from exc

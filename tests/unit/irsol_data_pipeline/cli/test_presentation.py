@@ -22,7 +22,8 @@ class TestCliPresentation:
         assert presentation.COMPACT_TITLE in result
 
     def test_print_runtime_presentation_writes_banner(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with patch(
             "irsol_data_pipeline.cli.presentation.build_runtime_presentation",

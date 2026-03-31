@@ -14,10 +14,11 @@ from irsol_data_pipeline.prefect.config import PREFECT_SERVER_HOST, PREFECT_SERV
 
 class TestPrefectStatusCommand:
     def test_prefect_status_json_when_dashboard_is_reachable(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with patch(
-            "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get"
+            "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get",
         ) as mock_get:
             mock_get.return_value.ok = True
             mock_get.return_value.status_code = 200
@@ -48,7 +49,8 @@ class TestPrefectStatusCommand:
         )
 
     def test_prefect_status_returns_one_when_dashboard_is_unreachable(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with patch(
             "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get",
@@ -70,10 +72,11 @@ class TestPrefectStatusCommand:
         assert "connection refused" in payload["detail"]
 
     def test_prefect_status_accepts_host_and_port_overrides(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with patch(
-            "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get"
+            "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get",
         ) as mock_get:
             mock_get.return_value.ok = True
             mock_get.return_value.status_code = 200
@@ -107,14 +110,15 @@ class TestPrefectStatusCommand:
         )
 
     def test_prefect_status_deep_analysis_json(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with (
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get"
+                "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get",
             ) as mock_get,
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.status_command._analyze_running_flows_and_tasks"
+                "irsol_data_pipeline.cli.commands.prefect_command.status_command._analyze_running_flows_and_tasks",
             ) as mock_analyze,
         ):
             mock_get.return_value.ok = True
@@ -132,7 +136,7 @@ class TestPrefectStatusCommand:
                         "running_task_count": 2,
                         "running_task_names": ["process-measurement", "scan-day"],
                         "state": "Running",
-                    }
+                    },
                 ],
             }
 
@@ -165,11 +169,12 @@ class TestPrefectStatusCommand:
         }
 
     def test_prefect_status_deep_analysis_reports_failure(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with (
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get"
+                "irsol_data_pipeline.cli.commands.prefect_command.status_command.requests.get",
             ) as mock_get,
             patch(
                 "irsol_data_pipeline.cli.commands.prefect_command.status_command._analyze_running_flows_and_tasks",

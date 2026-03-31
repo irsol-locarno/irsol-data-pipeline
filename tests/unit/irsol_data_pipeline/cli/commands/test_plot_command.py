@@ -29,7 +29,8 @@ class TestCliPlot:
 
         with (
             patch(
-                "irsol_data_pipeline.io.dat.read", return_value=(stokes, np.array([]))
+                "irsol_data_pipeline.io.dat.read",
+                return_value=(stokes, np.array([])),
             ) as read_dat,
             patch("irsol_data_pipeline.plotting.profile.plot") as plot_profile,
             patch(

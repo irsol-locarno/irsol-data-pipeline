@@ -20,10 +20,13 @@ def _normalize_jpeg_quality(jpeg_quality: int) -> int:
     Raises:
         ValueError: If the quality is outside Pillow's practical range.
     """
-
-    if 1 <= jpeg_quality <= 95:
+    MIN_JPEG_QUALITY = 1
+    MAX_JPEG_QUALITY = 95
+    if MIN_JPEG_QUALITY <= jpeg_quality <= MAX_JPEG_QUALITY:
         return jpeg_quality
-    raise ValueError("jpeg_quality must be in [1, 95]")
+    raise ValueError(
+        f"jpeg_quality must be in [{MIN_JPEG_QUALITY}, {MAX_JPEG_QUALITY}]"
+    )
 
 
 def convert_png_to_jpeg(

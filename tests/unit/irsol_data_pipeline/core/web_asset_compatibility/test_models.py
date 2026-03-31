@@ -57,10 +57,14 @@ class TestWebAssetSource:
         ],
     )
     def test_remote_target_path_uses_correct_folder(
-        self, kind: WebAssetKind, expected_folder: str
+        self,
+        kind: WebAssetKind,
+        expected_folder: str,
     ) -> None:
         src = self._make(
-            kind=kind, observation_name="250101", measurement_name="5876_m01"
+            kind=kind,
+            observation_name="250101",
+            measurement_name="5876_m01",
         )
         assert src.remote_target_path.startswith(expected_folder + "/")
 

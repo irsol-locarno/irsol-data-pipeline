@@ -17,7 +17,7 @@ class PrefectSecretName(Enum):
     """Canonical Prefect Secret block names used across flows and
     entrypoints."""
 
-    PIOMBO_PASSWORD = "piombo-password"  # gitleaks:allow
+    PIOMBO_PASSWORD = "piombo-password"  # gitleaks:allow  # noqa S105, S106
 
 
 def get_secret(name: PrefectSecretName, default: Any = None) -> Any:
@@ -60,7 +60,8 @@ async def aget_secret(name: PrefectSecretName, default: Any) -> Any:
             value = await Secret.aload(name.value)
         except ValueError:
             logger.warning(
-                "Prefect Secret block not found, using default", default=default
+                "Prefect Secret block not found, using default",
+                default=default,
             )
             value = default
         else:

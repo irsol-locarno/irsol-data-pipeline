@@ -46,13 +46,14 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
     now = datetime.datetime.now(datetime.timezone.utc)
     cutoff = now - dt
     logger.info(
-        "Retrieving all flows finished before cutoff time", cutoff=cutoff.isoformat()
+        "Retrieving all flows finished before cutoff time",
+        cutoff=cutoff.isoformat(),
     )
     async with get_client() as client:
         old_flow_runs = await client.read_flow_runs(
             sort=FlowRunSort.START_TIME_ASC,
             flow_run_filter=FlowRunFilter(
-                end_time=FlowRunFilterEndTime(before_=cutoff)
+                end_time=FlowRunFilterEndTime(before_=cutoff),
             ),
         )
     return [fr.id for fr in old_flow_runs]
@@ -71,14 +72,16 @@ async def delete_flow_runs_older_than(
     Args:
         hours: Optional retention duration in hours. If unset (0), the Prefect
             Variable ``flow-run-expiration-hours`` is used.
+
     Returns:
         True if any flow runs were deleted, False if no old flow runs were found.
     """
     setup_logging()
     hours = hours or float(
         await aget_variable(
-            PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS, default="672"
-        )
+            PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS,
+            default="672",
+        ),
     )
     dt = datetime.timedelta(hours=hours)
     old_flow_run_ids = await retrieve_old_flow_ids(dt)

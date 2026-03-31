@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 from loguru import logger
@@ -16,7 +15,7 @@ from irsol_data_pipeline.exceptions import DatImportError
 
 
 def read_zimpol_dat(
-    file_path: Union[Path, str],
+    file_path: Path | str,
 ) -> tuple[StokesParameters, np.ndarray]:
     """Read a ZIMPOL ``.dat``/``.sav`` file and return Stokes + raw ``info``.
 
@@ -33,7 +32,7 @@ def read_zimpol_dat(
             data = readsav(str(path), verbose=False, python_dict=True)
         else:
             raise DatImportError(
-                f"Unsupported file format: '{path.suffix}', expected '.dat' or '.sav'."
+                f"Unsupported file format: '{path.suffix}', expected '.dat' or '.sav'.",
             )
 
         si = np.array(data["si"])
@@ -43,10 +42,10 @@ def read_zimpol_dat(
         info = np.array(data["info"])
 
         # If data is 3D (no TCU averaging), average to 2D
-        if si.ndim == 3:
+        if si.ndim == 3:  # noqa PLR2004 - magic numbers are ok in this case
             logger.debug("Averaging 3D Stokes I over axis 0", shape=si.shape)
             si = np.mean(si, axis=0)
-        if sv.ndim == 3:
+        if sv.ndim == 3:  # noqa PLR2004 - magic numbers are ok in this case
             logger.debug("Averaging 3D Stokes V over axis 0", shape=sv.shape)
             sv = np.mean(sv, axis=0)
 

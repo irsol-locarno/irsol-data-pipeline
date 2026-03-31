@@ -33,6 +33,6 @@ automation = Automation(
         ChangeFlowRunState(
             state=StateType.CRASHED,
             message="Flow did not send a heartbeat for 12 hours and is being marked as a zombie.",
-        )
+        ),
     ],
 )

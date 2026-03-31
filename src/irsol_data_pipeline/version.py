@@ -17,7 +17,8 @@ _RELEVANT_DISTRIBUTIONS: tuple[str, ...] = (
 
 
 def resolve_distribution_version(
-    distribution_name: str, default_version: str = "0.0.0"
+    distribution_name: str,
+    default_version: str = "0.0.0",
 ) -> str:
     """Resolve the installed version of a Python distribution.
 

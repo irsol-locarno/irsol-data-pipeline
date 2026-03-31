@@ -13,7 +13,8 @@ from irsol_data_pipeline.prefect.variables import PrefectVariableName
 
 class TestPrefectVariablesCommand:
     def test_prefect_variables_list_json(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         value_by_name = {
             PrefectVariableName.DATA_ROOT_PATH: "/srv/data",

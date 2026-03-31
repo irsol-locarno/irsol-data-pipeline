@@ -178,7 +178,7 @@ def discover_observation_days(
                                 raw_dir=day_dir / RAW_DIRNAME,
                                 reduced_dir=reduced,
                                 processed_dir=day_dir / PROCESSED_DIRNAME,
-                            )
+                            ),
                         )
 
         if predicate is not None:
@@ -306,7 +306,8 @@ def is_measurement_flat_field_processed(processed_dir: Path, source_name: str) -
 
 
 def is_measurement_slit_preview_generated(
-    processed_dir: Path, source_name: str
+    processed_dir: Path,
+    source_name: str,
 ) -> bool:
     """Check whether a slit preview has already been generated.
 
@@ -322,6 +323,8 @@ def is_measurement_slit_preview_generated(
     """
     preview = processed_output_path(processed_dir, source_name, kind="slit_preview_png")
     error = processed_output_path(
-        processed_dir, source_name, kind="slit_preview_error_json"
+        processed_dir,
+        source_name,
+        kind="slit_preview_error_json",
     )
     return preview.exists() or error.exists()

@@ -36,7 +36,6 @@ def _extract_measurement_name(filename: str, suffix: str) -> str:
     Raises:
         ValueError: If filename does not end with the expected suffix.
     """
-
     if not filename.endswith(suffix):
         raise ValueError("filename does not end with expected suffix")
     return filename[: -len(suffix)]
@@ -56,14 +55,15 @@ def discover_measurement_names(processed_dir: Path) -> list[str]:
         Sorted list of unique measurement names found in the directory.
         Returns an empty list when the directory does not exist.
     """
-
     if not processed_dir.is_dir():
         return []
 
     names: set[str] = set()
     for _kind, suffix in _KIND_SUFFIX_MAP:
-        for path in processed_dir.glob(f"*{suffix}"):
-            names.add(_extract_measurement_name(path.name, suffix))
+        names.update(
+            _extract_measurement_name(path.name, suffix)
+            for path in processed_dir.glob(f"*{suffix}")
+        )
 
     return sorted(names)
 
@@ -87,7 +87,6 @@ def discover_assets_for_measurement(
     Returns:
         List of web assets found for the measurement (may be empty).
     """
-
     sources: list[WebAssetSource] = []
     for kind, suffix in _KIND_SUFFIX_MAP:
         source_path = processed_dir / f"{measurement_name}{suffix}"
@@ -103,7 +102,7 @@ def discover_assets_for_measurement(
                     observation_name=observation_name,
                     measurement_name=measurement_name,
                     source_path=source_path,
-                )
+                ),
             )
     return sources
 
@@ -122,7 +121,6 @@ def discover_day_web_asset_sources(day: ObservationDay) -> list[WebAssetSource]:
         Sorted list of deployable sources, ordered by observation name, asset
         kind, and measurement name.
     """
-
     with logger.contextualize(day=day.name):
         sources: list[WebAssetSource] = []
 

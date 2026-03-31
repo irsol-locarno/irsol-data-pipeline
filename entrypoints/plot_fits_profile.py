@@ -17,7 +17,7 @@ def _parse_args() -> argparse.Namespace:
         description=(
             "Load a pipeline FITS file and generate a Stokes profile image "
             "using metadata-based title and wavelength calibration."
-        )
+        ),
     )
     parser.add_argument("fits_path", type=Path, help="Path to input .fits file")
     parser.add_argument(

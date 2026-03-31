@@ -35,7 +35,7 @@ def get_variable(name: PrefectVariableName, default: Any = None) -> Any:
     Returns:
         The stored variable value, or ``default`` when not found.
     """
-    not_found = cast(Any, object())
+    not_found = cast("Any", object())
     with logger.contextualize(variable=name.value):
         value = Variable.get(name.value, default=not_found)
         if value is not_found:
@@ -60,7 +60,7 @@ async def aget_variable(name: PrefectVariableName, default: Any = None) -> Any:
         The stored variable value, or ``default`` when not found.
     """
     with logger.contextualize(variable=name.value):
-        not_found = cast(Any, object())
+        not_found = cast("Any", object())
         value = await Variable.aget(name.value, default=not_found)
         if value is not_found:
             logger.warning(
@@ -86,7 +86,6 @@ def resolve_dataset_root(root: str | Path | None = None) -> Path:
         DatasetRootNotConfiguredError: If neither an argument nor a configured
             Prefect Variable is available.
     """
-
     if root is not None:
         explicit_root = str(root).strip()
         if explicit_root:
@@ -94,7 +93,7 @@ def resolve_dataset_root(root: str | Path | None = None) -> Path:
             return Path(explicit_root)
 
     configured_root = str(
-        get_variable(PrefectVariableName.DATA_ROOT_PATH, default="")
+        get_variable(PrefectVariableName.DATA_ROOT_PATH, default=""),
     ).strip()
     if configured_root:
         logger.info("Using dataset root from Prefect Variable", root=configured_root)

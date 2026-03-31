@@ -46,7 +46,6 @@ def plot(
     Raises:
         ValueError: If neither output_path nor show is requested.
     """
-
     if output_path is None and not show:
         raise ValueError("One of output_path or show must be requested.")
 
@@ -84,7 +83,8 @@ def plot(
             )
         except ValueError:
             logger.warning(
-                "Cannot define crop for panel, skipping", panel=SDO_DATA_LABELS[i]
+                "Cannot define crop for panel, skipping",
+                panel=SDO_DATA_LABELS[i],
             )
             continue
 
@@ -272,7 +272,11 @@ def _draw_q_direction(ax, slit: SlitGeometry) -> None:
         size="x-small",
         color="yellow",
         bbox=dict(
-            facecolor="black", alpha=0.5, edgecolor="yellow", linestyle="dashed", pad=1
+            facecolor="black",
+            alpha=0.5,
+            edgecolor="yellow",
+            linestyle="dashed",
+            pad=1,
         ),
     )
 
@@ -303,6 +307,10 @@ def _draw_mu_circle(ax, slit: SlitGeometry, start_utc: Time) -> None:
         size="x-small",
         color="white",
         bbox=dict(
-            facecolor="black", alpha=0.5, linestyle="dashed", edgecolor="white", pad=1
+            facecolor="black",
+            alpha=0.5,
+            linestyle="dashed",
+            edgecolor="white",
+            pad=1,
         ),
     )

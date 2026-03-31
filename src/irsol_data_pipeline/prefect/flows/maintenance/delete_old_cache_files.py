@@ -50,10 +50,13 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
     Returns:
         Sorted list of :class:`~irsol_data_pipeline.core.models.ObservationDay`
         objects.
+
     """
     days = discover_observation_days(root)
     logger.info(
-        "Discovered observation days for cache cleanup", root=root, count=len(days)
+        "Discovered observation days for cache cleanup",
+        root=root,
+        count=len(days),
     )
     return days
 
@@ -79,7 +82,7 @@ def delete_old_day_cache_files(
     """
     setup_logging()
     hours = hours or float(
-        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672")
+        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
     )
     path = Path(day_path)
     day = ObservationDay(
@@ -123,7 +126,7 @@ def delete_old_cache_files(
     setup_logging()
 
     hours = hours or float(
-        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672")
+        get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
     )
 
     root_path = resolve_dataset_root(root)
@@ -135,7 +138,8 @@ def delete_old_cache_files(
         return []
 
     results = delete_old_day_cache_files_task.map(
-        day_path=[day.path for day in days], hours=unmapped(hours)
+        day_path=[day.path for day in days],
+        hours=unmapped(hours),
     ).result()
 
     report = build_cache_cleanup_report(root=root_path, results=results, hours=hours)

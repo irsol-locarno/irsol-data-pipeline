@@ -7,7 +7,6 @@ individual measurements and entire observation days.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -38,7 +37,7 @@ def generate_slit_image(
     measurement_path: Path,
     processed_dir: Path,
     jsoc_email: str,
-    sdo_cache_dir: Optional[Path] = None,
+    sdo_cache_dir: Path | None = None,
     use_limbguider: bool = False,
     offset_corrections: tuple[float, float] = (0.0, 0.0),
     angle_correction: float = 0.0,
@@ -57,15 +56,18 @@ def generate_slit_image(
     Raises:
         SlitImageGenerationError: If the image cannot be generated.
     """
-
     with logger.contextualize(file=measurement_path.name):
         logger.info("Generating slit preview image")
 
         output_path = processed_output_path(
-            processed_dir, measurement_path.name, kind="slit_preview_png"
+            processed_dir,
+            measurement_path.name,
+            kind="slit_preview_png",
         )
         error_path = processed_output_path(
-            processed_dir, measurement_path.name, kind="slit_preview_error_json"
+            processed_dir,
+            measurement_path.name,
+            kind="slit_preview_error_json",
         )
 
         try:
@@ -76,7 +78,7 @@ def generate_slit_image(
 
             if metadata.solar_x is None or metadata.solar_y is None:
                 raise SlitImageGenerationError(
-                    f"No solar disc coordinates in measurement {measurement_path.name}"
+                    f"No solar disc coordinates in measurement {measurement_path.name}",
                 )
 
             # 2. Compute slit geometry
@@ -100,7 +102,7 @@ def generate_slit_image(
             if all(m is None for _, m in maps):
                 raise SlitImageGenerationError(
                     f"No SDO data available for measurement {measurement_path.name} "
-                    f"at time {slit_geometry.start_time}"
+                    f"at time {slit_geometry.start_time}",
                 )
 
             # 4. Render the 6-panel image
@@ -150,7 +152,6 @@ def generate_slit_images_for_day(
     Returns:
         DayProcessingResult summary.
     """
-
     with logger.contextualize(day=day.name):
         logger.info("Generating slit images for observation day")
 
@@ -168,10 +169,12 @@ def generate_slit_images_for_day(
 
         for measurement_path in measurement_files:
             if not force and is_measurement_slit_preview_generated(
-                day.processed_dir, measurement_path.name
+                day.processed_dir,
+                measurement_path.name,
             ):
                 logger.debug(
-                    "Slit preview already exists, skipping", file=measurement_path.name
+                    "Slit preview already exists, skipping",
+                    file=measurement_path.name,
                 )
                 skipped += 1
                 continue
@@ -189,12 +192,13 @@ def generate_slit_images_for_day(
                 failed += 1
                 errors.append(f"{measurement_path.name}: {exc}")
                 logger.exception(
-                    "Failed to generate slit image", file=measurement_path.name
+                    "Failed to generate slit image",
+                    file=measurement_path.name,
                 )
 
         if processed == 0:
             logger.info(
-                "All measurements for day have already been processed for slit image generation"
+                "All measurements for day have already been processed for slit image generation",
             )
         else:
             logger.info(

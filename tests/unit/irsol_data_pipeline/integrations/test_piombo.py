@@ -54,7 +54,10 @@ class TestSftpRemoteFileSystemValidation:
 
     def test_empty_base_path_leaves_no_prefix(self) -> None:
         fs = SftpRemoteFileSystem(
-            hostname="host", username="user", password="pass", base_path=""
+            hostname="host",
+            username="user",
+            password="pass",
+            base_path="",
         )
         assert fs._base_path is None
 
@@ -67,11 +70,16 @@ class TestSftpRemoteFileSystemValidation:
         ],
     )
     def test_raises_on_partial_credentials(
-        self, hostname: str, username: str, password: str
+        self,
+        hostname: str,
+        username: str,
+        password: str,
     ) -> None:
         with pytest.raises(ValueError, match="all be provided together"):
             SftpRemoteFileSystem(
-                hostname=hostname, username=username, password=password
+                hostname=hostname,
+                username=username,
+                password=password,
             )
 
 
@@ -133,9 +141,15 @@ class TestSftpRemoteFileSystemResolve:
         ],
     )
     def test_resolve_parametrized(
-        self, base_path: str, sub_path: str, expected: str
+        self,
+        base_path: str,
+        sub_path: str,
+        expected: str,
     ) -> None:
         fs = SftpRemoteFileSystem(
-            hostname="h", username="u", password="p", base_path=base_path
+            hostname="h",
+            username="u",
+            password="p",
+            base_path=base_path,
         )
         assert fs._resolve(sub_path) == expected

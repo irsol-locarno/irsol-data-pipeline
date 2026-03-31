@@ -14,7 +14,6 @@ def has_display() -> bool:
     Returns:
         True if DISPLAY environment variable is set and non-empty.
     """
-
     return bool(os.environ.get("DISPLAY"))
 
 

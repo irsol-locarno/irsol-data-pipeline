@@ -14,10 +14,20 @@ class TestWriteProcessingMetadata:
             source_file="6302_m1.dat",
             flat_field_used="ff6302_m3.dat",
             flat_field_timestamp=datetime.datetime(
-                2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc
+                2024,
+                6,
+                1,
+                12,
+                0,
+                tzinfo=datetime.timezone.utc,
             ),
             measurement_timestamp=datetime.datetime(
-                2024, 6, 1, 12, 14, tzinfo=datetime.timezone.utc
+                2024,
+                6,
+                1,
+                12,
+                14,
+                tzinfo=datetime.timezone.utc,
             ),
             flat_field_time_delta_seconds=842.0,
             calibration_info={"pixel_scale": 0.01, "wavelength_offset": 6300.0},

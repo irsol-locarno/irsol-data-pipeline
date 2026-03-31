@@ -40,7 +40,12 @@ class TestFlatFieldCache:
         cache.add_correction(corr)
 
         measurement_ts = datetime.datetime(
-            2024, 7, 13, 10, 30, tzinfo=datetime.timezone.utc
+            2024,
+            7,
+            13,
+            10,
+            30,
+            tzinfo=datetime.timezone.utc,
         )
         result = cache.find_best_correction(6302, measurement_ts)
         assert result is not None
@@ -55,7 +60,12 @@ class TestFlatFieldCache:
 
         # Closer to ts2
         measurement_ts = datetime.datetime(
-            2024, 7, 13, 9, 45, tzinfo=datetime.timezone.utc
+            2024,
+            7,
+            13,
+            9,
+            45,
+            tzinfo=datetime.timezone.utc,
         )
         result = cache.find_best_correction(6302, measurement_ts)
         assert result is not None
@@ -68,7 +78,12 @@ class TestFlatFieldCache:
 
         # Too far away
         measurement_ts = datetime.datetime(
-            2024, 7, 13, 12, 0, tzinfo=datetime.timezone.utc
+            2024,
+            7,
+            13,
+            12,
+            0,
+            tzinfo=datetime.timezone.utc,
         )
         result = cache.find_best_correction(6302, measurement_ts)
         assert result is None
@@ -102,7 +117,12 @@ class TestFlatFieldCache:
         cache.add_correction(_make_correction(6302, ts))
 
         measurement_ts = datetime.datetime(
-            2024, 7, 13, 9, 30, tzinfo=datetime.timezone.utc
+            2024,
+            7,
+            13,
+            9,
+            30,
+            tzinfo=datetime.timezone.utc,
         )
 
         # Should find with default 2h
@@ -111,7 +131,9 @@ class TestFlatFieldCache:
         # Should not find with 30min override
         assert (
             cache.find_best_correction(
-                6302, measurement_ts, max_delta=datetime.timedelta(minutes=30)
+                6302,
+                measurement_ts,
+                max_delta=datetime.timedelta(minutes=30),
             )
             is None
         )
@@ -134,15 +156,17 @@ class TestBuildFlatFieldCache:
         )
 
     def test_build_flat_field_cache_generates_expected_artifacts(
-        self, flat_field_path: Path, flat_field_mock_correction: FlatFieldCorrection
+        self,
+        flat_field_path: Path,
+        flat_field_mock_correction: FlatFieldCorrection,
     ):
 
         with (
             patch(
-                "irsol_data_pipeline.pipeline.flatfield_cache._analyze_flatfield"
+                "irsol_data_pipeline.pipeline.flatfield_cache._analyze_flatfield",
             ) as mock_analyze,
             patch(
-                "irsol_data_pipeline.pipeline.flatfield_cache.flatfield_io.write"
+                "irsol_data_pipeline.pipeline.flatfield_cache.flatfield_io.write",
             ) as mock_write,
         ):
             mock_analyze.return_value = flat_field_mock_correction
@@ -153,7 +177,8 @@ class TestBuildFlatFieldCache:
             expected_save_path = flatfield_correction_cache_path(flat_field_path)
             assert mock_write.call_count == 1
             mock_write.assert_called_once_with(
-                expected_save_path, flat_field_mock_correction
+                expected_save_path,
+                flat_field_mock_correction,
             )
 
             assert len(cache) == 1

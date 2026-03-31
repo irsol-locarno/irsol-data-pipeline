@@ -50,7 +50,6 @@ def _format_tags(tags: tuple[str, ...]) -> str:
     Returns:
         New-line separated tag string or `-` when empty.
     """
-
     if not tags:
         return "-"
     return "\n".join(tags)
@@ -62,7 +61,6 @@ def _get_variable_entries() -> list[VariableReportEntry]:
     Returns:
         Current variable report entries.
     """
-
     entries: list[VariableReportEntry] = []
     for variable in PREFECT_VARIABLES:
         current_value = get_variable(variable.prefect_name)
@@ -73,7 +71,7 @@ def _get_variable_entries() -> list[VariableReportEntry]:
                 required=variable.required,
                 default_value=variable.default_value,
                 tags=tuple(tag.value for tag in variable.topic_tags),
-            )
+            ),
         )
     return entries
 
@@ -84,7 +82,6 @@ def _render_variable_entries(entries: list[VariableReportEntry]) -> None:
     Args:
         entries: Variable report entries to display.
     """
-
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Variable", style="white", no_wrap=True)
     table.add_column("Value", style="white")
@@ -113,7 +110,6 @@ def _serialize_variable_entries(entries: list[VariableReportEntry]) -> dict[str,
     Returns:
         JSON-serializable variable payload.
     """
-
     return {
         "variables": [
             {
@@ -124,7 +120,7 @@ def _serialize_variable_entries(entries: list[VariableReportEntry]) -> dict[str,
                 "value": entry.value,
             }
             for entry in entries
-        ]
+        ],
     }
 
 
@@ -137,7 +133,6 @@ def _prompt_for_value(config: PrefectVariableMetadata) -> str | None:
     Returns:
         Selected value, or None when omitted for an optional variable.
     """
-
     if config.default_value is not None:
         raw_value = input(f"{config.prompt_text} [{config.default_value}]: ")
         value = raw_value.strip() or config.default_value
@@ -161,7 +156,6 @@ def _confirm(prompt_text: str, *, default: bool = False) -> bool:
     Returns:
         True when confirmed.
     """
-
     response = input(prompt_text).strip().lower()
     if not response:
         return default
@@ -177,7 +171,6 @@ def list_variables(
     Args:
         format: Output format for the report.
     """
-
     entries = _get_variable_entries()
     if format == "json":
         print_json(_serialize_variable_entries(entries))
@@ -198,7 +191,6 @@ def configure_variables(
     Returns:
         Exit code for the command.
     """
-
     from prefect.variables import Variable
 
     print("Prefect Variable Bootstrap\n")
@@ -226,7 +218,7 @@ def configure_variables(
                         required=config.required,
                         default_value=config.default_value,
                         tags=tuple(tag.value for tag in config.topic_tags),
-                    )
+                    ),
                 )
                 continue
 
@@ -246,7 +238,7 @@ def configure_variables(
                         required=config.required,
                         default_value=config.default_value,
                         tags=tuple(tag.value for tag in config.topic_tags),
-                    )
+                    ),
                 )
                 continue
 
@@ -262,7 +254,7 @@ def configure_variables(
                         required=config.required,
                         default_value=config.default_value,
                         tags=tuple(tag.value for tag in config.topic_tags),
-                    )
+                    ),
                 )
                 continue
 
@@ -279,7 +271,7 @@ def configure_variables(
                         required=config.required,
                         default_value=config.default_value,
                         tags=tuple(tag.value for tag in config.topic_tags),
-                    )
+                    ),
                 )
                 continue
 
@@ -297,10 +289,10 @@ def configure_variables(
                     required=config.required,
                     default_value=config.default_value,
                     tags=tuple(tag.value for tag in config.topic_tags),
-                )
+                ),
             )
             print(
-                f"  v {'Updated' if existing_value is not None else 'Set'} '{config.prefect_name.value}'"
+                f"  v {'Updated' if existing_value is not None else 'Set'} '{config.prefect_name.value}'",
             )
         except Exception as exc:
             print(f"  x Failed to set '{config.prefect_name.value}': {exc}")
@@ -312,15 +304,13 @@ def configure_variables(
                     required=config.required,
                     default_value=config.default_value,
                     tags=tuple(tag.value for tag in config.topic_tags),
-                )
+                ),
             )
 
     print()
     print(
-        (
-            f"Summary: {success_count} set or updated, {already_set_count} already "
-            f"set, {skipped_count} skipped, {failed_count} failed"
-        )
+        f"Summary: {success_count} set or updated, {already_set_count} already "
+        f"set, {skipped_count} skipped, {failed_count} failed",
     )
     print()
     _render_variable_entries(report_entries)

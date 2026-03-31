@@ -28,14 +28,14 @@ _MEASUREMENT_INPUT = Parameter(
         ),
         exists=True,
         dir_okay=False,
-    )
+    ),
 )
 _SLIT_INPUT = Parameter(
     validator=validators.Path(
         ext=("dat",),
         exists=True,
         dir_okay=False,
-    )
+    ),
 )
 _OUTPUT_PATH_OPTION = Parameter(
     name="output-path",
@@ -59,11 +59,10 @@ def _resolve_output_path(output_path: Path) -> Path:
     Raises:
         ValueError: If the parent directory does not exist.
     """
-
     resolved_output_path = output_path.expanduser().resolve()
     if not resolved_output_path.parent.exists():
         raise ValueError(
-            f"Output directory does not exist: {resolved_output_path.parent}"
+            f"Output directory does not exist: {resolved_output_path.parent}",
         )
     return resolved_output_path
 
@@ -74,7 +73,6 @@ def _configure_backend_for_show(show: bool) -> None:
     Args:
         show: Whether the caller requested interactive figure display.
     """
-
     if not show:
         return
 
@@ -88,12 +86,13 @@ def _configure_backend_for_show(show: bool) -> None:
         try:
             plt.switch_backend(backend)
             return
-        except Exception:
+        except Exception:  # noqa: S112 - blindly ignoring exceptions is ok in this case
             continue
 
 
 def _load_stokes_and_calibration_and_solar_orientation(
-    input_path: Path, autocalibrate: bool
+    input_path: Path,
+    autocalibrate: bool,
 ) -> tuple[
     tuple[StokesParameters, MeasurementMetadata | None],
     CalibrationResult | None,
@@ -150,7 +149,7 @@ def _load_stokes_and_calibration_and_solar_orientation(
 
         return (stokes, metadata), calibration, solar_orientation
     raise ValidationError(
-        "Unsupported input extension. Expected one of: .dat, .sav, .fits"
+        "Unsupported input extension. Expected one of: .dat, .sav, .fits",
     )
 
 
@@ -174,7 +173,6 @@ def profile(
         output_path_option: Optional output .png file passed with `--output-path`.
         show: Display the rendered figure after saving it.
     """
-
     if output_path_option is None and not show:
         raise ValidationError("One of --show and --output-path must be set.")
 
@@ -193,7 +191,8 @@ def profile(
     )
     (stokes, metadata), calibration, solar_orientation = (
         _load_stokes_and_calibration_and_solar_orientation(
-            input_path, autocalibrate_option
+            input_path,
+            autocalibrate_option,
         )
     )
 
@@ -223,7 +222,8 @@ def slit(
     output_path_option: Annotated[Path | None, _OUTPUT_PATH_OPTION] = None,
     show: bool = False,
     cache_dir: Annotated[
-        Path | None, validators.Path(dir_okay=True, file_okay=False)
+        Path | None,
+        validators.Path(dir_okay=True, file_okay=False),
     ] = None,
 ) -> None:
     """Render a six-panel slit context image from a raw measurement file.
@@ -235,7 +235,6 @@ def slit(
         show: Display the rendered figure after saving it.
         cache_dir: Optional cache directory for SDO data, if not provided, as temporary directoy is used.
     """
-
     if output_path_option is None and not show:
         raise ValidationError("One of --show and --output-path must be set.")
 
@@ -263,7 +262,7 @@ def slit(
 
     if metadata.solar_x is None or metadata.solar_y is None:
         raise ValidationError(
-            f"No solar disc coordinates in measurement {input_path.name}"
+            f"No solar disc coordinates in measurement {input_path.name}",
         )
 
     slit_geometry = compute_slit_geometry(metadata=metadata)
@@ -276,7 +275,7 @@ def slit(
 
     if all(sdo_map is None for _, sdo_map in maps):
         raise ValidationError(
-            f"No SDO data available for measurement {input_path.name}"
+            f"No SDO data available for measurement {input_path.name}",
         )
 
     plot_slit(

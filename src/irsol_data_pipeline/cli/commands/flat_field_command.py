@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from cyclopts import App, Parameter, validators
 from rich.console import Console
@@ -74,7 +74,7 @@ _DAT_INPUT = Parameter(
         ext=("dat",),
         exists=True,
         dir_okay=False,
-    )
+    ),
 )
 
 _OUTPUT_DIR_OPTION = Parameter(
@@ -180,7 +180,7 @@ def apply(
     /,
     *,
     output_dir: Annotated[Path, _OUTPUT_DIR_OPTION],
-    cache_dir: Annotated[Optional[Path], _CACHE_DIR_OPTION] = None,
+    cache_dir: Annotated[Path | None, _CACHE_DIR_OPTION] = None,
     force: Annotated[bool, _FORCE_OPTION] = False,
 ) -> None:
     """Apply flat-field correction to a single measurement .dat file.
@@ -203,12 +203,13 @@ def apply(
     # Check for existing output files and prompt unless --force
     if not force:
         existing_outputs = _find_existing_outputs(
-            resolved_output_dir, resolved_measurement.name
+            resolved_output_dir,
+            resolved_measurement.name,
         )
         if existing_outputs:
             console.print(
                 "[yellow]The following output files already exist in "
-                f"{resolved_output_dir}:[/yellow]"
+                f"{resolved_output_dir}:[/yellow]",
             )
             for p in existing_outputs:
                 console.print(f"  [yellow]• {p.name}[/yellow]")
@@ -223,12 +224,12 @@ def apply(
     if not flatfield_paths:
         console.print(
             f"[bold red]No flat-field files found in {reduced_dir}. "
-            "Cannot apply flat-field correction.[/bold red]"
+            "Cannot apply flat-field correction.[/bold red]",
         )
         sys.exit(1)
 
     console.print(
-        f"[cyan]Found {len(flatfield_paths)} flat-field file(s) in {reduced_dir}[/cyan]"
+        f"[cyan]Found {len(flatfield_paths)} flat-field file(s) in {reduced_dir}[/cyan]",
     )
 
     resolved_output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,7 +243,7 @@ def apply(
     console.print(
         f"[cyan]Flat-field cache ready — "
         f"{len(ff_cache)} correction(s), "
-        f"wavelengths: {ff_cache.wavelengths}[/cyan]"
+        f"wavelengths: {ff_cache.wavelengths}[/cyan]",
     )
 
     try:
@@ -254,13 +255,13 @@ def apply(
             )
         console.print(
             f"[bold green]✓ Successfully processed "
-            f"{resolved_measurement.name}[/bold green]"
+            f"{resolved_measurement.name}[/bold green]",
         )
         console.print(f"  Output directory: {resolved_output_dir}")
     except Exception as exc:
         console.print(
             f"[bold red]✗ Failed to process "
-            f"{resolved_measurement.name}: {exc}[/bold red]"
+            f"{resolved_measurement.name}: {exc}[/bold red]",
         )
         sys.exit(1)
 
@@ -296,7 +297,7 @@ def apply_day(
     /,
     *,
     output_dir: Annotated[
-        Optional[Path],
+        Path | None,
         Parameter(
             name="output-dir",
             help=(
@@ -329,7 +330,7 @@ def apply_day(
     if not reduced_dir.is_dir():
         console.print(
             f"[bold red]No 'reduced/' directory found under {resolved_day_path}. "
-            "Expected the observation day to contain a 'reduced/' sub-directory.[/bold red]"
+            "Expected the observation day to contain a 'reduced/' sub-directory.[/bold red]",
         )
         sys.exit(1)
 
@@ -347,7 +348,7 @@ def apply_day(
     ):
         console.print(
             f"[yellow]Output directory already exists and is not empty: "
-            f"{resolved_output_dir}[/yellow]"
+            f"{resolved_output_dir}[/yellow]",
         )
         if not Confirm.ask(
             "Proceed? Previously processed measurements will be skipped "
@@ -369,7 +370,7 @@ def apply_day(
     console.print(f"  Output directory  : {resolved_output_dir}")
     if force:
         console.print(
-            "  [yellow]--force: all measurements will be reprocessed[/yellow]"
+            "  [yellow]--force: all measurements will be reprocessed[/yellow]",
         )
 
     try:
@@ -381,7 +382,7 @@ def apply_day(
     except Exception as exc:
         console.print(
             f"[bold red]✗ Unexpected error processing day "
-            f"{resolved_day_path.name}: {exc}[/bold red]"
+            f"{resolved_day_path.name}: {exc}[/bold red]",
         )
         sys.exit(1)
 
@@ -393,9 +394,9 @@ def apply_day(
     elif result.processed == 0 and result.skipped > 0:
         console.print(
             "[yellow]All measurements were already processed and skipped. "
-            "Use --force to reprocess.[/yellow]"
+            "Use --force to reprocess.[/yellow]",
         )
     else:
         console.print(
-            f"[bold green]✓ Day {resolved_day_path.name} complete.[/bold green]"
+            f"[bold green]✓ Day {resolved_day_path.name} complete.[/bold green]",
         )

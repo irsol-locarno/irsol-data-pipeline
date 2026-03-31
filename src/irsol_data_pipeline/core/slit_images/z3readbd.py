@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional
 
 
-def read_z3bd_header(path: Path) -> Optional[dict[str, object]]:
+def read_z3bd_header(path: Path) -> dict[str, object] | None:
     """Read the metadata header from a Z3BD file.
 
     Args:
@@ -25,7 +24,7 @@ def read_z3bd_header(path: Path) -> Optional[dict[str, object]]:
     STX = b"\x02"
 
     try:
-        with open(path, "rb") as fid:
+        with Path(path).open("rb") as fid:
             first_byte = fid.read(1)
             if first_byte != SOH:
                 return None

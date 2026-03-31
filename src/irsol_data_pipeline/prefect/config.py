@@ -16,7 +16,6 @@ def build_prefect_server_base_url(host: str, port: int) -> str:
     Returns:
         Base URL for the Prefect server.
     """
-
     return f"http://{host}:{port}"
 
 
@@ -30,7 +29,6 @@ def build_prefect_api_url(host: str, port: int) -> str:
     Returns:
         API base URL for the Prefect server.
     """
-
     return f"{build_prefect_server_base_url(host, port)}/api"
 
 
@@ -44,7 +42,6 @@ def build_prefect_api_healthcheck_url(host: str, port: int) -> str:
     Returns:
         Health-check URL for the Prefect server API.
     """
-
     return f"{build_prefect_api_url(host, port)}/health"
 
 

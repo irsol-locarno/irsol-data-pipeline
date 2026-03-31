@@ -95,7 +95,7 @@ class TestSetupServer:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles",
             ) as mock_save,
             patch("builtins.print"),
         ):
@@ -117,7 +117,7 @@ class TestSetupServer:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles",
             ),
             patch("builtins.print"),
         ):
@@ -146,7 +146,7 @@ class TestSetupServer:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.server_command.save_profiles",
             ),
             patch(
                 "irsol_data_pipeline.cli.commands.setup_command.server_command.Profile",

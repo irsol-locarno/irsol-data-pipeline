@@ -29,7 +29,6 @@ def _flow_group_by_name() -> dict[PrefectFlowGroupName, PrefectFlowGroupMetadata
     Returns:
         Mapping from canonical group name to metadata.
     """
-
     return {group.name: group for group in PREFECT_FLOW_GROUPS}
 
 
@@ -44,7 +43,6 @@ def _serialize_flow_groups(
     Returns:
         List of serialized flow-group dictionaries.
     """
-
     return [
         {
             "description": group.description,
@@ -71,7 +69,6 @@ def _render_flow_groups_table(groups: Iterable[PrefectFlowGroupMetadata]) -> Non
     Args:
         groups: Flow-group metadata to display.
     """
-
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Group", style="white", no_wrap=True)
     table.add_column("Flow", style="white", no_wrap=True)
@@ -111,12 +108,11 @@ def _normalize_selected_groups(
     Raises:
         ValidationError: If the selection is invalid.
     """
-
     if all_groups and flow_groups:
         raise ValidationError("--all cannot be combined with explicit flow groups.")
     if not all_groups and not flow_groups:
         raise ValidationError(
-            "Select at least one flow group or pass --all to serve all groups."
+            "Select at least one flow group or pass --all to serve all groups.",
         )
 
     if all_groups:
@@ -139,7 +135,6 @@ def _build_flat_field_deployments() -> list[Any]:
     Returns:
         Deployment objects for the flat-field correction group.
     """
-
     from prefect import serve
 
     del serve
@@ -185,7 +180,6 @@ def _build_slit_image_deployments() -> list[Any]:
     Returns:
         Deployment objects for the slit-image group.
     """
-
     from irsol_data_pipeline.prefect.flows.slit_image_generation import (
         generate_daily_slit_images,
         generate_slit_images,
@@ -224,7 +218,6 @@ def _build_maintenance_deployments() -> list[Any]:
     Returns:
         Deployment objects for the maintenance group.
     """
-
     from irsol_data_pipeline.prefect.flows.maintenance.delete_old_cache_files import (
         delete_old_cache_files,
     )
@@ -237,7 +230,7 @@ def _build_maintenance_deployments() -> list[Any]:
         PrefectDeploymentTopicTag,
     )
 
-    delete_old_cache_files_flow = cast(Any, delete_old_cache_files)
+    delete_old_cache_files_flow = cast("Any", delete_old_cache_files)
 
     return [
         delete_flow_runs_older_than.to_deployment(
@@ -269,7 +262,6 @@ def _build_web_assets_compatibility_deployments() -> list[Any]:
     Returns:
         Deployment objects for the web-assets compatibility group.
     """
-
     from irsol_data_pipeline.prefect.flows.tags import (
         DeploymentAutomationTag,
         DeploymentScheduleTag,
@@ -317,7 +309,6 @@ def _build_deployments_for_group(group_name: PrefectFlowGroupName) -> list[Any]:
     Returns:
         Deployment objects for the requested group.
     """
-
     builders = {
         "flat-field-correction": _build_flat_field_deployments,
         "slit-images": _build_slit_image_deployments,
@@ -338,7 +329,6 @@ def list_flows(
         topic: Optional flow-group filter.
         format: Output format for the report.
     """
-
     groups = PREFECT_FLOW_GROUPS
     if topic is not None:
         groups = tuple(group for group in groups if group.name == topic)
@@ -361,7 +351,6 @@ def serve_flows(
         flow_groups: Flow groups to serve.
         all: Serve all available flow groups.
     """
-
     selected_groups = _normalize_selected_groups(flow_groups, all_groups=all)
 
     from prefect import serve

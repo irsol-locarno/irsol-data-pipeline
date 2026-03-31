@@ -27,9 +27,11 @@ class TestResolveDatasetRoot:
         assert result == Path("/srv/data")
 
     def test_raises_when_neither_root_nor_variable_are_available(self) -> None:
-        with patch(
-            "irsol_data_pipeline.prefect.variables.get_variable",
-            return_value="",
+        with (
+            patch(
+                "irsol_data_pipeline.prefect.variables.get_variable",
+                return_value="",
+            ),
+            pytest.raises(DatasetRootNotConfiguredError),
         ):
-            with pytest.raises(DatasetRootNotConfiguredError):
-                resolve_dataset_root(None)
+            resolve_dataset_root(None)

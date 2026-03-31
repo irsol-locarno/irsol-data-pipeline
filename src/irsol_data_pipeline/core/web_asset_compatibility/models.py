@@ -55,5 +55,5 @@ class WebAssetSource(BaseModel):
         return str(
             PurePosixPath(WebAssetFolderName.for_asset_kind(self.kind).value)
             / self.observation_name
-            / f"{self.measurement_name}.jpg"
+            / f"{self.measurement_name}.jpg",
         )

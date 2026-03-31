@@ -107,7 +107,9 @@ def _make_stokes() -> StokesParameters:
 
 class TestPackageVersionsInHeader:
     def test_irsol_data_pipeline_software_version_key_present_in_all_hdus(
-        self, tmp_path, sample_measurement_metadata: MeasurementMetadata
+        self,
+        tmp_path,
+        sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         output_path = tmp_path / "test_versions.fits"
         write_stokes_fits(
@@ -123,7 +125,9 @@ class TestPackageVersionsInHeader:
                 assert hdu.header["SWVER"] == __version__
 
     def test_relevant_distribution_versions_included_in_primary_header(
-        self, tmp_path, sample_measurement_metadata: MeasurementMetadata
+        self,
+        tmp_path,
+        sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         output_path = tmp_path / "test_dist_versions.fits"
         write_stokes_fits(
@@ -145,7 +149,9 @@ class TestPackageVersionsInHeader:
 
 class TestExtraHeader:
     def test_extra_header_entries_appear_in_primary_header(
-        self, tmp_path, sample_measurement_metadata: MeasurementMetadata
+        self,
+        tmp_path,
+        sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         output_path = tmp_path / "test_extra.fits"
         extra = {"MY_KEY": ("my_value", "a custom comment"), "MY_INT": 42}
@@ -166,7 +172,9 @@ class TestExtraHeader:
                 assert "MY_KEY" not in hdu.header
 
     def test_no_extra_header_does_not_break(
-        self, tmp_path, sample_measurement_metadata: MeasurementMetadata
+        self,
+        tmp_path,
+        sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         output_path = tmp_path / "test_no_extra.fits"
         write_stokes_fits(
@@ -180,7 +188,9 @@ class TestExtraHeader:
         assert output_path.exists()
 
     def test_processing_history_integration(
-        self, tmp_path, sample_measurement_metadata: MeasurementMetadata
+        self,
+        tmp_path,
+        sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         history = ProcessingHistory()
         history.record("flat-field correction")

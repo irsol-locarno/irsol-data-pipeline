@@ -66,7 +66,7 @@ class TestSetupUser:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles",
             ) as mock_save,
             patch("builtins.print"),
         ):
@@ -87,7 +87,7 @@ class TestSetupUser:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles",
             ),
             patch("builtins.print"),
         ):
@@ -109,7 +109,7 @@ class TestSetupUser:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles",
             ),
             patch(
                 "irsol_data_pipeline.cli.commands.setup_command.user_command.Profile",
@@ -136,7 +136,7 @@ class TestSetupUser:
                 return_value=mock_profiles,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles"
+                "irsol_data_pipeline.cli.commands.setup_command.user_command.save_profiles",
             ),
             patch(
                 "irsol_data_pipeline.cli.commands.setup_command.user_command.Profile",

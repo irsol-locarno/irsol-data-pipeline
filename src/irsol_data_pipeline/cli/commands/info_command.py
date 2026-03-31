@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import time
 from contextlib import nullcontext
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from rich.console import Console
@@ -38,7 +38,6 @@ def _build_flow_groups_payload() -> list[dict[str, Any]]:
     Returns:
         List of flow group summaries.
     """
-
     return [
         {
             "name": group.name,
@@ -101,7 +100,7 @@ def _build_prefect_automations_payload() -> list[dict[str, str]]:
                 "name": remote_automation.name,
                 "description": remote_automation.description,
                 "deployed": True,
-            }
+            },
         )
     for missing_automation in missing_remote_automations:
         result.append(
@@ -109,7 +108,7 @@ def _build_prefect_automations_payload() -> list[dict[str, str]]:
                 "name": missing_automation.name,
                 "description": missing_automation.description,
                 "deployed": False,
-            }
+            },
         )
     return result
 
@@ -120,25 +119,23 @@ def _build_distributions_payload() -> list[dict[str, Any]]:
     Returns:
         List of distribution summaries.
     """
-
     return [
         {"name": name, "version": version}
         for name, version in __relevant_distribution_versions__
     ]
 
 
-def _build_info_payload(console: Optional[Console]) -> dict[str, Any]:
+def _build_info_payload(console: Console | None) -> dict[str, Any]:
     """Build the structured info payload.
 
     Returns:
         JSON-serializable runtime and metadata summary.
     """
-
     context = (
         nullcontext() if console is None else console.status("Gathering information...")
     )
 
-    def update(status: Optional[Status], message: str) -> None:
+    def update(status: Status | None, message: str) -> None:
         if status is None:
             return
         status.update(status=message)
@@ -162,13 +159,13 @@ def _build_info_payload(console: Optional[Console]) -> dict[str, Any]:
     except httpx.NetworkError:
         if console is not None:
             console.print(
-                "[bold red]Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?[/bold red]"
+                "[bold red]Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?[/bold red]",
             )
         else:
             print_json(
                 {
-                    "error": "Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?"
-                }
+                    "error": "Error connecting to Prefect server: are you sure prefect is running at the address configured via 'idp config user'?",
+                },
             )
         sys.exit(1)
     return result
@@ -180,7 +177,6 @@ def _render_info_table(payload: dict[str, Any]) -> None:
     Args:
         payload: Structured info payload.
     """
-
     runtime_table = Table(title="Runtime", show_header=True, header_style="bold cyan")
     runtime_table.add_column("Field", style="white", no_wrap=True)
     runtime_table.add_column("Value", style="white")
@@ -188,7 +184,9 @@ def _render_info_table(payload: dict[str, Any]) -> None:
     get_console().print(runtime_table)
 
     distributions_table = Table(
-        title="Distributions", show_header=True, header_style="bold cyan"
+        title="Distributions",
+        show_header=True,
+        header_style="bold cyan",
     )
     distributions_table.add_column("Name", style="white", no_wrap=True)
     distributions_table.add_column("Version", style="white")
@@ -214,11 +212,13 @@ def _render_info_table(payload: dict[str, Any]) -> None:
     has_prefect_variables = isinstance(payload["prefect_variables"], list)
     if not has_prefect_variables:
         get_console().print(
-            "[bold red]Error retrieving Prefect variables: make sure prefect is running via 'idp prefect start'[/bold red]"
+            "[bold red]Error retrieving Prefect variables: make sure prefect is running via 'idp prefect start'[/bold red]",
         )
     else:
         variables_table = Table(
-            title="Prefect Variables", show_header=True, header_style="bold cyan"
+            title="Prefect Variables",
+            show_header=True,
+            header_style="bold cyan",
         )
         variables_table.add_column("Variable", style="white", no_wrap=True)
         variables_table.add_column("Value", style="white")
@@ -232,11 +232,13 @@ def _render_info_table(payload: dict[str, Any]) -> None:
     has_prefect_secrets = isinstance(payload["prefect_secrets"], list)
     if not has_prefect_secrets:
         get_console().print(
-            "[bold red]Error retrieving Prefect secrets: make sure prefect is running via 'idp prefect start'[/bold red]"
+            "[bold red]Error retrieving Prefect secrets: make sure prefect is running via 'idp prefect start'[/bold red]",
         )
     else:
         secrets_table = Table(
-            title="Prefect Secrets", show_header=True, header_style="bold cyan"
+            title="Prefect Secrets",
+            show_header=True,
+            header_style="bold cyan",
         )
         secrets_table.add_column("Secret", style="white", no_wrap=True)
         secrets_table.add_column("Value", style="white")
@@ -250,11 +252,13 @@ def _render_info_table(payload: dict[str, Any]) -> None:
     has_prefect_automations = isinstance(payload["prefect_automations"], list)
     if not has_prefect_automations:
         get_console().print(
-            "[bold red]Error retrieving Prefect automations: make sure prefect is running via 'idp prefect start'[/bold red]"
+            "[bold red]Error retrieving Prefect automations: make sure prefect is running via 'idp prefect start'[/bold red]",
         )
     else:
         automation_table = Table(
-            title="Prefect Automations", show_header=True, header_style="bold cyan"
+            title="Prefect Automations",
+            show_header=True,
+            header_style="bold cyan",
         )
         automation_table.add_column("Automation", style="white", no_wrap=True)
         automation_table.add_column("Description", style="white")
@@ -276,11 +280,7 @@ def info(format: OutputFormat = "table") -> None:
     Args:
         format: Output format for the report.
     """
-
-    if format == "json":
-        console = None
-    else:
-        console = get_console()
+    console = None if format == "json" else get_console()
 
     payload = _build_info_payload(console)
 

@@ -14,7 +14,8 @@ from irsol_data_pipeline.cli.common import (
 from irsol_data_pipeline.cli.metadata import OutputFormat
 
 automations_app = App(
-    name="automations", help="List and configure Prefect automations."
+    name="automations",
+    help="List and configure Prefect automations.",
 )
 
 
@@ -41,7 +42,6 @@ def _get_automation_entries() -> list[AutomationReportEntry]:
     Returns:
         Current automation report entries.
     """
-
     from irsol_data_pipeline.prefect.automations import AUTOMATIONS, get_automation
 
     entries = []
@@ -69,7 +69,6 @@ def _render_automation_entries(entries: list[AutomationReportEntry]) -> None:
     Args:
         entries: Automation report entries to display.
     """
-
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Automation", style="white", no_wrap=True)
     table.add_column("Description", style="white")
@@ -96,7 +95,6 @@ def _serialize_automation_entries(
     Returns:
         JSON-serializable automation payload.
     """
-
     return {
         "automations": [
             {
@@ -105,7 +103,7 @@ def _serialize_automation_entries(
                 "deployed": entry.deployed,
             }
             for entry in entries
-        ]
+        ],
     }
 
 
@@ -119,7 +117,6 @@ def list_automations(
     Args:
         format: Output format for the report.
     """
-
     entries = _get_automation_entries()
     if format == "json":
         print_json(_serialize_automation_entries(entries))
@@ -137,7 +134,6 @@ def configure_automations() -> int:
     Returns:
         Exit code for the command.
     """
-
     from irsol_data_pipeline.prefect.automations import AUTOMATIONS, get_automation
 
     failed_count = 0

@@ -23,7 +23,9 @@ class TestRemoteFileSystem:
     RemoteFileSystem protocol."""
 
     def __init__(
-        self, existing_files: tuple[str, ...] = (), raise_on_upload: bool = False
+        self,
+        existing_files: tuple[str, ...] = (),
+        raise_on_upload: bool = False,
     ) -> None:
         self.existing_files = existing_files
         self.raise_on_upload = raise_on_upload
@@ -81,10 +83,10 @@ class TestProcessDayWebAssetCompatibility:
         assert result.failed == 0
         assert result.skipped == 0
         assert remote_fs.created_dir == [
-            str(Path(WebAssetFolderName.CONTEXT.value) / day.name)
+            str(Path(WebAssetFolderName.CONTEXT.value) / day.name),
         ]
         assert remote_fs.uploaded_files[0][1] == str(
-            Path(WebAssetFolderName.CONTEXT.value) / day.name / "5876_m01.jpg"
+            Path(WebAssetFolderName.CONTEXT.value) / day.name / "5876_m01.jpg",
         )
 
     def test_upload_successful_single_quick_look_file(self, tmp_path: Path) -> None:
@@ -101,10 +103,10 @@ class TestProcessDayWebAssetCompatibility:
         assert result.failed == 0
         assert result.skipped == 0
         assert remote_fs.created_dir == [
-            str(Path(WebAssetFolderName.QUICK_LOOK.value) / day.name)
+            str(Path(WebAssetFolderName.QUICK_LOOK.value) / day.name),
         ]
         assert remote_fs.uploaded_files[0][1] == str(
-            Path(WebAssetFolderName.QUICK_LOOK.value) / day.name / "5876_m01.jpg"
+            Path(WebAssetFolderName.QUICK_LOOK.value) / day.name / "5876_m01.jpg",
         )
 
     def test_upload_successful_mixed_files(self, tmp_path: Path) -> None:
@@ -146,7 +148,8 @@ class TestProcessDayWebAssetCompatibility:
         assert any("permission denied" in error for error in result.errors)
 
     def test_skips_existing_remote_destination_without_overwrite(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         day = _make_day(tmp_path)
         _write_png(day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}")
@@ -156,9 +159,9 @@ class TestProcessDayWebAssetCompatibility:
                 str(
                     Path(WebAssetFolderName.QUICK_LOOK.value)
                     / day.name
-                    / "5876_m01.jpg"
+                    / "5876_m01.jpg",
                 ),
-            )
+            ),
         )
 
         result = process_day_web_asset_compatibility(
@@ -172,7 +175,8 @@ class TestProcessDayWebAssetCompatibility:
         assert result.failed == 0
 
     def test_uploads_and_skips_existing_remote_destination_with_overwrite(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         day = _make_day(tmp_path)
         _write_png(day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}")
@@ -182,9 +186,9 @@ class TestProcessDayWebAssetCompatibility:
                 str(
                     Path(WebAssetFolderName.QUICK_LOOK.value)
                     / day.name
-                    / "5876_m01.jpg"
+                    / "5876_m01.jpg",
                 ),
-            )
+            ),
         )
 
         result = process_day_web_asset_compatibility(
@@ -207,9 +211,9 @@ class TestProcessDayWebAssetCompatibility:
                 str(
                     Path(WebAssetFolderName.QUICK_LOOK.value)
                     / day.name
-                    / "5876_m01.jpg"
+                    / "5876_m01.jpg",
                 ),
-            )
+            ),
         )
 
         result = process_day_web_asset_compatibility(

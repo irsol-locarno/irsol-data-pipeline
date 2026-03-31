@@ -35,7 +35,6 @@ def _resolve_vrange(
         Explicit `[vmin, vmax]` bounds or `None` when Matplotlib should use its
         default scaling.
     """
-
     if vrange is False:
         return None
     return vrange
@@ -53,7 +52,6 @@ def _require_vrange(vrange: Sequence[float] | Literal[False]) -> Sequence[float]
     Raises:
         ValueError: If no explicit range is available.
     """
-
     if vrange is False:
         raise ValueError("Expected explicit plotting range.")
     return vrange
@@ -235,7 +233,6 @@ def plot(
         solar_orientation: Optional pre-computed solar orientation information, used to draw a solar north arrow on the Stokes I panel when available.
         show: Display the figure interactively after rendering.
     """
-
     si, sq, su, sv = data
     if colors_lines is None:
         colors_lines = ["tab:blue", "tab:orange", "tab:green", "tab:red"]
@@ -244,28 +241,34 @@ def plot(
     if vrange_sq is False:
         center = np.median(sq)
         upper_limit = center + max(
-            abs(np.percentile(sq, 99) - center), abs(np.percentile(sq, 1) - center)
+            abs(np.percentile(sq, 99) - center),
+            abs(np.percentile(sq, 1) - center),
         )
         lower_limit = center - max(
-            abs(np.percentile(sq, 99) - center), abs(np.percentile(sq, 1) - center)
+            abs(np.percentile(sq, 99) - center),
+            abs(np.percentile(sq, 1) - center),
         )
         vrange_sq = [lower_limit, upper_limit]
     if vrange_su is False:
         center = np.median(su)
         upper_limit = center + max(
-            abs(np.percentile(su, 99) - center), abs(np.percentile(su, 1) - center)
+            abs(np.percentile(su, 99) - center),
+            abs(np.percentile(su, 1) - center),
         )
         lower_limit = center - max(
-            abs(np.percentile(su, 99) - center), abs(np.percentile(su, 1) - center)
+            abs(np.percentile(su, 99) - center),
+            abs(np.percentile(su, 1) - center),
         )
         vrange_su = [lower_limit, upper_limit]
     if vrange_sv is False:
         center = np.median(sv)
         upper_limit = center + max(
-            abs(np.percentile(sv, 99) - center), abs(np.percentile(sv, 1) - center)
+            abs(np.percentile(sv, 99) - center),
+            abs(np.percentile(sv, 1) - center),
         )
         lower_limit = center - max(
-            abs(np.percentile(sv, 99) - center), abs(np.percentile(sv, 1) - center)
+            abs(np.percentile(sv, 99) - center),
+            abs(np.percentile(sv, 1) - center),
         )
         vrange_sv = [lower_limit, upper_limit]
 
@@ -513,10 +516,20 @@ def plot(
         ax.yaxis.label.set_size(AXIS_LABEL_FONT_SIZE)
         ax.tick_params(axis="both", labelsize=16)
         ax.tick_params(
-            axis="x", which="major", direction="in", length=7, width=1.5, top=True
+            axis="x",
+            which="major",
+            direction="in",
+            length=7,
+            width=1.5,
+            top=True,
         )
         ax.tick_params(
-            axis="y", which="major", direction="in", length=7, width=1.5, right=True
+            axis="y",
+            which="major",
+            direction="in",
+            length=7,
+            width=1.5,
+            right=True,
         )
 
     fig.supylabel("Spatial dimension [px]", fontsize=AXIS_LABEL_FONT_SIZE)

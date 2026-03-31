@@ -9,7 +9,6 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from astropy.time import Time
@@ -43,7 +42,7 @@ class SlitGeometry:
     angle_solar: float
 
     # Derotator offset angle (radians), None if not available
-    derotator_offset: Optional[float]
+    derotator_offset: float | None
 
     # Mu value (limb darkening)
     mu: float
@@ -82,8 +81,7 @@ def compute_mu(obstime: datetime.datetime, slit_center: tuple[float, float]) -> 
 
     if limb_distance < 0.0:
         return -np.sqrt(1.0 - (1.0 - abs(limb_distance) / r0) ** 2)
-    else:
-        return np.sqrt(1.0 - (1.0 - abs(limb_distance) / r0) ** 2)
+    return np.sqrt(1.0 - (1.0 - abs(limb_distance) / r0) ** 2)
 
 
 def compute_slit_geometry(
@@ -114,7 +112,7 @@ def compute_slit_geometry(
     image_center = _get_image_center(metadata, use_limbguider)
     if image_center is None:
         raise ValueError(
-            f"No solar disc coordinates available for measurement {metadata.name}"
+            f"No solar disc coordinates available for measurement {metadata.name}",
         )
 
     image_center = (
@@ -129,7 +127,7 @@ def compute_slit_geometry(
     derotator_angle = (derotator_angle_deg + angle_correction) * np.pi / 180
 
     # Derotator offset
-    derotator_offset: Optional[float] = None
+    derotator_offset: float | None = None
     if metadata.derotator.offset is not None:
         derotator_offset = float(metadata.derotator.offset) * np.pi / 180
 
@@ -163,16 +161,13 @@ def compute_slit_geometry(
         [
             [np.cos(sun_p0_rad), -np.sin(sun_p0_rad)],
             [np.sin(sun_p0_rad), np.cos(sun_p0_rad)],
-        ]
+        ],
     )
     center_solar = rot_matrix.dot(image_center)
     center_solar_x, center_solar_y = float(center_solar[0]), float(center_solar[1])
 
     # Adjust derotator angle based on coordinate system
-    if needs_rotation:
-        angle2rotate = derotator_angle - sun_p0_rad
-    else:
-        angle2rotate = derotator_angle
+    angle2rotate = (derotator_angle - sun_p0_rad) if needs_rotation else derotator_angle
 
     # Get telescope specs
     telescope = metadata.telescope_name.lower()
@@ -192,7 +187,7 @@ def compute_slit_geometry(
         # Try to extract day name from the raw file path
         parts = Path(raw_file).parts
         for part in parts:
-            if len(part) == 6 and part.isdigit():
+            if len(part) == 6 and part.isdigit():  # noqa: PLR2004 - magic values are ok in this case
                 observation_name = part
                 break
 
@@ -223,7 +218,7 @@ def compute_slit_geometry(
 def _get_image_center(
     metadata: MeasurementMetadata,
     use_limbguider: bool,
-) -> Optional[tuple[float, float]]:
+) -> tuple[float, float] | None:
     """Get slit center coordinates, optionally from limbguider data.
 
     Args:

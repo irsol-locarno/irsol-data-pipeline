@@ -43,24 +43,30 @@ def calibrate_measurement(
     """
     simean = _prepare_mean_spectrum(stokes.i, stokes.v)
     ref_data, reference_peaks, lines, reference_params, shift = _find_refdata(
-        simean, refdata_dir
+        simean,
+        refdata_dir,
     )
 
     a1, a0, a1_err, a0_err, peak_pixels = _wavelength_calibration(
-        reference_peaks, lines, reference_params, shift, simean
+        reference_peaks,
+        lines,
+        reference_params,
+        shift,
+        simean,
     )
 
     # Check calibration quality
     if a1 != 0:
         a0_err_in_pix = a0_err / abs(a1)
         a1_err_in_pix = a1_err / abs(a1)
-        if a0_err_in_pix > 5 or a1_err_in_pix > 0.1:
+        if a0_err_in_pix > 5 or a1_err_in_pix > 0.1:  # noqa: PLR2004 - magic numbers are ok in this case
             import warnings
 
             warnings.warn(
                 f"High fitting error in wavelength calibration: "
                 f"a0_err = {a0_err_in_pix:.2f} pixels, "
-                f"a1_err = {a1_err_in_pix:.2f} pixels."
+                f"a1_err = {a1_err_in_pix:.2f} pixels.",
+                stacklevel=2,
             )
 
     return CalibrationResult(
@@ -92,7 +98,7 @@ def _prepare_mean_spectrum(si: np.ndarray, sv: np.ndarray) -> np.ndarray:
         np.max(v_intensity) - np.min(v_intensity) + 1e-12
     )
     rows_over_threshold = set(
-        np.where(np.abs(0.5 - v_intensity) >= V_STOKES_CUTOFF)[0].tolist()
+        np.where(np.abs(0.5 - v_intensity) >= V_STOKES_CUTOFF)[0].tolist(),
     )
 
     simean = np.zeros(si.shape[1])
@@ -103,10 +109,7 @@ def _prepare_mean_spectrum(si: np.ndarray, sv: np.ndarray) -> np.ndarray:
         simean += si[i]
         valid_count += 1
 
-    if valid_count == 0:
-        simean = np.mean(si, axis=0)
-    else:
-        simean = simean / valid_count
+    simean = np.mean(si, axis=0) if valid_count == 0 else simean / valid_count
 
     max_val = np.max(simean)
     if max_val > 0:
@@ -116,7 +119,8 @@ def _prepare_mean_spectrum(si: np.ndarray, sv: np.ndarray) -> np.ndarray:
 
 
 def _find_refdata(
-    simean: np.ndarray, refdata_dir: Path
+    simean: np.ndarray,
+    refdata_dir: Path,
 ) -> tuple[dict, np.ndarray, np.ndarray, list, float]:
     """Find the best-matching reference data by cross-correlation.
 

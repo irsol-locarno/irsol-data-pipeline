@@ -21,7 +21,6 @@ def _resolve_server_port_from_active_profile() -> int:
         Port declared in the active profile ``PREFECT_API_URL`` setting.
         Falls back to the project default port when unset or invalid.
     """
-
     profiles = load_profiles()
     active_profile = profiles.active_profile
     if active_profile is None:
@@ -41,10 +40,9 @@ def _resolve_server_port_from_active_profile() -> int:
 @prefect_app.command(name="start")
 def start_prefect_server() -> None:
     """Start the Prefect server using the active profile API port."""
-
     server_port = _resolve_server_port_from_active_profile()
 
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603 - sub-process is ok in this case
         [
             sys.executable,
             "-m",

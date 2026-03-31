@@ -19,12 +19,12 @@ class TestStartPrefectServer:
     def test_prefect_start_uses_active_profile_api_port(self) -> None:
         mock_profiles = Mock()
         mock_profiles.active_profile = Mock(
-            settings={"PREFECT_API_URL": "http://127.0.0.1:4201/api"}
+            settings={"PREFECT_API_URL": "http://127.0.0.1:4201/api"},
         )
 
         with (
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.subprocess.run"
+                "irsol_data_pipeline.cli.commands.prefect_command.subprocess.run",
             ) as mock_run,
             patch(
                 "irsol_data_pipeline.cli.commands.prefect_command.load_profiles",
@@ -104,12 +104,12 @@ class TestStartPrefectServer:
     def test_prefect_start_propagates_server_exit_code(self) -> None:
         mock_profiles = Mock()
         mock_profiles.active_profile = Mock(
-            settings={"PREFECT_API_URL": "http://127.0.0.1:4201/api"}
+            settings={"PREFECT_API_URL": "http://127.0.0.1:4201/api"},
         )
 
         with (
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.subprocess.run"
+                "irsol_data_pipeline.cli.commands.prefect_command.subprocess.run",
             ) as mock_run,
             patch(
                 "irsol_data_pipeline.cli.commands.prefect_command.load_profiles",

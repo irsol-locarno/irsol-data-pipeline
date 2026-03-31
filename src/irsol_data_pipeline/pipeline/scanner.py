@@ -99,7 +99,8 @@ def scan_flatfield_dataset(root: Path) -> ScanResult:
         ScanResult with discovered days and pending measurements.
     """
     return _scan_dataset(
-        root, is_measurment_already_processed=is_measurement_flat_field_processed
+        root,
+        is_measurment_already_processed=is_measurement_flat_field_processed,
     )
 
 
@@ -123,7 +124,7 @@ def build_scan_flatfield_report_markdown(root: Path, scan_result: ScanResult) ->
                 "## Pending Measurements",
                 "",
                 "No pending measurements found.",
-            ]
+            ],
         )
         return "\n".join(lines)
 
@@ -133,13 +134,13 @@ def build_scan_flatfield_report_markdown(root: Path, scan_result: ScanResult) ->
             "",
             "| Observation Day | Pending Count | Files |",
             "|---|---:|---|",
-        ]
+        ],
     )
 
     for day_name in sorted(scan_result.pending_measurements):
         files = sorted(p.name for p in scan_result.pending_measurements[day_name])
         lines.append(
-            f"| `{day_name}` | {len(files)} | {', '.join(f'`{f}`' for f in files)} |"
+            f"| `{day_name}` | {len(files)} | {', '.join(f'`{f}`' for f in files)} |",
         )
 
     return "\n".join(lines)
@@ -201,7 +202,7 @@ def build_slit_scan_report_markdown(root: Path, scan_result: ScanResult) -> str:
                 "## Pending Measurements",
                 "",
                 "No pending slit preview measurements found.",
-            ]
+            ],
         )
         return "\n".join(lines)
 
@@ -211,13 +212,13 @@ def build_slit_scan_report_markdown(root: Path, scan_result: ScanResult) -> str:
             "",
             "| Observation Day | Pending Count | Files |",
             "|---|---:|---|",
-        ]
+        ],
     )
 
     for day_name in sorted(scan_result.pending_measurements):
         files = sorted(p.name for p in scan_result.pending_measurements[day_name])
         lines.append(
-            f"| `{day_name}` | {len(files)} | {', '.join(f'`{f}`' for f in files)} |"
+            f"| `{day_name}` | {len(files)} | {', '.join(f'`{f}`' for f in files)} |",
         )
 
     return "\n".join(lines)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from astropy.io import fits
@@ -79,10 +78,10 @@ class ImportedFitsMeasurement:
     """Typed representation of a measurement loaded from FITS."""
 
     stokes: StokesParameters
-    calibration: Optional[CalibrationResult]
+    calibration: CalibrationResult | None
     header: fits.Header
-    metadata: Optional[MeasurementMetadata]
-    solar_orientation: Optional[SolarOrientationInfo]
+    metadata: MeasurementMetadata | None
+    solar_orientation: SolarOrientationInfo | None
 
 
 def load_fits_measurement(fits_path: Path) -> ImportedFitsMeasurement:
@@ -130,8 +129,8 @@ def load_fits_measurement(fits_path: Path) -> ImportedFitsMeasurement:
 
 def _extract_metadata(
     header: fits.Header,
-    primary_header: Optional[fits.Header] = None,
-) -> Optional[MeasurementMetadata]:
+    primary_header: fits.Header | None = None,
+) -> MeasurementMetadata | None:
     """Build a MeasurementMetadata from FITS header fields written by
     write_stokes_fits.
 
@@ -275,7 +274,7 @@ def _extract_metadata(
 def _extract_solar_orientation(
     primary_header: fits.Header,
     data_header: fits.Header,
-) -> Optional[SolarOrientationInfo]:
+) -> SolarOrientationInfo | None:
     """Reconstruct SolarOrientationInfo from stored FITS header values.
 
     Returns ``None`` if the required keys are absent (e.g. older files written
@@ -283,7 +282,7 @@ def _extract_solar_orientation(
     """
     # Read slit angle and sun_p0 directly from the FITS headers.
     slit_angle = _as_float(
-        _from_primary_or_data(primary_header, data_header, FITS_KEY_SLTANGL)
+        _from_primary_or_data(primary_header, data_header, FITS_KEY_SLTANGL),
     )
     sun_p0 = _as_float(_from_primary_or_data(primary_header, data_header, "SOLAR_P0"))
     if slit_angle is None or sun_p0 is None:
@@ -291,7 +290,9 @@ def _extract_solar_orientation(
 
     # needs_rotation is recoverable from the derotator coordinate system.
     coord_system_raw = _from_primary_or_data(
-        primary_header, data_header, FITS_KEY_DRCSYS
+        primary_header,
+        data_header,
+        FITS_KEY_DRCSYS,
     )
     coord_system = _as_int(coord_system_raw)
     try:
@@ -314,7 +315,7 @@ def _extract_solar_orientation(
     )
 
 
-def _extract_calibration(header: fits.Header) -> Optional[CalibrationResult]:
+def _extract_calibration(header: fits.Header) -> CalibrationResult | None:
     """Read calibration values from FITS headers when available."""
     wavecal_value = header.get("WAVECAL", 0)
     has_calibration = False
@@ -355,7 +356,7 @@ def _get_hdu(hdul: fits.HDUList, extname: str, fallback_index: int) -> fits.Imag
     hdu = hdul[fallback_index]
     if not isinstance(hdu, fits.ImageHDU):
         raise FitsImportError(
-            f"Expected ImageHDU at index {fallback_index} for {extname}"
+            f"Expected ImageHDU at index {fallback_index} for {extname}",
         )
     return hdu
 
@@ -364,14 +365,14 @@ def _to_spatial_spectral(data: np.ndarray) -> np.ndarray:
     """Convert FITS image data to (spatial, spectral) arrays for plotting."""
     arr = np.asarray(data)
     arr = np.squeeze(arr)
-    if arr.ndim != 2:
+    if arr.ndim != 2:  # noqa PLR2004 - magic numbers are ok in this case
         raise FitsImportError(
-            f"Expected 2D Stokes image after squeeze, got shape {arr.shape}"
+            f"Expected 2D Stokes image after squeeze, got shape {arr.shape}",
         )
     return arr.T
 
 
-def _as_float(value: object) -> Optional[float]:
+def _as_float(value: object) -> float | None:
     """Convert header value to float when possible."""
     if isinstance(value, (int, float)):
         return float(value)
@@ -383,7 +384,7 @@ def _as_float(value: object) -> Optional[float]:
     return None
 
 
-def _as_int(value: object) -> Optional[int]:
+def _as_int(value: object) -> int | None:
     """Convert a FITS header value to int when possible.
 
     FITS integer-typed header cards sometimes come back as Python ``float``
@@ -406,7 +407,7 @@ def _as_int(value: object) -> Optional[int]:
     return None
 
 
-def _as_str(value: object) -> Optional[str]:
+def _as_str(value: object) -> str | None:
     """Convert a FITS header value to a non-empty stripped string, or None.
 
     Returns ``None`` when ``value`` is ``None`` or reduces to an empty string
@@ -416,11 +417,11 @@ def _as_str(value: object) -> Optional[str]:
     if value is None:
         return None
     s = str(value).strip()
-    return s if s else None
+    return s or None
 
 
 def _from_primary_or_data(
-    primary: Optional[fits.Header],
+    primary: fits.Header | None,
     data: fits.Header,
     key: str,
 ) -> object:

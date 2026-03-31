@@ -64,6 +64,50 @@ exclude = [
     "/uv.lock",
 ]
 
+
+[tool.ruff]
+target-version = "py310"
+output-format = "full"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "B",         # flake8-bugbear
+    "S",         # flake8-bandit (security)
+    "UP",        # pyupgrade
+    "PL",        # pylint
+    "SIM",       # simplifications
+]
+ignore = [
+    "SIM117",   # Multi with statements are allowed
+    "PLC0415",  # imports are managed by isort
+    "PLR0911",  # Too many return statements
+    "PLR0912",  # Too many branches
+    "PLR0913",  # Too many arguments
+    "PLR0915",  # Too many statements
+    "E501",     # line too long is not to be worried about
+ ]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = [
+    "B017",    # assert blind exceptions is ok.
+    "S101",    # assert is fine in tests, Ruff. Relax.
+    "S105", "S106",  # passwords in test files are ok: these are mocked passwords.
+    "S108",    # temporary files manipulation in tests is ok
+    "PLR2004", # magic values in tests are normal
+    "ANN",     # type annotations can be loose in tests
+    "D100", "D101", "D102", "D103", "D104",  # docstrings in tests? come on
+    "ARG001", "ARG002",  # unused args - hello, pytest fixtures
+    "SLF001",  # accessing private attrs in tests is fine
+    "PLC2701", # private imports are fine in tests
+    "PLR6301", # pytest uses class style even if not needed
+    "RUF069",  # floating point comparison is ok in tests
+    "TRY003", "EM101",  # exception messages in tests don't matter
+]
+
+
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
 

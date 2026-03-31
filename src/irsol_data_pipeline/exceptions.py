@@ -18,7 +18,8 @@ class SmileCorrectionException(IrsolDataPipelineException, RuntimeError):
 
 
 class AutocalibrationReferenceFilesNotFound(
-    IrsolDataPipelineException, FileNotFoundError
+    IrsolDataPipelineException,
+    FileNotFoundError,
 ):
     """Raised when no autocalibration reference files are found for a
     measurement."""
@@ -99,7 +100,7 @@ class DatasetRootNotConfiguredError(IrsolDataPipelineException, ValueError):
         self.variable_name = variable_name
         super().__init__(
             "No dataset root path provided and no default Prefect Variable is set "
-            f"for '{variable_name}'."
+            f"for '{variable_name}'.",
         )
 
 

@@ -72,7 +72,7 @@ def _build_remote_fs(
     if not all(provided):
         raise ValueError(
             "piombo_hostname, piombo_username, and piombo_password must "
-            "all be provided together"
+            "all be provided together",
         )
     return SftpRemoteFileSystem(
         hostname=piombo_hostname,
@@ -91,8 +91,8 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
 
     Returns:
         Sorted observation-day contexts.
-    """
 
+    """
     observation_days = discover_observation_days(root)
     summary_lines = [
         "# Web Assets Compatibility Scan",
@@ -135,8 +135,8 @@ def run_day_web_assets_subflow_task(
 
     Returns:
         Day-level compatibility processing summary.
-    """
 
+    """
     return publish_web_assets_for_day(
         day_path=day_path,
         piombo_base_path=piombo_base_path,
@@ -181,7 +181,6 @@ def publish_web_assets_for_root(
     Returns:
         One DayProcessingResult per scanned day.
     """
-
     setup_logging()
     dataset_root = resolve_dataset_root(root)
     piombo_base_path = piombo_base_path or get_variable(
@@ -231,7 +230,7 @@ def publish_web_assets_for_root(
                         "jpeg_quality": jpeg_quality,
                         "force_overwrite": force_overwrite,
                     },
-                )
+                ),
             )
         results = [result_future.result() for result_future in result_futures]
 
@@ -273,7 +272,6 @@ def publish_web_assets_for_day(
     Returns:
         Day-level compatibility processing summary.
     """
-
     setup_logging()
 
     path = Path(day_path)

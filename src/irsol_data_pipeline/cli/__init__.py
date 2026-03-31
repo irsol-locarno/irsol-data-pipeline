@@ -120,5 +120,4 @@ def _meta(
 
 def main() -> None:
     """Run the root CLI application."""
-
     app.meta()

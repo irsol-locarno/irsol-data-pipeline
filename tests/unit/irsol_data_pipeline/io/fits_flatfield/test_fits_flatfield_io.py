@@ -151,7 +151,12 @@ class TestFitsFlatfieldImporter:
         primary_hdr["SRCFFPTH"] = "/data/ff_test.dat"
         primary_hdr["WAVELEN"] = 6302
         primary_hdr["TIMESTMP"] = datetime.datetime(
-            2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc
+            2024,
+            7,
+            13,
+            10,
+            0,
+            tzinfo=datetime.timezone.utc,
         ).isoformat()
         primary_hdr["OMAPFILE"] = companion_name
         hdul = fits.HDUList(
@@ -159,7 +164,7 @@ class TestFitsFlatfieldImporter:
                 fits.PrimaryHDU(header=primary_hdr),
                 fits.ImageHDU(data=np.ones((50, 200)), name="DUSTFLAT"),
                 fits.ImageHDU(data=np.ones((50, 200)), name="DESMILED"),
-            ]
+            ],
         )
         out_path = tmp_path / "ff_test_correction_cache.fits"
         hdul.writeto(str(out_path))

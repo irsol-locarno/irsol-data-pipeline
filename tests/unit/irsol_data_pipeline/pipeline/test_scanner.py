@@ -80,7 +80,7 @@ def test_build_scan_report_markdown_with_pending_measurements():
             "240713": [
                 Path("/dataset/2024/240713/reduced/6302_m1.dat"),
                 Path("/dataset/2024/240713/reduced/6302_m2.dat"),
-            ]
+            ],
         },
         total_measurements=5,
         total_pending=2,
@@ -207,7 +207,7 @@ def test_build_slit_scan_report_markdown_with_pending_measurements():
             "240713": [
                 Path("/dataset/2024/240713/reduced/6302_m1.dat"),
                 Path("/dataset/2024/240713/reduced/6302_m2.dat"),
-            ]
+            ],
         },
         total_measurements=5,
         total_pending=2,

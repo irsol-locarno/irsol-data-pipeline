@@ -89,7 +89,9 @@ class TestConvertPngToJpegWithFixtures:
     _JPEG_QUALITY = 80
 
     def test_png_to_jpeg_bytes_match_fixture(
-        self, fixture_dir: Path, tmp_path: Path
+        self,
+        fixture_dir: Path,
+        tmp_path: Path,
     ) -> None:
         """Converting the fixture PNG produces bytes identical to the fixture
         JPEG."""

@@ -18,7 +18,8 @@ from irsol_data_pipeline.prefect.automations import AUTOMATIONS
 
 class TestListAutomations:
     def test_list_automations_table_shows_deployed(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         mock_automation = MagicMock()
         mock_automation.name = "Crash zombie flows"
@@ -30,7 +31,7 @@ class TestListAutomations:
                 return_value=mock_automation,
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.automations_command._render_automation_entries"
+                "irsol_data_pipeline.cli.commands.prefect_command.automations_command._render_automation_entries",
             ) as mock_render,
         ):
             list_automations()
@@ -46,7 +47,7 @@ class TestListAutomations:
                 side_effect=RuntimeError("not found"),
             ),
             patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.automations_command._render_automation_entries"
+                "irsol_data_pipeline.cli.commands.prefect_command.automations_command._render_automation_entries",
             ) as mock_render,
         ):
             list_automations()
@@ -55,7 +56,8 @@ class TestListAutomations:
         assert all(not e.deployed for e in entries)
 
     def test_list_automations_json_output(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         mock_automation = MagicMock()
         mock_automation.name = "Crash zombie flows"
@@ -78,7 +80,8 @@ class TestListAutomations:
         assert payload["automations"][0]["deployed"] is True
 
     def test_list_automations_json_undeployed(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         with patch(
             "prefect.automations.Automation.read",

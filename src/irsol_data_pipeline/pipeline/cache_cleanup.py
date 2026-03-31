@@ -67,7 +67,7 @@ def cleanup_day_cache_files(
         Cleanup summary for the day.
     """
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
-        hours=hours
+        hours=hours,
     )
 
     with logger.contextualize(day=day.name, hours=hours, cutoff=cutoff.isoformat()):
@@ -210,7 +210,7 @@ def build_cache_cleanup_report(
             "",
             "| Day | Checked | Deleted | Deleted Size | Kept | Kept Size | Failed |",
             "|---|---:|---:|---:|---:|---:|---:|",
-        ]
+        ],
     )
     for r in sorted(results, key=lambda x: x.day_name):
         lines.append(
@@ -220,7 +220,7 @@ def build_cache_cleanup_report(
             f"| `{_format_bytes(r.deleted_bytes)}` "
             f"| {r.skipped_recent_files} "
             f"| `{_format_bytes(r.skipped_bytes)}` "
-            f"| {r.failed_files} |"
+            f"| {r.failed_files} |",
         )
 
     return "\n".join(lines)

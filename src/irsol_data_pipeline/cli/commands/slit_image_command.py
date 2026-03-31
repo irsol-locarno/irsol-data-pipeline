@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from cyclopts import App, Parameter, validators
 from rich.console import Console
@@ -71,7 +71,7 @@ _DAT_INPUT = Parameter(
         ext=("dat",),
         exists=True,
         dir_okay=False,
-    )
+    ),
 )
 
 _JSOC_EMAIL_OPTION = Parameter(
@@ -158,7 +158,7 @@ def generate(
     *,
     jsoc_email: Annotated[str, _JSOC_EMAIL_OPTION],
     output_dir: Annotated[Path, _OUTPUT_DIR_OPTION],
-    cache_dir: Annotated[Optional[Path], _CACHE_DIR_OPTION] = None,
+    cache_dir: Annotated[Path | None, _CACHE_DIR_OPTION] = None,
     force: Annotated[bool, _FORCE_OPTION] = False,
 ) -> None:
     """Generate a slit context image for a single measurement.
@@ -184,10 +184,13 @@ def generate(
 
     # Check if a slit preview or error artifact already exists
     if not force and is_measurement_slit_preview_generated(
-        resolved_output_dir, resolved_measurement.name
+        resolved_output_dir,
+        resolved_measurement.name,
     ):
         preview_path = processed_output_path(
-            resolved_output_dir, resolved_measurement.name, kind="slit_preview_png"
+            resolved_output_dir,
+            resolved_measurement.name,
+            kind="slit_preview_png",
         )
         error_path = processed_output_path(
             resolved_output_dir,
@@ -197,7 +200,7 @@ def generate(
         existing = [p for p in (preview_path, error_path) if p.exists()]
         console.print(
             "[yellow]Slit preview artifact already exists — skipping "
-            f"{resolved_measurement.name}:[/yellow]"
+            f"{resolved_measurement.name}:[/yellow]",
         )
         for p in existing:
             console.print(f"  [yellow]• {p.name}[/yellow]")
@@ -216,13 +219,13 @@ def generate(
             )
         console.print(
             f"[bold green]✓ Slit image generated for "
-            f"{resolved_measurement.name}[/bold green]"
+            f"{resolved_measurement.name}[/bold green]",
         )
         console.print(f"  Output directory: {resolved_output_dir}")
     except Exception as exc:
         console.print(
             f"[bold red]✗ Failed to generate slit image for "
-            f"{resolved_measurement.name}: {exc}[/bold red]"
+            f"{resolved_measurement.name}: {exc}[/bold red]",
         )
         error_path = processed_output_path(
             resolved_output_dir,
@@ -271,7 +274,7 @@ def generate_day(
     *,
     jsoc_email: Annotated[str, _JSOC_EMAIL_OPTION],
     output_dir: Annotated[
-        Optional[Path],
+        Path | None,
         Parameter(
             name="output-dir",
             help=(
@@ -304,7 +307,7 @@ def generate_day(
     if not reduced_dir.is_dir():
         console.print(
             f"[bold red]No 'reduced/' directory found under {resolved_day_path}. "
-            "Expected the observation day to contain a 'reduced/' sub-directory.[/bold red]"
+            "Expected the observation day to contain a 'reduced/' sub-directory.[/bold red]",
         )
         sys.exit(1)
 
@@ -322,7 +325,7 @@ def generate_day(
     ):
         console.print(
             f"[yellow]Output directory already exists and is not empty: "
-            f"{resolved_output_dir}[/yellow]"
+            f"{resolved_output_dir}[/yellow]",
         )
         if not Confirm.ask(
             "Proceed? Measurements with existing artifacts will be skipped "
@@ -341,18 +344,18 @@ def generate_day(
 
     console.print(
         f"[cyan]Generating slit images for observation day: "
-        f"{resolved_day_path.name}[/cyan]"
+        f"{resolved_day_path.name}[/cyan]",
     )
     console.print(f"  Reduced directory : {reduced_dir}")
     console.print(f"  Output directory  : {resolved_output_dir}")
     if force:
         console.print(
-            "  [yellow]--force: all measurements will be regenerated[/yellow]"
+            "  [yellow]--force: all measurements will be regenerated[/yellow]",
         )
 
     try:
         with console.status(
-            f"Generating slit images for day {resolved_day_path.name}…"
+            f"Generating slit images for day {resolved_day_path.name}…",
         ):
             result = generate_slit_images_for_day(
                 day=observation_day,
@@ -362,7 +365,7 @@ def generate_day(
     except Exception as exc:
         console.print(
             f"[bold red]✗ Unexpected error processing day "
-            f"{resolved_day_path.name}: {exc}[/bold red]"
+            f"{resolved_day_path.name}: {exc}[/bold red]",
         )
         sys.exit(1)
 
@@ -374,9 +377,9 @@ def generate_day(
     elif result.processed == 0 and result.skipped > 0:
         console.print(
             "[yellow]All measurements were already processed and skipped. "
-            "Use --force to regenerate.[/yellow]"
+            "Use --force to regenerate.[/yellow]",
         )
     else:
         console.print(
-            f"[bold green]✓ Day {resolved_day_path.name} complete.[/bold green]"
+            f"[bold green]✓ Day {resolved_day_path.name} complete.[/bold green]",
         )

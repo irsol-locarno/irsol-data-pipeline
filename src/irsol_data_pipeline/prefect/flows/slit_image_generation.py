@@ -64,7 +64,6 @@ def _build_min_age_day_predicate(
     Returns:
         Predicate returning ``True`` for eligible observation days.
     """
-
     cutoff = today - datetime.timedelta(days=min_age_days)
 
     def _predicate(day: ObservationDay) -> bool:
@@ -85,7 +84,6 @@ def _resolve_jsoc_data_delay_days(raw_value: object) -> int:
     Returns:
         Non-negative delay in days.
     """
-
     try:
         delay_days = int(str(raw_value).strip())
     except (TypeError, ValueError):
@@ -189,7 +187,7 @@ def generate_slit_images(
         logger.error(
             "No JSOC email provided. Set the "
             f"'{PrefectVariableName.JSOC_EMAIL.value}' Prefect Variable "
-            "or pass 'jsoc_email' as a flow parameter."
+            "or pass 'jsoc_email' as a flow parameter.",
         )
         return []
 
@@ -199,7 +197,7 @@ def generate_slit_images(
         get_variable(
             PrefectVariableName.JSOC_DATA_DELAY_DAYS,
             default=str(DEFAULT_JSOC_DATA_DELAY_DAYS),
-        )
+        ),
     )
     logger.info("Starting slit image generation", root=dataset_root, jsoc_email=email)
 
@@ -274,10 +272,11 @@ def generate_daily_slit_images(
         logger.error(
             "No JSOC email provided. Set the "
             f"'{PrefectVariableName.JSOC_EMAIL.value}' Prefect Variable "
-            "or pass 'jsoc_email' as a flow parameter."
+            "or pass 'jsoc_email' as a flow parameter.",
         )
         return DayProcessingResult(
-            day_name=Path(day_path).name, errors=["No JSOC email"]
+            day_name=Path(day_path).name,
+            errors=["No JSOC email"],
         )
 
     logger.info(

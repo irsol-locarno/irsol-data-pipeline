@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 import re
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from loguru import logger
@@ -28,8 +27,8 @@ class CalibrationResult(BaseModel):
     pixel_scale_error: float  # 1-sigma error on a1
     wavelength_offset_error: float  # 1-sigma error on a0
     reference_file: str  # name of reference data file used
-    peak_pixels: Optional[np.ndarray] = None  # pixel positions of fitted peaks
-    reference_lines: Optional[np.ndarray] = None  # wavelengths of the reference lines
+    peak_pixels: np.ndarray | None = None  # pixel positions of fitted peaks
+    reference_lines: np.ndarray | None = None  # wavelengths of the reference lines
 
     def pixel_to_wavelength(self, pixel: float) -> float:
         """Convert a pixel position to wavelength in Angstrom."""
@@ -141,7 +140,7 @@ class SolarOrientationInfo(BaseModel):
     rotation was applied to bring the slit angle into the solar frame."""
 
 
-def _parse_yes_no(value: object) -> Optional[bool]:
+def _parse_yes_no(value: object) -> bool | None:
     """Parse a yes/no string into a boolean."""
     if value is None:
         return None
@@ -163,22 +162,22 @@ class ReductionInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    software: Optional[str] = None
-    status: Optional[bool] = None
-    file: Optional[str] = None
-    number_of_files: Optional[int] = None
-    file_dc_used: Optional[str] = None
-    dcfit: Optional[str] = None
-    demodulation_matrix: Optional[str] = None
+    software: str | None = None
+    status: bool | None = None
+    file: str | None = None
+    number_of_files: int | None = None
+    file_dc_used: str | None = None
+    dcfit: str | None = None
+    demodulation_matrix: str | None = None
     order_of_rows: list[int] = Field(default_factory=list)
-    mode: Optional[str] = None
-    tcu_method: Optional[str] = None
-    pixels_replaced: Optional[str] = None
-    outfname: Optional[str] = None
+    mode: str | None = None
+    tcu_method: str | None = None
+    pixels_replaced: str | None = None
+    outfname: str | None = None
 
     @field_validator("status", mode="before")
     @classmethod
-    def _coerce_status(cls, v: object) -> Optional[bool]:
+    def _coerce_status(cls, v: object) -> bool | None:
         return _parse_yes_no(v)
 
     @field_validator("order_of_rows", mode="before")
@@ -194,14 +193,14 @@ class CalibrationInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    software: Optional[str] = None
-    file: Optional[str] = None
-    status: Optional[bool] = None
-    description: Optional[str] = None
+    software: str | None = None
+    file: str | None = None
+    status: bool | None = None
+    description: str | None = None
 
     @field_validator("status", mode="before")
     @classmethod
-    def _coerce_status(cls, v: object) -> Optional[bool]:
+    def _coerce_status(cls, v: object) -> bool | None:
         return _parse_yes_no(v)
 
 
@@ -210,10 +209,10 @@ class CameraInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    identity: Optional[str] = None
-    ccd: Optional[str] = None
-    temperature: Optional[float] = None
-    position: Optional[str] = None
+    identity: str | None = None
+    ccd: str | None = None
+    temperature: float | None = None
+    position: str | None = None
 
 
 class SpectrographInfo(BaseModel):
@@ -221,10 +220,10 @@ class SpectrographInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    alpha: Optional[float] = None
-    grtwl: Optional[float] = None
-    order: Optional[int] = None
-    slit: Optional[float] = None
+    alpha: float | None = None
+    grtwl: float | None = None
+    order: int | None = None
+    slit: float | None = None
 
 
 class DerotatorInfo(BaseModel):
@@ -232,9 +231,9 @@ class DerotatorInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    coordinate_system: Optional[int] = None
-    position_angle: Optional[float] = None
-    offset: Optional[float] = None
+    coordinate_system: int | None = None
+    position_angle: float | None = None
+    offset: float | None = None
 
 
 class TCUInfo(BaseModel):
@@ -242,10 +241,10 @@ class TCUInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    mode: Optional[int] = None
-    retarder_name: Optional[str] = None
-    retarder_wl_parameter: Optional[str] = None
-    positions: Optional[str] = None
+    mode: int | None = None
+    retarder_name: str | None = None
+    retarder_wl_parameter: str | None = None
+    positions: str | None = None
 
 
 class MeasurementMetadata(BaseModel):
@@ -264,39 +263,41 @@ class MeasurementMetadata(BaseModel):
     """
 
     model_config = ConfigDict(
-        frozen=True, arbitrary_types_allowed=True, populate_by_name=True
+        frozen=True,
+        arbitrary_types_allowed=True,
+        populate_by_name=True,
     )
 
     # --- measurement core ---
-    file: Optional[str] = None
+    file: str | None = None
     telescope_name: str
-    instrument_post_focus: Optional[str] = None
+    instrument_post_focus: str | None = None
     instrument: str
-    modulator_type: Optional[str] = None
+    modulator_type: str | None = None
     project: str = ""
     observer: str = ""
     wavelength: int
     name: str
     # Datetimes are parsed and already in UTC timezone. The original raw string is kept in _raw for reference.
     datetime_start: datetime.datetime = Field(validation_alias="datetime")
-    datetime_end: Optional[datetime.datetime] = None
+    datetime_end: datetime.datetime | None = None
     type: str
     id: int
-    sequence_length: Optional[int] = None
-    sub_sequence_length: Optional[int] = None
-    sub_sequence_name: Optional[str] = None
-    stokes_vector: Optional[str] = None
-    integration_time: Optional[float] = None
+    sequence_length: int | None = None
+    sub_sequence_length: int | None = None
+    sub_sequence_name: str | None = None
+    stokes_vector: str | None = None
+    integration_time: float | None = None
     images: list[int] = Field(default_factory=list)
-    image_type: Optional[str] = None
-    image_type_x: Optional[str] = None
-    image_type_y: Optional[str] = None
-    guiding_status: Optional[int] = None
-    pig_intensity: Optional[int] = None
-    solar_disc_coordinates: Optional[str] = None
-    solar_p0: Optional[float] = Field(default=None, validation_alias="sun_p0")
-    limbguider_status: Optional[int] = None
-    polcomp_status: Optional[int] = None
+    image_type: str | None = None
+    image_type_x: str | None = None
+    image_type_y: str | None = None
+    guiding_status: int | None = None
+    pig_intensity: int | None = None
+    solar_disc_coordinates: str | None = None
+    solar_p0: float | None = Field(default=None, validation_alias="sun_p0")
+    limbguider_status: int | None = None
+    polcomp_status: int | None = None
 
     # --- sub-models ---
     camera: CameraInfo = Field(default_factory=CameraInfo)
@@ -307,21 +308,21 @@ class MeasurementMetadata(BaseModel):
     calibration: CalibrationInfo = Field(default_factory=CalibrationInfo)
 
     # --- top-level flags outside the groups above ---
-    flatfield_status: Optional[bool] = None
-    global_noise: Optional[str] = None
-    global_mean: Optional[str] = None
+    flatfield_status: bool | None = None
+    global_noise: str | None = None
+    global_mean: str | None = None
 
     # Keep the raw decoded dict for any field we haven't explicitly modeled.
     _raw: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @field_validator("flatfield_status", mode="before")
     @classmethod
-    def _coerce_flatfield_status(cls, v: object) -> Optional[bool]:
+    def _coerce_flatfield_status(cls, v: object) -> bool | None:
         return _parse_yes_no(v)
 
     @field_validator("datetime_start", "datetime_end", mode="before")
     @classmethod
-    def _coerce_datetime(cls, v: object) -> Optional[datetime.datetime]:
+    def _coerce_datetime(cls, v: object) -> datetime.datetime | None:
         if v is None:
             return None
         if isinstance(v, datetime.datetime):
@@ -338,7 +339,7 @@ class MeasurementMetadata(BaseModel):
         return v
 
     @staticmethod
-    def from_info_array(info: np.ndarray) -> "MeasurementMetadata":
+    def from_info_array(info: np.ndarray) -> MeasurementMetadata:
         """Build metadata from a ZIMPOL info Nx2 byte array.
 
         Raw keys are routed to sub-models based on their dot-separated
@@ -393,28 +394,28 @@ class MeasurementMetadata(BaseModel):
         return instance
 
     @property
-    def solar_x(self) -> Optional[float]:
+    def solar_x(self) -> float | None:
         """Solar disc X coordinate in arcsec, parsed from
         ``solar_disc_coordinates``."""
         if self.solar_disc_coordinates is None:
             return None
         parts = self.solar_disc_coordinates.strip().split()
-        if len(parts) < 2:
+        if len(parts) < 2:  # noqa: PLR2004 - magic numbers are ok in this case
             return None
         return float(parts[0])
 
     @property
-    def solar_y(self) -> Optional[float]:
+    def solar_y(self) -> float | None:
         """Solar disc Y coordinate in arcsec, parsed from
         ``solar_disc_coordinates``."""
         if self.solar_disc_coordinates is None:
             return None
         parts = self.solar_disc_coordinates.strip().split()
-        if len(parts) < 2:
+        if len(parts) < 2:  # noqa: PLR2004 - magic numbers are ok in this case
             return None
         return float(parts[1])
 
-    def get_raw(self, key: str) -> Optional[str]:
+    def get_raw(self, key: str) -> str | None:
         """Access any raw metadata key that is not explicitly modeled."""
         return self._raw.get(key)
 
@@ -464,7 +465,7 @@ def _parse_zimpol_datetime(dt_str: str) -> datetime.datetime:
         elif minute_part is not None:
             hours = hour_digits.zfill(2)
             minutes = minute_part
-        elif len(hour_digits) <= 2:
+        elif len(hour_digits) <= 2:  # noqa: PLR2004 - magic numbers are ok in this case
             hours = hour_digits.zfill(2)
             minutes = "00"
         else:
@@ -535,7 +536,7 @@ class MaxDeltaPolicy(BaseModel):
     """
 
     default_max_delta: datetime.timedelta = Field(
-        default_factory=lambda: DEFAULT_MAX_DELTA
+        default_factory=lambda: DEFAULT_MAX_DELTA,
     )
 
     def get_max_delta(

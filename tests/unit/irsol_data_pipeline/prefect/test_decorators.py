@@ -9,10 +9,6 @@ import pytest
 
 from irsol_data_pipeline.prefect.decorators import flow, prefect_enabled, task
 
-# ---------------------------------------------------------------------------
-# prefect_enabled()
-# ---------------------------------------------------------------------------
-
 
 class TestPrefectEnabled:
     @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "Yes", " true "])

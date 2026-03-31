@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from loguru import logger
 
 from irsol_data_pipeline.core.models import (
@@ -32,7 +30,7 @@ from irsol_data_pipeline.prefect.utils import (
 
 def process_observation_day(
     day: ObservationDay,
-    max_delta_policy: Optional[MaxDeltaPolicy] = None,
+    max_delta_policy: MaxDeltaPolicy | None = None,
     force: bool = False,
 ) -> DayProcessingResult:
     """Process all measurements for a single observation day.
@@ -96,7 +94,8 @@ def process_observation_day(
         for meas_path in sorted(measurement_paths):
             with logger.contextualize(file=meas_path.name):
                 if not force and is_measurement_flat_field_processed(
-                    day.processed_dir, meas_path.name
+                    day.processed_dir,
+                    meas_path.name,
                 ):
                     logger.debug("Skipping already processed", file=meas_path.name)
                     result.skipped += 1

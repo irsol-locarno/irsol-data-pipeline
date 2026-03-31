@@ -78,7 +78,7 @@ class TestComputeSolarOrientation:
             {
                 "measurement.derotator.coordinate_system": "0",
                 "measurement.derotator.position_angle": "30.0",
-            }
+            },
         )
         p0 = 15.0  # degrees
         with patch("irsol_data_pipeline.core.solar_orientation.P") as mock_p:
@@ -94,7 +94,7 @@ class TestComputeSolarOrientation:
             {
                 "measurement.derotator.coordinate_system": "1",
                 "measurement.derotator.position_angle": "30.0",
-            }
+            },
         )
         with patch("irsol_data_pipeline.core.solar_orientation.P") as mock_p:
             mock_p.return_value.value = 20.0

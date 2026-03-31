@@ -281,7 +281,8 @@ class TestDeleteEmptyDirs:
         assert not parent_dir.exists()
 
     def test_delete_empty_dirs_recursively_but_not_those_containing_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ):
         parent_dir = tmp_path / "sub-dir"
         empty_child_dir = parent_dir / "sub-sub-dir-empty"

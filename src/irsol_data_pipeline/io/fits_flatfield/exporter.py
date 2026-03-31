@@ -82,12 +82,12 @@ def write_correction_data(
                         data=np.asarray(data.desmiled, dtype=np.float64),
                         header=desmiled_hdr,
                     ),
-                ]
+                ],
             )
             hdul.writeto(str(path), overwrite=True)
         except Exception as exc:
             raise FlatfieldCorrectionExportError(
-                f"Failed to write FlatFieldCorrection to {path}: {exc}"
+                f"Failed to write FlatFieldCorrection to {path}: {exc}",
             ) from exc
 
         logger.debug("Flat-field correction FITS written")

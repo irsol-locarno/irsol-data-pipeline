@@ -93,7 +93,6 @@ def _string_value(value: object, *, default: str = "-") -> str:
     Returns:
         Printable string value.
     """
-
     if isinstance(value, str) and value:
         return value
     return default
@@ -137,8 +136,8 @@ def _analyze_running_flows_and_tasks(
                 running_flow_runs = await client.read_flow_runs(
                     flow_run_filter=FlowRunFilter(
                         state=FlowRunFilterState(
-                            type=FlowRunFilterStateType(any_=["RUNNING"])
-                        )
+                            type=FlowRunFilterStateType(any_=["RUNNING"]),
+                        ),
                     ),
                     sort=FlowRunSort.EXPECTED_START_TIME_DESC,
                     limit=200,
@@ -224,7 +223,7 @@ def _analyze_running_flows_and_tasks(
                                 getattr(flow_run, "state_name", None),
                                 default="RUNNING",
                             ),
-                        )
+                        ),
                     )
 
                 running_flow_summaries.sort(
@@ -267,7 +266,6 @@ def _check_prefect_status(host: str, port: int) -> PrefectStatusReport:
     Returns:
         Structured status report for the expected local Prefect server.
     """
-
     dashboard_url = build_prefect_server_base_url(host, port)
     healthcheck_url = build_prefect_api_healthcheck_url(host, port)
 
@@ -318,7 +316,6 @@ def _render_status_report(report: PrefectStatusReport) -> None:
     Args:
         report: Status report to display.
     """
-
     title_style = "bold italic green" if report.reachable else "bold italic red"
     header_style = "bold green" if report.reachable else "bold red"
     status_style = "green" if report.reachable else "red"
@@ -350,7 +347,6 @@ def _render_deep_analysis_report(report: PrefectDeepAnalysisReport) -> None:
     Args:
         report: Deep-analysis report to display.
     """
-
     summary_table = Table(
         title="Prefect Deep Analysis",
         show_header=True,
@@ -409,7 +405,6 @@ def status(
     Returns:
         Zero when the local Prefect dashboard is reachable, otherwise one.
     """
-
     report = _check_prefect_status(host=host, port=port)
     payload: dict[str, object] = report.model_dump()
     deep_report: PrefectDeepAnalysisReport | None = None
@@ -438,12 +433,12 @@ def status(
                     _render_deep_analysis_report(
                         PrefectDeepAnalysisReport(
                             detail=str(
-                                fallback.get("detail", "Deep analysis unavailable.")
+                                fallback.get("detail", "Deep analysis unavailable."),
                             ),
                             flow_run_count=0,
                             running_task_count=0,
                             running_flows=[],
-                        )
+                        ),
                     )
 
     return 0 if report.reachable else 1

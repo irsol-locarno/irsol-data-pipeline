@@ -2,7 +2,7 @@
 
 import pytest
 
-import irsol_data_pipeline.io.fits.constants as constants
+from irsol_data_pipeline.io.fits import constants
 
 
 @pytest.mark.parametrize(

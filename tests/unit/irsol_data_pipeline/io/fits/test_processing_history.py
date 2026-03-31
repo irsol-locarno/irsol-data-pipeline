@@ -61,7 +61,10 @@ class TestProcessingHistory:
         ],
     )
     def test_value_format(
-        self, step: str, details: str | None, expected_value: str
+        self,
+        step: str,
+        details: str | None,
+        expected_value: str,
     ) -> None:
         history = ProcessingHistory()
         history.record(step, details)

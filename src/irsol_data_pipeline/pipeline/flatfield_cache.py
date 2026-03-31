@@ -10,7 +10,6 @@ import datetime
 import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
 from loguru import logger
 
@@ -50,8 +49,8 @@ class FlatFieldCache:
         self,
         wavelength: int,
         timestamp: datetime.datetime,
-        max_delta: Optional[datetime.timedelta] = None,
-    ) -> Optional[FlatFieldCorrection]:
+        max_delta: datetime.timedelta | None = None,
+    ) -> FlatFieldCorrection | None:
         """Find the closest flat-field correction for a given wavelength and
         time.
 
@@ -73,8 +72,8 @@ class FlatFieldCache:
             )
             return None
 
-        best: Optional[FlatFieldCorrection] = None
-        best_delta: Optional[datetime.timedelta] = None
+        best: FlatFieldCorrection | None = None
+        best_delta: datetime.timedelta | None = None
 
         for correction in candidates:
             delta = abs(correction.timestamp - timestamp)
@@ -99,15 +98,16 @@ class FlatFieldCache:
 def _analyze_flatfield(path: Path) -> FlatFieldCorrection:
     """Helper function to analyze a single flat-field file for parallel
     processing."""
-
     stokes, info = dat_io.read(path)
     metadata = MeasurementMetadata.from_info_array(info)
 
     with NamedTemporaryFile(suffix=".json") as f:
-        with open(f.name, "w") as json_file:
+        with Path(f.name).open("w") as json_file:
             json.dump(metadata.model_dump(), json_file, default=str)
         create_prefect_json_report(
-            path=Path(f.name), title="Flatfield metadata", key=f"ff-{path.name}"
+            path=Path(f.name),
+            title="Flatfield metadata",
+            key=f"ff-{path.name}",
         )
 
     dust_flat, offset_map, desmiled = analyze_flatfield(stokes.i)
@@ -127,7 +127,7 @@ def build_flatfield_cache(
     flatfield_paths: list[Path],
     max_delta: datetime.timedelta = DEFAULT_MAX_DELTA,
     allow_cached_data: bool = True,
-    cache_dir: Optional[Path] = None,
+    cache_dir: Path | None = None,
 ) -> FlatFieldCache:
     """Build a FlatFieldCache by analyzing all flat-field files.
 

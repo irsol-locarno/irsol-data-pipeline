@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from loguru import logger
@@ -23,14 +22,11 @@ def create_config_for_data(flat_field: np.ndarray) -> Config:
     Returns:
         spectroflat Config object.
     """
-    if flat_field.ndim == 2:
-        ff_shape = flat_field.shape
-    elif flat_field.ndim == 3:
-        ff_shape = flat_field.shape[1:]
-    else:
+    if flat_field.ndim not in (2, 3):
         raise InvalidMeasurementDataException(
-            f"Flat field must be 2D or 3D, got shape {flat_field.shape}"
+            f"Flat field must be 2D or 3D, got shape {flat_field.shape}",
         )
+    ff_shape = flat_field.shape if flat_field.ndim == 2 else flat_field.shape[1:]  # noqa: PLR2004 - magic numbers are ok in this case
 
     roi = parse_shape(f"[1:{ff_shape[0] - 2},1:{ff_shape[1] - 2}]")
 
@@ -65,8 +61,8 @@ def create_config_for_data(flat_field: np.ndarray) -> Config:
 
 def analyze_flatfield(
     flat_field_si: np.ndarray,
-    reports_path: Optional[Path] = None,
-    config: Optional[Config] = None,
+    reports_path: Path | None = None,
+    config: Config | None = None,
 ) -> tuple[np.ndarray, OffsetMap, np.ndarray]:
     """Run spectroflat analysis on a flat-field Stokes I array.
 
@@ -81,7 +77,7 @@ def analyze_flatfield(
     config = config or create_config_for_data(flat_field_si)
 
     # Ensure data is 3D for spectroflat
-    if flat_field_si.ndim == 2:
+    if flat_field_si.ndim == 2:  # noqa: PLR2004 - magic numbers are ok in this case
         ff_data = np.expand_dims(flat_field_si, axis=0)
     else:
         ff_data = flat_field_si

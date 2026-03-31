@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
 from loguru import logger
 
@@ -41,7 +40,7 @@ def process_single_measurement(
     measurement_path: Path,
     processed_dir: Path,
     ff_cache: FlatFieldCache,
-    max_delta_policy: Optional[MaxDeltaPolicy] = None,
+    max_delta_policy: MaxDeltaPolicy | None = None,
 ) -> None:
     """Process a single measurement.
 
@@ -115,10 +114,12 @@ def _process_single_measurement(
         solar_orientation = compute_solar_orientation(measurement_metadata)
 
         with NamedTemporaryFile(suffix=".json") as f:
-            with open(f.name, "w") as json_file:
+            with Path(f.name).open("w") as json_file:
                 json.dump(measurement_metadata.model_dump(), json_file, default=str)
             create_prefect_json_report(
-                path=Path(f.name), title="Measurement metadata", key=f"meas-{stem}"
+                path=Path(f.name),
+                title="Measurement metadata",
+                key=f"meas-{stem}",
             )
 
         # 2. Find closest flat-field
@@ -136,10 +137,11 @@ def _process_single_measurement(
 
         if ff_correction is None:
             raise FlatFieldAssociationNotFoundException(
-                measurement=measurement, max_delta=max_delta
+                measurement=measurement,
+                max_delta=max_delta,
             )
         ff_time_delta = abs(
-            (ff_correction.timestamp - measurement.timestamp).total_seconds()
+            (ff_correction.timestamp - measurement.timestamp).total_seconds(),
         )
         logger.info(
             "Using flat-field correction",
@@ -159,7 +161,7 @@ def _process_single_measurement(
             "Flat-field correction",
             details=(
                 f"Associated flat-field: {ff_correction.source_flatfield_path.name} "
-                + f"Delta Time: {abs((ff_correction.timestamp - measurement.timestamp).total_seconds())} seconds"
+                f"Delta Time: {abs((ff_correction.timestamp - measurement.timestamp).total_seconds())} seconds"
             ),
         )
 
@@ -190,7 +192,7 @@ def _process_single_measurement(
             measurement_metadata,
             calibration=calibration,
             solar_orientation=solar_orientation,
-            extra=processing_history.to_fits_header_entries(),
+            extra_header=processing_history.to_fits_header_entries(),
         )
 
         # 6. Save flat-field correction data (FITS)

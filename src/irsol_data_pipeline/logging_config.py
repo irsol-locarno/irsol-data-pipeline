@@ -61,7 +61,7 @@ def setup_logging(
         retention: How long to keep rotated logs (e.g. "1 week", "30 days").
         force: Reconfigure logging even if setup was already called.
     """
-    global _configured
+    global _configured  # noqa PLW0603 - it's ok to handle globals in this case
 
     if _configured and not force:
         return

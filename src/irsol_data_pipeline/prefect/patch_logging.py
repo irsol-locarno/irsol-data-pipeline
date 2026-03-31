@@ -22,7 +22,7 @@ def _extract_traceback_message(record: dict) -> str | None:
                 exception.type,
                 exception.value,
                 exception.traceback,
-            )
+            ),
         ).strip()
     except Exception:
         return str(exception)
@@ -31,7 +31,7 @@ def _extract_traceback_message(record: dict) -> str | None:
 def setup_logging(level: LOG_LEVEL = "DEBUG"):
     """Configure loguru logging with a Prefect sink that forwards logs to the
     run logger."""
-    global _prefect_sink_added
+    global _prefect_sink_added  # noqa PLW0603 - it's ok to handle globals in this case
     if _prefect_sink_added:
         return
 
@@ -46,10 +46,11 @@ def setup_logging(level: LOG_LEVEL = "DEBUG"):
 
         # loguru and stdlib share numeric levels (DEBUG=10, INFO=20, etc.)
         # Map loguru-only levels: TRACE(5)->DEBUG(10), SUCCESS(25)->INFO(20)
+        SUCCESS_LEVEL = 25
         level_no = record["level"].no
         if level_no < stdlib_logging.DEBUG:
             level_no = stdlib_logging.DEBUG
-        elif level_no == 25:  # SUCCESS
+        elif level_no == SUCCESS_LEVEL:
             level_no = stdlib_logging.INFO
 
         traceback_message = _extract_traceback_message(record)

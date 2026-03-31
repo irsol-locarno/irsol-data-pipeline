@@ -39,7 +39,6 @@ def _upload_candidate(
     ensured_remote_dirs: set[str],
 ) -> None:
     """Upload one converted candidate to remote or local destination."""
-
     remote_dir = str(PurePosixPath(candidate.target_path).parent)
     if remote_dir not in ensured_remote_dirs:
         remote_fs.ensure_dir(remote_dir)
@@ -103,7 +102,8 @@ def process_day_web_asset_compatibility(
                     logger.info("No measurements found")
                 else:
                     logger.info(
-                        "Found measurements to convert", count=len(measurement_names)
+                        "Found measurements to convert",
+                        count=len(measurement_names),
                     )
                     for measurement_name in measurement_names:
                         with logger.contextualize(measurement=measurement_name):
@@ -117,7 +117,7 @@ def process_day_web_asset_compatibility(
                                 staged_jpeg = (
                                     staging_root
                                     / WebAssetFolderName.for_asset_kind(
-                                        source.kind
+                                        source.kind,
                                     ).value
                                     / day.name
                                     / f"{measurement_name}.jpg"
@@ -138,12 +138,12 @@ def process_day_web_asset_compatibility(
                                             source_png=source.source_path,
                                             staged_jpeg=staged_jpeg,
                                             target_path=target_path,
-                                        )
+                                        ),
                                     )
 
                     if not assets_to_convert:
                         logger.info(
-                            "All assets seem to be already deployed, nothing to convert/upload"
+                            "All assets seem to be already deployed, nothing to convert/upload",
                         )
                     else:
                         logger.info(
@@ -188,7 +188,9 @@ def process_day_web_asset_compatibility(
                             ):
                                 try:
                                     _upload_candidate(
-                                        candidate, remote_fs, ensured_remote_dirs
+                                        candidate,
+                                        remote_fs,
+                                        ensured_remote_dirs,
                                     )
                                 except Exception as exc:
                                     failed += 1

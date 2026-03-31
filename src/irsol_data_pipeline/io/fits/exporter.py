@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from astropy import units as u
@@ -95,8 +94,8 @@ def write_stokes_fits(
     output_path: Path,
     stokes: StokesParameters,
     info: MeasurementMetadata,
-    calibration: Optional[CalibrationResult],
-    solar_orientation: Optional[SolarOrientationInfo],
+    calibration: CalibrationResult | None,
+    solar_orientation: SolarOrientationInfo | None,
     extra_header: dict[str, FitsHeaderEntry] | None = None,
 ) -> Path:
     """Write processed Stokes data to a FITS file.
@@ -143,8 +142,8 @@ def write_stokes_fits(
 def _build_fits_hdu_list(
     stokes: StokesParameters,
     info: MeasurementMetadata,
-    calibration: Optional[CalibrationResult],
-    solar_orientation: Optional[SolarOrientationInfo],
+    calibration: CalibrationResult | None,
+    solar_orientation: SolarOrientationInfo | None,
     extra_header: dict[str, FitsHeaderEntry],
 ) -> fits.HDUList:
     """Build a FITS HDU list from Stokes data and raw info metadata.
@@ -154,13 +153,20 @@ def _build_fits_hdu_list(
     """
     a1, a0, a1_err, a0_err = _calibration_values(calibration)
     return _build_hdu_list(
-        stokes, info, a1, a0, a1_err, a0_err, solar_orientation, extra_header
+        stokes,
+        info,
+        a1,
+        a0,
+        a1_err,
+        a0_err,
+        solar_orientation,
+        extra_header,
     )
 
 
 def _calibration_values(
-    calibration: Optional[CalibrationResult],
-) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+    calibration: CalibrationResult | None,
+) -> tuple[float | None, float | None, float | None, float | None]:
     """Resolve wavelength calibration values for FITS headers."""
     if calibration is None:
         logger.debug("No wavelength calibration provided for FITS export")
@@ -177,11 +183,11 @@ def _calibration_values(
 def _build_hdu_list(
     stokes: StokesParameters,
     metadata: MeasurementMetadata,
-    a1: Optional[float],
-    a0: Optional[float],
-    a1_err: Optional[float],
-    a0_err: Optional[float],
-    solar_orientation: Optional[SolarOrientationInfo],
+    a1: float | None,
+    a0: float | None,
+    a1_err: float | None,
+    a0_err: float | None,
+    solar_orientation: SolarOrientationInfo | None,
     extra_header: dict[str, FitsHeaderEntry],
 ) -> fits.HDUList:
     """Build a complete multi-extension FITS HDU list."""
@@ -278,7 +284,7 @@ def _build_hdu_list(
 def _fill_primary_header(
     header: fits.Header,
     metadata: MeasurementMetadata,
-    solar_orientation: Optional[SolarOrientationInfo],
+    solar_orientation: SolarOrientationInfo | None,
 ) -> None:
     """Fill the primary HDU header."""
     header["EXTNAME"] = ("PRIMARY", "Name of HDU")
@@ -314,7 +320,7 @@ def _fill_primary_header(
 def _fill_extended_metadata_primary_header(
     header: fits.Header,
     metadata: MeasurementMetadata,
-    solar_orientation: Optional[SolarOrientationInfo],
+    solar_orientation: SolarOrientationInfo | None,
 ) -> None:
     """Write extended measurement metadata to the primary HDU header.
 
@@ -437,8 +443,8 @@ def _fill_extended_metadata_primary_header(
 
 
 def _resolve_slit_angle(
-    solar_orientation: Optional[SolarOrientationInfo],
-) -> Optional[float]:
+    solar_orientation: SolarOrientationInfo | None,
+) -> float | None:
     """Return slit_angle_solar_deg from *solar_orientation* or None."""
     if solar_orientation is not None:
         return solar_orientation.slit_angle_solar_deg
@@ -449,10 +455,10 @@ def _fill_data_header(
     header: fits.Header,
     metadata: MeasurementMetadata,
     data: np.ndarray,
-    a1: Optional[float],
-    a0: Optional[float],
-    a1_err: Optional[float],
-    a0_err: Optional[float],
+    a1: float | None,
+    a0: float | None,
+    a1_err: float | None,
+    a0_err: float | None,
     ext_name: str,
     stokes_name: str,
     si_hdu: fits.ImageHDU,
@@ -539,10 +545,7 @@ def _fill_data_header(
     header["MEASNAME"] = (metadata.name, "Name of measurement")
 
     # Exposure info
-    if metadata.images:
-        nsumexp = sum(metadata.images)
-    else:
-        nsumexp = None
+    nsumexp = sum(metadata.images) if metadata.images else None
     header["NSUMEXP"] = (nsumexp, "Number of summed exposures")
 
     if metadata.integration_time is not None:
@@ -682,11 +685,11 @@ def _fill_data_header(
     # Solar coordinates
     gcrs_coord = IRSOL_LOCATION.get_gcrs(obstime=obs_time)
     hgsr_coord = gcrs_coord.transform_to(
-        frames.HeliographicStonyhurst(obstime=obs_time)
+        frames.HeliographicStonyhurst(obstime=obs_time),
     )
     observer = SkyCoord(gcrs_coord)
     cr_coord = gcrs_coord.transform_to(
-        frames.HeliographicCarrington(obstime=obs_time, observer=observer)
+        frames.HeliographicCarrington(obstime=obs_time, observer=observer),
     )
 
     # values from position
@@ -717,7 +720,7 @@ def _fill_data_header(
                 [
                     coords[0] * np.cos(sun_p0_rad) - coords[1] * np.sin(sun_p0_rad),
                     coords[0] * np.sin(sun_p0_rad) + coords[1] * np.cos(sun_p0_rad),
-                ]
+                ],
             )
             header["CRVAL1"] = (
                 rotated[0],
@@ -734,7 +737,7 @@ def _fill_data_header(
             )
     else:
         logger.warning(
-            "Setting CRVAL1 and CRVAL2 to 'None' as no solar disc coordinates were provided"
+            "Setting CRVAL1 and CRVAL2 to 'None' as no solar disc coordinates were provided",
         )
         header["CRVAL1"] = (None, "[arcsec] HPLN coordinate at reference pixel")
         header["CRVAL2"] = (None, "[[arcsec] HPLT coordinate at reference pixel")
@@ -803,6 +806,6 @@ def _make_title(metadata: MeasurementMetadata) -> str:
         return f"{time_str}_{metadata.name}.fits"
     except Exception:
         logger.warning(
-            "Impossible to determine title for measurement, using default measurement title"
+            "Impossible to determine title for measurement, using default measurement title",
         )
         return "measurement.fits"

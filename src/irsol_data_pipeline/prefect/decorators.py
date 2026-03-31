@@ -22,8 +22,9 @@ Usage::
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, ParamSpec, TypeVar, overload
+from typing import Any, ParamSpec, TypeVar, overload
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -45,7 +46,8 @@ def prefect_enabled() -> bool:
 def task(fn: Callable[P, R]) -> Callable[P, R]: ...
 @overload
 def task(
-    fn: None = None, **kwargs: Any
+    fn: None = None,
+    **kwargs: Any,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
@@ -79,7 +81,8 @@ def task(
 def flow(fn: Callable[P, R]) -> Callable[P, R]: ...
 @overload
 def flow(
-    fn: None = None, **kwargs: Any
+    fn: None = None,
+    **kwargs: Any,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 

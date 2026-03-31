@@ -41,8 +41,9 @@ def _get_secret_entries() -> list[SecretReportEntry]:
         value = get_secret(secret_meta.prefect_name)
         entries.append(
             SecretReportEntry(
-                name=secret_meta.prefect_name.value, value=value or "<unset>"
-            )
+                name=secret_meta.prefect_name.value,
+                value=value or "<unset>",
+            ),
         )
     return entries
 
@@ -52,19 +53,19 @@ def _render_secret_entries(entries: list[SecretReportEntry]) -> None:
     table.add_column("Secret", style="white", no_wrap=True)
     table.add_column("Value", style="white")
     for entry in entries:
-        table.add_row(entry.name, entry.value if entry.value else "<unset>")
+        table.add_row(entry.name, entry.value or "<unset>")
     get_console().print(table)
 
 
 def _serialize_secret_entries(entries: list[SecretReportEntry]) -> dict[str, Any]:
     return {
-        "secrets": [{"name": entry.name, "value": entry.value} for entry in entries]
+        "secrets": [{"name": entry.name, "value": entry.value} for entry in entries],
     }
 
 
 def _prompt_for_secret(config: PrefectSecretMetadata) -> str | None:
     value = input(
-        f"{config.prompt_text}\nEnter value for secret '{config.prefect_name.value}': "
+        f"{config.prompt_text}\nEnter value for secret '{config.prefect_name.value}': ",
     ).strip()
     return value or None
 
@@ -101,7 +102,7 @@ def configure_secrets(update_existing: bool = False) -> int:
         total = len(PREFECT_SECRETS)
         remaining = total - index
         print(
-            f"[{index}/{total}] {secret_meta.prefect_name.value} ({remaining} remaining)"
+            f"[{index}/{total}] {secret_meta.prefect_name.value} ({remaining} remaining)",
         )
         existing_value = get_secret(secret_meta.prefect_name, default=None)
         if existing_value:
@@ -110,8 +111,9 @@ def configure_secrets(update_existing: bool = False) -> int:
                 already_set_count += 1
                 report_entries.append(
                     SecretReportEntry(
-                        name=secret_meta.prefect_name.value, value=existing_value
-                    )
+                        name=secret_meta.prefect_name.value,
+                        value=existing_value,
+                    ),
                 )
                 continue
             if not _confirm(
@@ -119,13 +121,14 @@ def configure_secrets(update_existing: bool = False) -> int:
                 default=False,
             ):
                 print(
-                    f"  -> Kept existing value for '{secret_meta.prefect_name.value}'"
+                    f"  -> Kept existing value for '{secret_meta.prefect_name.value}'",
                 )
                 already_set_count += 1
                 report_entries.append(
                     SecretReportEntry(
-                        name=secret_meta.prefect_name.value, value=existing_value
-                    )
+                        name=secret_meta.prefect_name.value,
+                        value=existing_value,
+                    ),
                 )
                 continue
         try:
@@ -134,7 +137,7 @@ def configure_secrets(update_existing: bool = False) -> int:
                 print(f"  o Skipped '{secret_meta.prefect_name.value}'")
                 skipped_count += 1
                 report_entries.append(
-                    SecretReportEntry(name=secret_meta.prefect_name.value, value="-")
+                    SecretReportEntry(name=secret_meta.prefect_name.value, value="-"),
                 )
                 continue
             if not _confirm(
@@ -144,28 +147,29 @@ def configure_secrets(update_existing: bool = False) -> int:
                 print(f"  o Skipped '{secret_meta.prefect_name.value}' (user declined)")
                 skipped_count += 1
                 report_entries.append(
-                    SecretReportEntry(name=secret_meta.prefect_name.value, value="-")
+                    SecretReportEntry(name=secret_meta.prefect_name.value, value="-"),
                 )
                 continue
             Secret(value=value).save(secret_meta.prefect_name.value, overwrite=True)
             success_count += 1
             report_entries.append(
                 SecretReportEntry(
-                    name=secret_meta.prefect_name.value, value="[REDACTED]"
-                )
+                    name=secret_meta.prefect_name.value,
+                    value="[REDACTED]",
+                ),
             )
             print(
-                f"  v {'Updated' if existing_value else 'Set'} '{secret_meta.prefect_name.value}'"
+                f"  v {'Updated' if existing_value else 'Set'} '{secret_meta.prefect_name.value}'",
             )
         except Exception as exc:
             print(f"  x Failed to set '{secret_meta.prefect_name.value}': {exc}")
             failed_count += 1
             report_entries.append(
-                SecretReportEntry(name=secret_meta.prefect_name.value, value="-")
+                SecretReportEntry(name=secret_meta.prefect_name.value, value="-"),
             )
     print()
     print(
-        f"Summary: {success_count} set or updated, {already_set_count} already set, {skipped_count} skipped, {failed_count} failed"
+        f"Summary: {success_count} set or updated, {already_set_count} already set, {skipped_count} skipped, {failed_count} failed",
     )
     print()
     _render_secret_entries(report_entries)

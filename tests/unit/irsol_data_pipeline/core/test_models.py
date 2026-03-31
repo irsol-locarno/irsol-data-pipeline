@@ -22,7 +22,8 @@ from tests.unit.utils import make_dat_array_info
 class TestCalibrationResult:
     @staticmethod
     def make_calibration_result(
-        pixel_scale: float, wavelength_offset: float
+        pixel_scale: float,
+        wavelength_offset: float,
     ) -> CalibrationResult:
         return CalibrationResult(
             pixel_scale=pixel_scale,
@@ -59,7 +60,8 @@ class TestCalibrationResult:
         expected: float,
     ):
         calibration_result = self.make_calibration_result(
-            pixel_scale, wavelength_offset
+            pixel_scale,
+            wavelength_offset,
         )
         wavelength = calibration_result.pixel_to_wavelength(pixel)
         assert wavelength == expected
@@ -81,7 +83,8 @@ class TestCalibrationResult:
         expected: float,
     ):
         calibration_result = self.make_calibration_result(
-            pixel_scale, wavelength_offset
+            pixel_scale,
+            wavelength_offset,
         )
         pixel = calibration_result.wavelength_to_pixel(wavelength)
         assert pixel == expected
@@ -171,10 +174,10 @@ class TestMeasurementMetadata:
         assert sample_measurement_metadata.wavelength == 5886
         assert sample_measurement_metadata.name == "5886_m13"
         assert sample_measurement_metadata.datetime_start == _parse_zimpol_datetime(
-            "2025-11-11T09:43:16+01:00"
+            "2025-11-11T09:43:16+01:00",
         )
         assert sample_measurement_metadata.datetime_end == _parse_zimpol_datetime(
-            "2025-11-11T09:44:42+01:00"
+            "2025-11-11T09:44:42+01:00",
         )
         assert sample_measurement_metadata.type == "SCIENCE"
         assert sample_measurement_metadata.id == 1762850596

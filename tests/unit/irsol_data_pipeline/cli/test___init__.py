@@ -52,9 +52,9 @@ class TestCliApp:
         with (
             patch("irsol_data_pipeline.cli.setup_logging"),
             patch("irsol_data_pipeline.cli.app"),
+            pytest.raises(SystemExit) as exc_info,
         ):
-            with pytest.raises(SystemExit) as exc_info:
-                _meta("info", verbose=1, log_level="DEBUG")
+            _meta("info", verbose=1, log_level="DEBUG")
 
         assert exc_info.value.code == 1
 
@@ -67,7 +67,8 @@ class TestCliApp:
         assert isinstance(app["slit-image"], App)
 
     def test_setup_subcommands_are_registered(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         app(
             ["setup", "--help"],
@@ -81,7 +82,8 @@ class TestCliApp:
         assert "server" in output
 
     def test_root_help_mentions_install_completion(
-        self, capsys: pytest.CaptureFixture[str]
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         app(
             ["--help"],
