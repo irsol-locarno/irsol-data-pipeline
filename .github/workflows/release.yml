@@ -16,17 +16,23 @@ jobs:
     permissions:
       id-token: write
     steps:
+      # Check out the repository at the tagged commit so the source is available
       - uses: actions/checkout@v5
 
       - name: Set up uv
+        # Install and configure the uv package manager; enable the built-in cache
+        # so repeated dependency resolutions are fast
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
       - name: Build distribution
+        # Build both the source distribution (sdist) and the wheel for the library package
         run: uv build
 
       - name: Publish package distributions to PyPI
+        # Upload the built artifacts to PyPI using OIDC trusted publishing
+        # (no API token required; authentication is handled by the environment configuration)
         uses: pypa/gh-action-pypi-publish@release/v1
 
 
@@ -39,37 +45,119 @@ jobs:
     permissions:
       id-token: write
     steps:
+      # Check out the repository at the tagged commit so the source is available
       - uses: actions/checkout@v5
+
       - name: Set up uv
+        # Install and configure the uv package manager (no dependency cache needed
+        # for the CLI build because the lock file export happens in the next step)
         uses: astral-sh/setup-uv@v7
 
       - name: Transform to CLI Package
+        # Produces the irsol-data-pipeline-cli variant of the package by:
+        #   1. Exporting the full transitive dependency tree from uv.lock so that
+        #      every transitive dependency is pinned to an exact version.
+        #   2. Patching pyproject.toml to rename the package to irsol-data-pipeline-cli
+        #      and replacing the flexible dependency ranges with the pinned versions.
+        #   3. Adding a prominent disclaimer to both pyproject.toml (PyPI description)
+        #      and README.md warning consumers that this package pins all dependencies
+        #      and must therefore be installed as a uv tool – never as a project
+        #      dependency – to avoid restricting the dependency resolver of other projects.
         run: |
-          # 1. Export the full transitive tree from uv.lock
+          # Export the full transitive dependency tree from uv.lock as pinned requirements
           uv export --format requirements.txt --no-dev --no-hashes > locked_deps.txt
 
-          # 2. Patch pyproject.toml using a Python one-liner
-          # Note: we use 'tomli-w' via uvx to keep the runner clean
-          # Note2: we use 'tomli' as tomllib i s not available on python3.10
-          uvx --with tomli --with tomli-w python -c "
-          import tomli, tomli_w
-          with open('pyproject.toml', 'rb') as f:
+          # Write the patching script to a temporary file using a heredoc so that
+          # the Python source is not subject to any shell interpolation.
+          # All lines must remain indented at this level so the YAML block scalar
+          # stays valid; the leading spaces are stripped by the shell before writing
+          # the file, because we use the <<- form of the heredoc (strip leading tabs).
+          # We therefore use tabs for indentation of the heredoc body.
+          cat > /tmp/patch_cli.py << 'PYEOF'
+          import re
+          import tomli
+          import tomli_w
+
+          CLI_DISCLAIMER = (
+              "> [!WARNING]\n"
+              "> **`irsol-data-pipeline-cli` must be installed as a"
+              " [uv tool](https://docs.astral.sh/uv/concepts/tools/) only.**\n"
+              ">\n"
+              "> This package pins **all** its dependencies to exact versions"
+              " in order to guarantee out-of-the-box compatibility."
+              " Installing it as a dependency of another project will severely"
+              " restrict that project's dependency resolver and is likely to"
+              " cause conflicts.\n"
+              ">\n"
+              "> **Correct installation:**\n"
+              "> ```bash\n"
+              "> uv tool install irsol-data-pipeline-cli\n"
+              "> ```\n"
+              ">\n"
+              "> **Do not** add `irsol-data-pipeline-cli` to your `pyproject.toml` or"
+              " `requirements.txt`. If you need to use the pipeline programmatically,"
+              " depend on the unpinned library package"
+              " [`irsol-data-pipeline`](https://pypi.org/p/irsol-data-pipeline) instead."
+          )
+
+          # --- Patch pyproject.toml ---
+          # Load the existing project metadata
+          with open("pyproject.toml", "rb") as f:
               data = tomli.load(f)
-          with open('locked_deps.txt', 'r') as f:
-              locked = [l.strip() for l in f if l.strip()]
-              locked = [l for l in locked if not l.startswith('#')]
-              locked = [l for l in locked if not l.startswith('-e')]
 
-          # Append -cli to name and replace dependencies with the lockfile export
-          data['project']['name'] = f'{data[\"project\"][\"name\"]}-cli'
-          data['project']['dependencies'] = locked
+          # Read the pinned requirements produced by the uv export step above,
+          # skipping comment lines and editable installs
+          with open("locked_deps.txt") as f:
+              locked = [
+                  line.strip()
+                  for line in f
+                  if line.strip()
+                  and not line.strip().startswith("#")
+                  and not line.strip().startswith("-e")
+              ]
 
-          with open('pyproject.toml', 'wb') as f:
+          # Rename the package to the CLI variant and pin all dependencies
+          data["project"]["name"] = f'{data["project"]["name"]}-cli'
+          data["project"]["dependencies"] = locked
+
+          # Replace the PyPI package description with the CLI disclaimer so that users
+          # who browse the package on PyPI are immediately informed of the usage constraint
+          data["project"]["readme"] = {
+              "text": CLI_DISCLAIMER,
+              "content-type": "text/markdown",
+          }
+
+          with open("pyproject.toml", "wb") as f:
               tomli_w.dump(data, f)
-          "
+
+          # --- Patch README.md ---
+          # Insert a prominent disclaimer section directly after the top-level heading
+          # so it is visible at the very top of the rendered README
+          with open("README.md") as f:
+              readme = f.read()
+
+          disclaimer_section = (
+              "## ⚠️ CLI Package: Install as `uv tool` only\n\n"
+              + CLI_DISCLAIMER
+              + "\n\n"
+          )
+          readme = re.sub(
+              r"(# [^\n]+\n)", r"\1\n" + disclaimer_section, readme, count=1
+          )
+
+          with open("README.md", "w") as f:
+              f.write(readme)
+          PYEOF
+
+          # Run the patching script via uvx, pulling in tomli and tomli-w on the fly
+          # to keep the runner environment clean.
+          # Note: tomli is used instead of the stdlib tomllib for Python 3.10 compatibility
+          uvx --with tomli --with tomli-w python /tmp/patch_cli.py
 
       - name: Build distribution
+        # Build both the source distribution (sdist) and the wheel for the CLI package
         run: uv build
 
       - name: Publish package distributions to PyPI
+        # Upload the built CLI artifacts to PyPI using OIDC trusted publishing
         uses: pypa/gh-action-pypi-publish@release/v1

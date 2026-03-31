@@ -7,7 +7,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Carlo Del Don", email = "deldoc@usi.ch" }]
 maintainers = [{ name = "Carlo Del Don", email = "deldoc@usi.ch" }]
-requires-python = ">=3.10, <=3.11"  # python >= 3.12 seems not to work with the dependencies
+requires-python = ">=3.10, <3.12"  # python >= 3.12 seems not to work with the dependencies
 dependencies = [
     "numpy<2",
     "scipy>=1.10.0",
