@@ -76,14 +76,13 @@ def setup_logging(level: PrefectLogLevel):
 
     std_base_level = _extract_std_level_from_loguru_level(loguru_base_level)
 
-    try:
-        run_logger = get_run_logger()
-        run_logger.setLevel(std_base_level)
-    except Exception:
-        return  # Not inside a flow/task run context
-
     def _prefect_sink(message):
         record = message.record
+        try:
+            run_logger = get_run_logger()
+            run_logger.setLevel(std_base_level)
+        except Exception:
+            return  # Not inside a flow/task run context
 
         # loguru and stdlib share numeric levels (DEBUG=10, INFO=20, etc.)
         # Map loguru-only levels: TRACE(5)->DEBUG(10), SUCCESS(25)->INFO(20)
