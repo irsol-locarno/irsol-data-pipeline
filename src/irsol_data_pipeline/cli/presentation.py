@@ -5,10 +5,10 @@ from __future__ import annotations
 import platform
 import shutil
 
-from irsol_data_pipeline.version import __version__ as pipeline_version
 from irsol_data_pipeline.version import (
-    resolve_distribution_version,
+    __relevant_distribution_versions__ as relevant_distribution_versions,
 )
+from irsol_data_pipeline.version import __version__ as pipeline_version
 
 TITLE_ART = r"""
     ____ ____  _____  ____   __               __        __                        _               __ _
@@ -33,12 +33,6 @@ COMPACT_TITLE = r"""
 TITLE_VARIANTS: tuple[str, ...] = (
     TITLE_ART,
     COMPACT_TITLE,
-)
-
-_DISTRIBUTIONS: tuple[str, ...] = (
-    "spectroflat",
-    "numpy",
-    "pydantic",
 )
 
 
@@ -91,26 +85,16 @@ def _detect_operating_system() -> str:
     return " ".join(part for part in (operating_system, release, machine) if part)
 
 
-def distribution_versions() -> dict[str, str]:
-    """Get the versions of relevant distributions.
-
-    Returns:
-        Mapping of distribution names to their resolved versions.
-    """
-    return {
-        distribution_name: resolve_distribution_version(distribution_name)
-        for distribution_name in sorted(_DISTRIBUTIONS)
-    }
-
-
 def build_runtime_presentation() -> str:
     """Build the CLI runtime presentation banner.
 
     Returns:
         Multi-line banner containing package and runtime version information.
     """
-    versions = distribution_versions()
-    label_width = max(len(distribution_name) for distribution_name in _DISTRIBUTIONS)
+    label_width = max(
+        len(distribution_name)
+        for distribution_name, _ in relevant_distribution_versions
+    )
 
     lines = [
         _select_title(),
@@ -123,8 +107,8 @@ def build_runtime_presentation() -> str:
         "Versions",
     ]
     lines.extend(
-        f"  {distribution_name:<{label_width}} : {versions[distribution_name]}"
-        for distribution_name in sorted(_DISTRIBUTIONS)
+        f"  {distribution_name:<{label_width}} : {distribution_version}"
+        for distribution_name, distribution_version in relevant_distribution_versions
     )
     return "\n".join(lines)
 

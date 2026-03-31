@@ -16,8 +16,8 @@ class ProcessingHistory:
     """Records processing steps and serialises them as FITS header entries.
 
     Each recorded step is assigned a sequential key of the form ``PROC_NNN``
-    (where *NNN* is a zero-padded three-digit counter, supporting up to 999
-    steps).  The corresponding value is a human-readable description built
+    (where *NNN* is a zero-padded three-digit counter.
+    The corresponding value is a human-readable description built
     from the step name and optional details string.
 
     Example::
@@ -37,8 +37,6 @@ class ProcessingHistory:
         )
     """
 
-    MAX_STEPS = 999
-
     def __init__(self) -> None:
         """Initialise an empty processing history."""
         self._steps: list[tuple[str, str | None]] = []
@@ -50,14 +48,7 @@ class ProcessingHistory:
             step: Short human-readable name of the processing step.
             details: Optional extra information about the step (e.g. parameter
                 values or filenames).
-
-        Raises:
-            ValueError: When more than ``MAX_STEPS`` steps have been recorded.
         """
-        if len(self._steps) >= self.MAX_STEPS:
-            raise ValueError(
-                f"Cannot record more than {self.MAX_STEPS} processing steps in a single history."
-            )
         self._steps.append((step, details))
 
     def to_fits_header_entries(self) -> dict[str, tuple[Any, str]]:

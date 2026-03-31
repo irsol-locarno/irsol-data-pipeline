@@ -77,17 +77,7 @@ from irsol_data_pipeline.io.fits.constants import (
     FITS_KEY_ZCSOFT,
     FITS_KEY_ZCSTAT,
 )
-from irsol_data_pipeline.version import __version__, resolve_distribution_version
-
-# ---------------------------------------------------------------------------
-# Resolved versions of key dependency packages – evaluated once at import time
-# so that every FITS file written during a single run records consistent values.
-# ---------------------------------------------------------------------------
-
-_NUMPY_VERSION = resolve_distribution_version("numpy")
-_SCIPY_VERSION = resolve_distribution_version("scipy")
-_SPECTROFLAT_VERSION = resolve_distribution_version("spectroflat")
-_PYDANTIC_VERSION = resolve_distribution_version("pydantic")
+from irsol_data_pipeline.version import __relevant_distribution_versions__, __version__
 
 # Type alias for values accepted inside the *extra_header* mapping.
 # Each entry may be a bare scalar or a *(value, comment)* two-tuple.
@@ -163,7 +153,9 @@ def _build_fits_hdu_list(
     object is provided.
     """
     a1, a0, a1_err, a0_err = _calibration_values(calibration)
-    return _build_hdu_list(stokes, info, a1, a0, a1_err, a0_err, solar_orientation, extra_header)
+    return _build_hdu_list(
+        stokes, info, a1, a0, a1_err, a0_err, solar_orientation, extra_header
+    )
 
 
 def _calibration_values(
@@ -267,7 +259,6 @@ def _build_hdu_list(
         hdu.header["FILENAME"] = title
         _add_software_metadata(
             header=hdu.header,
-            software_version=__version__,
         )
 
     # Custom key-value pairs go into the primary HDU header only so they
@@ -776,19 +767,16 @@ def _add_data_statistics(header: fits.Header, data: np.ndarray) -> None:
 
 def _add_software_metadata(
     header: fits.Header,
-    software_version: str,
 ) -> None:
     """Add software versioning information to a FITS header.
 
     Records the version of ``irsol-data-pipeline`` and the key dependency
-    packages (numpy, scipy, spectroflat, pydantic) so that the exact
-    software environment used to produce the file can be reconstructed.
+    so that the exact software environment used to produce the file can be reconstructed.
     """
-    header["SWVER"] = (software_version, "irsol_data_pipeline package version")
-    header["SWVERNP"] = (_NUMPY_VERSION, "numpy package version")
-    header["SWVERSP"] = (_SCIPY_VERSION, "scipy package version")
-    header["SWVERSF"] = (_SPECTROFLAT_VERSION, "spectroflat package version")
-    header["SWVERPD"] = (_PYDANTIC_VERSION, "pydantic package version")
+    header["SWVER"] = (__version__, "irsol_data_pipeline package version")
+    for dist, version in __relevant_distribution_versions__:
+        key = f"SWVER{dist.upper()[:5]}"  # e.g. SWVERNUMPY, SWVERSCIPY
+        header[key] = (version, f"{dist} package version")
 
 
 def _apply_extra_header(

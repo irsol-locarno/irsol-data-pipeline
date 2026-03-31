@@ -52,13 +52,6 @@ class TestProcessingHistory:
         assert "PROC_001" in entries
         assert "PROC_010" in entries
 
-    def test_max_steps_limit_raises(self) -> None:
-        history = ProcessingHistory()
-        for i in range(ProcessingHistory.MAX_STEPS):
-            history.record(f"step {i}")
-        with pytest.raises(ValueError, match="Cannot record more than"):
-            history.record("one too many")
-
     @pytest.mark.parametrize(
         "step,details,expected_value",
         [
@@ -67,7 +60,9 @@ class TestProcessingHistory:
             ("calibration", "file=ref.npy", "calibration: file=ref.npy"),
         ],
     )
-    def test_value_format(self, step: str, details: str | None, expected_value: str) -> None:
+    def test_value_format(
+        self, step: str, details: str | None, expected_value: str
+    ) -> None:
         history = ProcessingHistory()
         history.record(step, details)
         value, _ = history.to_fits_header_entries()["PROC_001"]

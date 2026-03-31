@@ -197,4 +197,6 @@ class TestExtraHeader:
             primary = hdul[0].header
             assert primary["PROC_001"] == "flat-field correction"
             assert primary["PROC_002"] == "smile correction"
-            assert primary["PROC_003"] == "wavelength calibration: reference_file=ref.npy"
+            assert (
+                primary["PROC_003"] == "wavelength calibration: reference_file=ref.npy"
+            )
