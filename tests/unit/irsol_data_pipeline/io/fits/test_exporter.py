@@ -121,8 +121,10 @@ class TestPackageVersionsInHeader:
         )
         with fits.open(output_path) as hdul:
             for hdu in hdul:
-                assert "SWVER" in hdu.header, f"SWVER missing from HDU {hdu.name!r}"
-                assert hdu.header["SWVER"] == __version__
+                assert "SWVIRSOL" in hdu.header, (
+                    f"SWVIRSOL missing from HDU {hdu.name!r}"
+                )
+                assert hdu.header["SWVIRSOL"] == __version__
 
     def test_relevant_distribution_versions_included_in_primary_header(
         self,
@@ -140,7 +142,7 @@ class TestPackageVersionsInHeader:
         with fits.open(output_path) as hdul:
             primary = hdul[0].header
             for dist_name, dist_version in __relevant_distribution_versions__:
-                key = f"SWVER{dist_name.upper()[:5]}"
+                key = f"SWV{dist_name.upper()}"[:8]
                 assert key in primary, f"{key} missing from primary header"
                 assert primary[key] == dist_version, (
                     f"{key} value mismatch: expected {dist_version}, got {primary[key]}"
@@ -154,7 +156,11 @@ class TestExtraHeader:
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         output_path = tmp_path / "test_extra.fits"
-        extra = {"MY_KEY": ("my_value", "a custom comment"), "MY_INT": 42}
+        extra = {
+            "MY_KEY": ("my_value", "a custom comment"),
+            "MY_INT": 42,
+            "MY_VERY_LONG_KEY": "should be truncated",
+        }
         write_stokes_fits(
             output_path=output_path,
             stokes=_make_stokes(),
@@ -167,6 +173,7 @@ class TestExtraHeader:
             primary = hdul[0].header
             assert primary["MY_KEY"] == "my_value"
             assert primary["MY_INT"] == 42
+            assert primary["MY_VERY_LONG_KEY"[:8]] == "should be truncated"
             # Extra keys should NOT be in extension headers
             for hdu in hdul[1:]:
                 assert "MY_KEY" not in hdu.header

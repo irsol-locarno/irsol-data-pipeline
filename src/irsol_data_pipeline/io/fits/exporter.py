@@ -768,6 +768,14 @@ def _add_data_statistics(header: fits.Header, data: np.ndarray) -> None:
             )
 
 
+def _make_software_key(distribution: str) -> str:
+    """Make a FITS header key for a given software distribution.
+
+    Fits header keys should be at most 8 chars long.
+    """
+    return f"SWV{distribution.upper()}"[:8]  # e.g. SWVNUMPY, SWVSCIPY
+
+
 def _add_software_metadata(
     header: fits.Header,
 ) -> None:
@@ -776,9 +784,12 @@ def _add_software_metadata(
     Records the version of ``irsol-data-pipeline`` and the key dependency
     so that the exact software environment used to produce the file can be reconstructed.
     """
-    header["SWVER"] = (__version__, "irsol_data_pipeline package version")
+    header[_make_software_key("irsol_data_pipeline")] = (
+        __version__,
+        "irsol_data_pipeline package version",
+    )
     for dist, version in __relevant_distribution_versions__:
-        key = f"SWVER{dist.upper()[:5]}"  # e.g. SWVERNUMPY, SWVERSCIPY
+        key = _make_software_key(dist)
         header[key] = (version, f"{dist} package version")
 
 
@@ -796,7 +807,7 @@ def _apply_extra_header(
         extra: Mapping from FITS keyword to value or ``(value, comment)`` tuple.
     """
     for key, entry in extra.items():
-        header[key] = entry
+        header[key[:8]] = entry  # FITS keys should be at most 8 chars long
 
 
 def _make_title(metadata: MeasurementMetadata) -> str:
