@@ -51,7 +51,9 @@ def write_stokes_fits(
     output_path: Path,
     stokes: StokesParameters,
     info: MeasurementMetadata,
-    calibration: CalibrationResult | None = None,
+    calibration: CalibrationResult | None,
+    solar_orientation: SolarOrientationInfo | None,
+    extra_header: dict[str, Any] | None = None,
 ) -> Path:
 ```
 
@@ -62,19 +64,56 @@ Writes corrected Stokes data as a multi-extension FITS file:
 - **WCS support:** helioprojective-Cartesian coordinates (HPLN, HPLT, AWAV axes).
 - **Metadata:** telescope location, solar disc coordinates, P₀ angle, Carrington rotation.
 - **Wavelength calibration:** `CDELT3`, `CRVAL3`, `CRDER3`, `CSYER3` keywords when calibration is provided.
+- **Solar orientation:** `SLTANGL` in the primary header when `solar_orientation` is provided.
+- **Software versions:** `SWVER` (irsol-data-pipeline), `SWVERNP` (numpy), `SWVERSP` (scipy), `SWVERSF` (spectroflat), and `SWVERPD` (pydantic) written to every HDU.
+- **Custom header entries:** any key-value pairs in `extra_header` are written to the primary HDU. Use `ProcessingHistory` to record processing steps.
 - **Data statistics:** min, max, median, and percentile values per extension.
 - **Integrity:** `CHECKSUM` for data verification.
 - Raises `FitsExportError` on write failures.
 
 ### FITS HDU Layout
 
-| Extension | Name | Content |
-|-----------|------|---------|
-| 0 | Primary | Metadata header (no data) |
-| 1 | `STOKES_I` | Stokes I intensity |
-| 2 | `STOKES_QI` | Stokes Q / I ratio |
-| 3 | `STOKES_UI` | Stokes U / I ratio |
-| 4 | `STOKES_VI` | Stokes V / I ratio |
+| Extension | `EXTNAME` | Content |
+|-----------|-----------|---------|
+| 0 | `PRIMARY` | Metadata header (no data) |
+| 1 | `Stokes I` | Stokes I intensity |
+| 2 | `Stokes Q/I` | Stokes Q / I ratio |
+| 3 | `Stokes U/I` | Stokes U / I ratio |
+| 4 | `Stokes V/I` | Stokes V / I ratio |
+
+### ProcessingHistory
+
+```python
+class ProcessingHistory:
+    def record(self, step: str, details: str | None = None) -> None: ...
+    def to_fits_header_entries(self) -> dict[str, tuple[Any, str]]: ...
+```
+
+A utility class for recording the sequence of processing operations applied to a `StokesParameters` object before writing to a FITS file. Each step is serialised as a numbered primary-header entry (`PROC_001`, `PROC_002`, …) when passed via `extra_header`.
+
+```python
+from irsol_data_pipeline.io.fits import ProcessingHistory, write
+
+history = ProcessingHistory()
+history.record("flat-field correction")
+history.record("smile correction")
+history.record("wavelength calibration", details="reference_file=ref.npy")
+
+write(
+    output_path=output_path,
+    stokes=corrected_stokes,
+    info=metadata,
+    calibration=calibration,
+    solar_orientation=solar_orientation,
+    extra_header=history.to_fits_header_entries(),
+)
+# Primary HDU gains:
+# PROC_001 = 'flat-field correction'
+# PROC_002 = 'smile correction'
+# PROC_003 = 'wavelength calibration: reference_file=ref.npy'
+```
+
+The `extra_header` parameter also accepts arbitrary `dict[str, scalar | (value, comment)]` mappings independent of `ProcessingHistory`.
 
 ## Flat-Field Importer / Exporter
 

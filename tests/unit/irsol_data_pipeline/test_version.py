@@ -15,10 +15,9 @@ class TestVersion:
         with patch(
             "importlib.metadata.version",
             return_value="1.2.3",
-        ) as mocked_version:
+        ):
             module = importlib.import_module("irsol_data_pipeline.version")
 
-        mocked_version.assert_called_once_with("irsol-data-pipeline")
         assert module.__version__ == "1.2.3"
 
     def test_falls_back_when_distribution_metadata_is_missing(self) -> None:

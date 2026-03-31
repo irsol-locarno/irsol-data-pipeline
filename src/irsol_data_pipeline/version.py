@@ -6,6 +6,15 @@ import importlib.metadata
 
 _DISTRIBUTION_NAME = "irsol-data-pipeline"
 
+_RELEVANT_DISTRIBUTIONS: tuple[str, ...] = (
+    "astropy",
+    "drms",
+    "numpy",
+    "pydantic",
+    "spectroflat",
+    "sunpy",
+)
+
 
 def resolve_distribution_version(
     distribution_name: str, default_version: str = "0.0.0"
@@ -25,4 +34,19 @@ def resolve_distribution_version(
         return default_version
 
 
+def distribution_versions() -> dict[str, str]:
+    """Get the versions of relevant distributions.
+
+    Returns:
+        Mapping of distribution names to their resolved versions.
+    """
+    return {
+        distribution_name: resolve_distribution_version(distribution_name)
+        for distribution_name in sorted(_RELEVANT_DISTRIBUTIONS)
+    }
+
+
 __version__ = resolve_distribution_version(_DISTRIBUTION_NAME)
+__relevant_distribution_versions__ = tuple(
+    (v, resolve_distribution_version(v)) for v in sorted(_RELEVANT_DISTRIBUTIONS)
+)

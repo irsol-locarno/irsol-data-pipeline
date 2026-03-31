@@ -24,13 +24,12 @@ from irsol_data_pipeline.cli.metadata import (
     OutputFormat,
 )
 from irsol_data_pipeline.cli.presentation import (
-    distribution_versions,
     print_runtime_presentation,
 )
 from irsol_data_pipeline.prefect.automations import get_automation
 from irsol_data_pipeline.prefect.secrets import get_secret
 from irsol_data_pipeline.prefect.variables import get_variable
-from irsol_data_pipeline.version import __version__
+from irsol_data_pipeline.version import __relevant_distribution_versions__, __version__
 
 
 def _build_flow_groups_payload() -> list[dict[str, Any]]:
@@ -124,7 +123,7 @@ def _build_distributions_payload() -> list[dict[str, Any]]:
 
     return [
         {"name": name, "version": version}
-        for name, version in distribution_versions().items()
+        for name, version in __relevant_distribution_versions__
     ]
 
 

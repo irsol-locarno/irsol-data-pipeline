@@ -77,7 +77,12 @@ from irsol_data_pipeline.io.fits.constants import (
     FITS_KEY_ZCSOFT,
     FITS_KEY_ZCSTAT,
 )
-from irsol_data_pipeline.version import __version__
+from irsol_data_pipeline.version import __relevant_distribution_versions__, __version__
+
+# Type alias for values accepted inside the *extra_header* mapping.
+# Each entry may be a bare scalar or a *(value, comment)* two-tuple.
+_FitsHeaderValue = str | int | float | bool | None
+FitsHeaderEntry = _FitsHeaderValue | tuple[_FitsHeaderValue, str]
 
 IRSOL_LOCATION = EarthLocation(
     lat=46.176906 * u.Unit("deg"),
@@ -92,6 +97,7 @@ def write_stokes_fits(
     info: MeasurementMetadata,
     calibration: Optional[CalibrationResult],
     solar_orientation: Optional[SolarOrientationInfo],
+    extra_header: dict[str, FitsHeaderEntry] | None = None,
 ) -> Path:
     """Write processed Stokes data to a FITS file.
 
@@ -104,6 +110,10 @@ def write_stokes_fits(
             :attr:`~irsol_data_pipeline.core.models.SolarOrientationInfo.slit_angle_solar_deg`
             is stored in the primary HDU header so it can be recovered on
             re-import without re-computing P0.
+        extra_header: Optional mapping of custom FITS keyword to value (or
+            ``(value, comment)`` tuple) that is written into the primary HDU
+            header.  Use :class:`~irsol_data_pipeline.io.fits.ProcessingHistory`
+            to build this mapping from recorded processing steps.
 
     Returns:
         The path written to.
@@ -123,6 +133,7 @@ def write_stokes_fits(
             info=info,
             calibration=calibration,
             solar_orientation=solar_orientation,
+            extra_header=extra_header or {},
         )
         hdu_list.writeto(output_path, output_verify="ignore", overwrite=True)
         logger.debug("Stokes FITS written")
@@ -134,6 +145,7 @@ def _build_fits_hdu_list(
     info: MeasurementMetadata,
     calibration: Optional[CalibrationResult],
     solar_orientation: Optional[SolarOrientationInfo],
+    extra_header: dict[str, FitsHeaderEntry],
 ) -> fits.HDUList:
     """Build a FITS HDU list from Stokes data and raw info metadata.
 
@@ -141,7 +153,9 @@ def _build_fits_hdu_list(
     object is provided.
     """
     a1, a0, a1_err, a0_err = _calibration_values(calibration)
-    return _build_hdu_list(stokes, info, a1, a0, a1_err, a0_err, solar_orientation)
+    return _build_hdu_list(
+        stokes, info, a1, a0, a1_err, a0_err, solar_orientation, extra_header
+    )
 
 
 def _calibration_values(
@@ -168,6 +182,7 @@ def _build_hdu_list(
     a1_err: Optional[float],
     a0_err: Optional[float],
     solar_orientation: Optional[SolarOrientationInfo],
+    extra_header: dict[str, FitsHeaderEntry],
 ) -> fits.HDUList:
     """Build a complete multi-extension FITS HDU list."""
 
@@ -244,8 +259,12 @@ def _build_hdu_list(
         hdu.header["FILENAME"] = title
         _add_software_metadata(
             header=hdu.header,
-            software_version=__version__,
         )
+
+    # Custom key-value pairs go into the primary HDU header only so they
+    # appear once per file rather than being repeated in each Stokes extension.
+    if extra_header:
+        _apply_extra_header(hdu_primary.header, extra_header)
 
     # Checksums
     for hdu in [si_hdu, sq_hdu, su_hdu, sv_hdu]:
@@ -748,10 +767,33 @@ def _add_data_statistics(header: fits.Header, data: np.ndarray) -> None:
 
 def _add_software_metadata(
     header: fits.Header,
-    software_version: str,
 ) -> None:
-    """Add software versioning information to a FITS header."""
-    header["SWVER"] = (software_version, "irsol_data_pipeline package version")
+    """Add software versioning information to a FITS header.
+
+    Records the version of ``irsol-data-pipeline`` and the key dependency
+    so that the exact software environment used to produce the file can be reconstructed.
+    """
+    header["SWVER"] = (__version__, "irsol_data_pipeline package version")
+    for dist, version in __relevant_distribution_versions__:
+        key = f"SWVER{dist.upper()[:5]}"  # e.g. SWVERNUMPY, SWVERSCIPY
+        header[key] = (version, f"{dist} package version")
+
+
+def _apply_extra_header(
+    header: fits.Header,
+    extra: dict[str, FitsHeaderEntry],
+) -> None:
+    """Write *extra* key-value pairs into *header*.
+
+    Each value in *extra* may be a bare scalar (``str``, ``int``, ``float``,
+    ``bool``, or ``None``) or a ``(value, comment)`` two-tuple.
+
+    Args:
+        header: Target FITS header to update in-place.
+        extra: Mapping from FITS keyword to value or ``(value, comment)`` tuple.
+    """
+    for key, entry in extra.items():
+        header[key] = entry
 
 
 def _make_title(metadata: MeasurementMetadata) -> str:

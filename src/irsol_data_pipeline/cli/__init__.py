@@ -9,13 +9,26 @@ from cyclopts import App, Parameter
 
 from irsol_data_pipeline.cli.common import ensure_prefect_enabled
 from irsol_data_pipeline.logging_config import LOG_LEVEL, setup_logging
-from irsol_data_pipeline.version import __version__
+from irsol_data_pipeline.version import (
+    _DISTRIBUTION_NAME,
+    __relevant_distribution_versions__,
+    __version__,
+)
+
+
+def _build_version_string():
+    version = f"{_DISTRIBUTION_NAME}={__version__}"
+    version += "\n\ndistributions:\n"
+    for distribution, d_version in __relevant_distribution_versions__:
+        version += f" - {distribution}={d_version}\n"
+    return version
+
 
 app = App(
     name="idp",
     help=(
         "IRSOL Data Pipeline CLI — process ZIMPOL spectropolarimetric solar "
-        "observations.\n\n"
+        "observations.\n"
         "Commands:\n"
         "  info          Show runtime and operational information.\n"
         "  flat-field    Apply flat-field corrections to measurements.\n"
@@ -24,7 +37,7 @@ app = App(
         "  prefect       Run Prefect server commands.\n"
         "  setup         Configure local or server Prefect profiles."
     ),
-    version=__version__,
+    version=_build_version_string(),
 )
 app.register_install_completion_command()
 

@@ -24,9 +24,9 @@ from irsol_data_pipeline.core.solar_orientation import (
 )
 from irsol_data_pipeline.exceptions import FlatFieldAssociationNotFoundException
 from irsol_data_pipeline.io import dat as dat_io
+from irsol_data_pipeline.io import fits as fits_io
 from irsol_data_pipeline.io import fits_flatfield as flatfield_io
 from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
-from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 from irsol_data_pipeline.pipeline.filesystem import (
     get_processed_stem,
     processed_output_path,
@@ -102,6 +102,8 @@ def _process_single_measurement(
         logger.info("Processing measurement")
         stem = get_processed_stem(meas_path.name)
 
+        processing_history = fits_io.ProcessingHistory()
+
         # 1. Load measurement
         stokes, info = dat_io.read(meas_path)
         measurement_metadata = MeasurementMetadata.from_info_array(info)
@@ -136,7 +138,6 @@ def _process_single_measurement(
             raise FlatFieldAssociationNotFoundException(
                 measurement=measurement, max_delta=max_delta
             )
-
         ff_time_delta = abs(
             (ff_correction.timestamp - measurement.timestamp).total_seconds()
         )
@@ -154,6 +155,14 @@ def _process_single_measurement(
             offset_map=ff_correction.offset_map,
         )
 
+        processing_history.record(
+            "Flat-field correction",
+            details=(
+                f"Associated flat-field: {ff_correction.source_flatfield_path.name} "
+                + f"Delta Time: {abs((ff_correction.timestamp - measurement.timestamp).total_seconds())} seconds"
+            ),
+        )
+
         logger.info("Flat-field correction applied")
 
         # 4. Wavelength auto-calibration
@@ -165,9 +174,13 @@ def _process_single_measurement(
             reference_file=calibration.reference_file,
         )
 
+        processing_history.record(
+            "Wavelength auto-calibration",
+            details=f"Reference file used: {calibration.reference_file}",
+        )
+
         # 5. Save corrected data
-        # TODO: regenerate info array with calibration results if needed.
-        write_stokes_fits(
+        fits_io.write(
             processed_output_path(
                 processed_dir,
                 meas_path.name,
@@ -177,6 +190,7 @@ def _process_single_measurement(
             measurement_metadata,
             calibration=calibration,
             solar_orientation=solar_orientation,
+            extra=processing_history.to_fits_header_entries(),
         )
 
         # 6. Save flat-field correction data (FITS)

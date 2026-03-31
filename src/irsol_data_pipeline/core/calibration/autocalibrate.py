@@ -174,7 +174,13 @@ def _find_refdata(
 
     shift = correlations[best_idx].size / 2 - np.argmax(correlations[best_idx])
 
-    return ref_data, reference_peaks, np.array(lines), reference_params, shift
+    return (
+        ref_data,
+        reference_peaks,
+        np.array(lines),
+        reference_params,
+        shift,
+    )
 
 
 def _wavelength_calibration(

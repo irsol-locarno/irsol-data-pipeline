@@ -69,7 +69,7 @@ Each image extension stores a three-dimensional array with axes ordered as **(wa
 - **Axis 2 (NAXIS2)** — spatial dimension along the slit (spatial pixels)
 - **Axis 3 (NAXIS3)** — always length 1 (degenerate spatial axis perpendicular to slit)
 
-Every extension (including PRIMARY) carries `FILENAME`, `SWVER`, and `CHECKSUM` keywords. The four image extensions additionally carry `DATASUM`.
+Every extension (including PRIMARY) carries `FILENAME`, `SWVER`, `SWVERNP`, `SWVERSP`, `SWVERSF`, `SWVERPD`, and `CHECKSUM` keywords. The four image extensions additionally carry `DATASUM`.
 
 
 ### Primary HDU Header
@@ -98,6 +98,10 @@ The primary HDU carries no image data. It holds two groups of metadata:
 | `SOLAR_P0` | *float* | Sun-Earth position angle P₀ in degrees |
 | `FILENAME` | *string* | Suggested output filename |
 | `SWVER` | *string* | `irsol_data_pipeline` package version |
+| `SWVERNP` | *string* | `numpy` package version |
+| `SWVERSP` | *string* | `scipy` package version |
+| `SWVERSF` | *string* | `spectroflat` package version |
+| `SWVERPD` | *string* | `pydantic` package version |
 
 #### Top-level Measurement Fields
 
@@ -190,6 +194,19 @@ These keywords describe the ZIMPOL-internal calibration (distinct from the wavel
 | `GLBMEAN` | Global mean values from ZIMPOL reduction |
 | `SLTANGL` | [deg] Slit angle in the solar reference frame |
 
+#### Custom Processing History (`PROC_NNN`)
+
+The primary HDU may contain an ordered sequence of pipeline-step records stamped via the `extra_header` parameter of `write_stokes_fits`. Keys follow the pattern `PROC_NNN`, where `NNN` is a zero-padded three-digit index (001–999). Each value is a human-readable string describing the step and, optionally, its parameters.
+
+| Keyword pattern | Example value | Description |
+|----------------|---------------|-------------|
+| `PROC_001` | `flat-field correction` | First recorded processing step |
+| `PROC_002` | `smile correction` | Second recorded processing step |
+| `PROC_003` | `wavelength calibration: reference_file=ref.npy` | Third step with details |
+| … | … | Additional steps in sequential order |
+
+These keys are written only when the caller provides an `extra_header` mapping to `write_stokes_fits`. The recommended way to build this mapping is through the `ProcessingHistory` utility class (see [FITS Exporter](#fits-exporter) in `io_modules.md`).
+
 
 ### Image Extension Headers (Stokes I, Q/I, U/I, V/I)
 
@@ -210,6 +227,10 @@ Each of the four image extensions carries an independent header. The content is 
 | `ORIGIN` | `IRSOL, Locarno, Switzerland` | Creating institution |
 | `FILENAME` | *string* | Suggested output filename |
 | `SWVER` | *string* | `irsol_data_pipeline` package version |
+| `SWVERNP` | *string* | `numpy` package version |
+| `SWVERSP` | *string* | `scipy` package version |
+| `SWVERSF` | *string* | `spectroflat` package version |
+| `SWVERPD` | *string* | `pydantic` package version |
 
 #### Observation Timing
 
