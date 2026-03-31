@@ -215,7 +215,7 @@ def _query_drms(
         try:
             result = _execute_drms_query(client, series, time_range, segment)
         except Exception:
-            logger.warning("DRMS query failed after all retries", series=series)
+            logger.warning("DRMS query failed after all retries")
             return None
         if not hasattr(result[0], "WAVELNTH"):
             logger.warning("No data available")
@@ -384,7 +384,6 @@ def _download_and_load_map(
             header["CDELT2"] = -header["CDELT2"]
 
         smap = sunpy.map.Map(data, header)
-        del data  # Drop the local reference; the map object retains the array
 
         if is_hmi:
             smap = smap.rotate(angle=180 * u.Unit("deg"))
