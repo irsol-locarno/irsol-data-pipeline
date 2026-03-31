@@ -32,6 +32,7 @@ flowchart TD
     LIST_A["list"]
     CONFIGURE_A["configure"]
 
+    START["start"]
     FLOWS["flows"]
     STATUS["status"]
     VARS["variables"]
@@ -63,6 +64,7 @@ flowchart TD
     SI --> SI_GENERATE
     SI --> SI_GENERATE_DAY
 
+    PREFECT --> START
     PREFECT --> STATUS
     PREFECT --> FLOWS
     PREFECT --> VARS
@@ -189,6 +191,7 @@ The command discovers flat-field files from the same directory as the measuremen
 |------|-------------|
 | `<stem>_corrected.fits` | Flat-field corrected Stokes FITS file |
 | `<stem>_flat_field_correction_data.fits` | Serialised correction object (FITS) |
+| `<stem>_flat_field_correction_data_offset_map.fits` | Serialised correction offset map (FITS) |
 | `<stem>_metadata.json` | Processing metadata |
 | `<stem>_profile_corrected.png` | Stokes profile plot (corrected data) |
 | `<stem>_profile_original.png` | Stokes profile plot (original data) |
@@ -444,6 +447,10 @@ idp plot slit /path/to/6302_m1.dat user@example.com --cache-dir /tmp/sdo_cache
 ### `idp prefect`
 
 Manage Prefect workflow orchestration.
+
+#### `idp prefect start`
+
+Starts the prefect server.
 
 #### `idp prefect automations list`
 
