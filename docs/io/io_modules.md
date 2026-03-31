@@ -10,7 +10,7 @@ The `io/` package handles all data loading and saving, providing a clean abstrac
 |--------|--------|------|-------|-------------|
 | ZIMPOL `.dat` / `.sav` | `io.dat` | ✅ | — | Raw IDL save-files from the ZIMPOL instrument |
 | Multi-extension FITS | `io.fits` | ✅ | ✅ | Corrected Stokes data with WCS and metadata |
-| Flat-field pickle | `io.flatfield` | ✅ | ✅ | Cached `FlatFieldCorrection` objects |
+| Flat-field FITS | `io.fits_flatfield` | ✅ | ✅ | Cached `FlatFieldCorrection` objects (FITS format) |
 | JSON metadata | `io.processing_metadata` | ✅ | ✅ | Processing metadata and error records |
 
 
@@ -84,11 +84,12 @@ def load_correction_data(path: Path) -> FlatFieldCorrection:
 def write_correction_data(output_path: Path | str, data: FlatFieldCorrection) -> Path:
 ```
 
-Persists `FlatFieldCorrection` objects (containing the dust-flat array, offset map, and desmiled data) as Python pickle files:
+Persists `FlatFieldCorrection` objects (containing the dust-flat array, offset map, and desmiled data) as FITS files (via `io.fits_flatfield`):
 
-- Uses `pickle.HIGHEST_PROTOCOL` for write performance.
+- Writes a multi-extension FITS file with `DUSTFLAT` and `DESMILED` image extensions and a primary header carrying provenance metadata.
+- When an `OffsetMap` is present, writes a companion `_offset_map.fits` file via `spectroflat.smile.OffsetMap.dump()`.
 - Creates parent directories automatically.
-- Validates the unpickled type on load; raises `FlatfieldCorrectionImportError` on type mismatch or corruption.
+- Raises `FlatfieldCorrectionImportError` on read failures and `FlatfieldCorrectionExportError` on write failures.
 
 ## Processing Metadata
 

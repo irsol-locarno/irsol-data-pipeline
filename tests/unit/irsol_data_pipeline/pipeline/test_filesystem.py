@@ -187,7 +187,7 @@ class TestMeasurementPathBuilders:
             / PROCESSED_DIRNAME
             / CACHE_DIRNAME
             / "flat-field-cache"
-            / "ff6302_m3_correction_cache.pkl"
+            / "ff6302_m3_correction_cache.fits"
         )
 
 

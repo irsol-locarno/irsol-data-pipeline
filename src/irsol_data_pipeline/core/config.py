@@ -14,7 +14,7 @@ CACHE_DIRNAME = "_cache"
 CORRECTED_FITS_SUFFIX = "_corrected.fits"
 ERROR_JSON_SUFFIX = "_error.json"
 METADATA_JSON_SUFFIX = "_metadata.json"
-FLATFIELD_CORRECTION_DATA_SUFFIX = "_flat_field_correction_data.pkl"
+FLATFIELD_CORRECTION_DATA_SUFFIX = "_flat_field_correction_data.fits"
 PROFILE_CORRECTED_PNG_SUFFIX = "_profile_corrected.png"
 PROFILE_ORIGINAL_PNG_SUFFIX = "_profile_original.png"
 

@@ -88,7 +88,7 @@ _OUTPUT_DIR_OPTION = Parameter(
 _CACHE_DIR_OPTION = Parameter(
     name="cache-dir",
     help=(
-        "Optional directory for flat-field correction cache (pickle) files. "
+        "Optional directory for flat-field correction cache files. "
         "When omitted the cache is placed under the day's processed/_cache/ "
         "directory derived from the measurement location."
     ),
@@ -168,7 +168,7 @@ def _find_existing_outputs(processed_dir: Path, source_name: str) -> list[Path]:
         "  • Reads flat-field .dat files from the same directory as the "
         "measurement.\n"
         "  • Writes multiple output artifacts to --output-dir (corrected FITS, "
-        "correction data pickle, metadata JSON, profile PNG plots).\n"
+        "flat-field correction FITS, metadata JSON, profile PNG plots).\n"
         "  • If --cache-dir is provided, flat-field analysis results are cached "
         "there as .pkl files to speed up subsequent runs.\n"
         "  • Prompts for confirmation when output artifacts already exist "
@@ -275,7 +275,7 @@ def apply(
         "Side effects:\n"
         "  • Reads all .dat measurement files from <day>/reduced/.\n"
         "  • Writes multiple artifacts per measurement to --output-dir "
-        "(corrected FITS, correction data pickle, metadata JSON, profile PNG "
+        "(corrected FITS, flat field correction FITS, metadata JSON, profile PNG "
         "plots).\n"
         "  • Measurements with an existing *_corrected.fits or *_error.json "
         "artifact are silently skipped (use --force to reprocess them).\n"

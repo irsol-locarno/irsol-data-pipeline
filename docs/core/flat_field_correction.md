@@ -93,7 +93,7 @@ The interpolator shifts each row by the sub-pixel offsets from the `OffsetMap`, 
 Flat-field analysis is computationally expensive. The pipeline caches results:
 
 - **In-memory** — the `FlatFieldCache` (in `pipeline.flatfield_cache`) groups corrections by wavelength and retrieves the temporally closest one for each measurement.
-- **On-disk** — corrections are persisted as pickle files (`*_flat_field_correction_data.pkl`) in the `processed/_cache/` directory and reloaded on subsequent runs.
+- **On-disk** — corrections are persisted as FITS files (`*_flat_field_correction_data.fits`) in the `processed/_cache/` directory and reloaded on subsequent runs.
 
 ## Inputs / Outputs
 
@@ -102,11 +102,11 @@ Flat-field analysis is computationally expensive. The pipeline caches results:
 | **Input** | Raw flat-field `.dat` file | ZIMPOL IDL save-file |
 | **Input** | Raw measurement `.dat` file | ZIMPOL IDL save-file |
 | **Output** | Corrected Stokes parameters | In-memory `StokesParameters` model |
-| **Output** | Cached correction data | Pickle file (`.pkl`) |
+| **Output** | Cached correction data | FITS file (`.fits`) |
 
 
 ## Related Documentation
 
 - [Wavelength Auto-Calibration](wavelength_autocalibration.md) — runs after flat-field correction
 - [Pipeline Overview](../pipeline/pipeline_overview.md) — full processing sequence
-- [IO Modules](../io/io_modules.md) — flat-field pickle import/export
+- [IO Modules](../io/io_modules.md) — flat-field FITS import/export

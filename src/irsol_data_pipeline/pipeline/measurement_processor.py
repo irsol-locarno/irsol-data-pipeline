@@ -24,7 +24,7 @@ from irsol_data_pipeline.core.solar_orientation import (
 )
 from irsol_data_pipeline.exceptions import FlatFieldAssociationNotFoundException
 from irsol_data_pipeline.io import dat as dat_io
-from irsol_data_pipeline.io import flatfield as flatfield_io
+from irsol_data_pipeline.io import fits_flatfield as flatfield_io
 from irsol_data_pipeline.io import processing_metadata as processing_metadata_io
 from irsol_data_pipeline.io.fits.exporter import write_stokes_fits
 from irsol_data_pipeline.pipeline.filesystem import (
@@ -179,7 +179,7 @@ def _process_single_measurement(
             solar_orientation=solar_orientation,
         )
 
-        # 6. Save flat-field correction data (pickle)
+        # 6. Save flat-field correction data (FITS)
         flatfield_io.write(
             processed_output_path(
                 processed_dir,

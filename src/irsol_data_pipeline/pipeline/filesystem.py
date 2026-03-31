@@ -105,7 +105,7 @@ def processed_output_path(
 def flatfield_correction_cache_path(flatfield_path: Path) -> Path:
     """Return the flat-field correction cache path for a flat-field .dat
     path."""
-    cache_filename = f"{flatfield_path.stem}_correction_cache.pkl"
+    cache_filename = f"{flatfield_path.stem}_correction_cache.fits"
     day_path = flatfield_path.parent.parent
     return processed_cache_dir_for_day(day_path) / "flat-field-cache" / cache_filename
 

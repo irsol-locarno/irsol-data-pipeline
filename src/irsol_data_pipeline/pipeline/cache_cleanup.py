@@ -53,7 +53,7 @@ def cleanup_day_cache_files(
     day: ObservationDay,
     hours: float,
 ) -> CacheCleanupDayResult:
-    """Delete stale ``.pkl`` cache files for a single observation day.
+    """Delete stale cache files for a single observation day.
 
     Files in ``processed/_cache`` whose
     last-modified time is older than *hours* are removed.

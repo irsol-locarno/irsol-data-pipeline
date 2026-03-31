@@ -31,22 +31,25 @@ All output files share the same stem as the source `.dat` file:
 
 ```
 processed/
-├── 6302_m1_corrected.fits
-├── 6302_m1_metadata.json
-├── 6302_m1_profile_original.png
-├── 6302_m1_profile_corrected.png
-├── 6302_m1_slit_preview.png
+├── 6302_m1_corrected.fits  # The flat-field corrected stokes data of the measurement, in FITS format
+├── 6302_m1_flat_field_correction_data.fits  # The spectroflat correction data used for the flat-field correction, in FITS format
+├── 6302_m1_flat_field_correction_data_offset_map.fits  # The offset map used for the flat-field correction, in FITS format
+├── 6302_m1_metadata.json   # Metadata about the processing (timestamps, flat-field used, wavelength calibration result, etc.)
+├── 6302_m1_profile_original.png  # Quick-look plot of the original Stokes profiles (before correction)
+├── 6302_m1_profile_corrected.png  # Quick-look plot of the corrected Stokes profiles (after correction)
+├── 6302_m1_slit_preview.png  # Slit preview image showing the slit position on the solar disc at observation time
 └── _cache/
     └── flat-field-cache/
-        └── 6302_m1_flat_field_correction_data.pkl
+        └── ff6302_m1_correction_cache.fits  # The cached spectroflat correction data computed on a flat-field, in FITS format
+        └── ff6302_m1_correction_cache_offset_map.fits  # The cached spectroflat offset map data computed on a flat-field, in FITS format
 ```
-
-An internal flat-field correction pickle (`_flat_field_correction_data.pkl`) is also written to `_cache/flat-field-cache/` for pipeline caching purposes; see [Flat-field correction cache](#flat-field-correction-cache-pkl).
 
 
 ## Corrected FITS File
 
-The corrected FITS file is the primary scientific output of the pipeline. It is a multi-extension FITS (MEF) file that carries all four Stokes parameters together with their World Coordinate System (WCS) mapping and a rich set of observatory, instrument, and provenance metadata.
+File: `<stem>_corrected.fits`
+
+The corrected FITS file is the primary scientific output of the pipeline. It is a file that carries all four Stokes parameters together with their World Coordinate System (WCS) mapping and a rich set of observatory, instrument, and provenance metadata.
 
 The file conforms to the SOLARNET FITS standard.
 
@@ -455,24 +458,33 @@ The spectrograph slit is overlaid as a line on each panel. The image is purely a
 ![Slit preview image](../assets/5886_m9_slit_preview.png)
 
 
-## Flat-field Correction Cache (`.pkl`)
+## Flat-field Correction Cache (`.fits`)
 
-File: `_cache/flat-field-cache/<stem>_flat_field_correction_data.pkl`
+Files:
+ * `_cache/flat-field-cache/<stem>_correction_cache.fits`
+ * `_cache/flat-field-cache/<stem>_correction_cache_offset_map.fits`
 
-A Python pickle file that serialises the `FlatFieldCorrection` Pydantic model computed from the paired flat-field `.dat` file. This cache avoids recomputing the (expensive) spectroflat analysis for every measurement that shares the same flat-field.
+A FITS file that serialises result of the _Spectroflat_ analysis performed on a flat-field measurement. This cache avoids recomputing the (expensive) spectroflat analysis for every measurement that shares the same flat-field.
 
-The pickle stores the following fields of `FlatFieldCorrection`:
+The main FITS file uses the following HDU layout:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `source_flatfield_path` | `Path` | Absolute path to the source flat-field `.dat` file |
-| `dust_flat` | `numpy.ndarray` | Normalised dust-flat correction array |
-| `offset_map` | `numpy.ndarray` | Spectral smile offset map (pixel shift per row) |
-| `desmiled` | `numpy.ndarray` | Desmiled flat-field array |
-| `timestamp` | `datetime` | Observation time of the flat-field measurement |
-| `wavelength` | `float` | Target wavelength [Å] of the flat-field |
+| Extension | `EXTNAME` | Content |
+|-----------|-----------|---------|
+| 0 (Primary) | — | Header with provenance metadata |
+| 1 | `DUSTFLAT` | Normalised dust-flat correction array |
+| 2 | `DESMILED` | Desmiled flat-field array |
 
-> **Note** The pickle format is internal to the pipeline and is not intended as a data exchange format. Its schema may change between pipeline versions. Cached files are automatically invalidated and regenerated when the source flat-field `.dat` changes.
+The primary header stores the following keys:
+
+| Header key | Description |
+|------------|-------------|
+| `SRCFFPTH` | Absolute path to the source flat-field `.dat` file |
+| `WAVELEN` | Target wavelength [Å] of the flat-field |
+| `TIMESTMP` | Observation time of the flat-field measurement (ISO 8601) |
+| `OMAPFILE` | Basename of the companion offset-map FITS file (absent when no offset map) |
+
+
+> **Note** The FITS cache format is internal to the pipeline and is not intended as a data exchange format. Its schema may change between pipeline versions. Cached files are automatically invalidated and regenerated when the source flat-field `.dat` changes.
 
 
 ## Related Documentation

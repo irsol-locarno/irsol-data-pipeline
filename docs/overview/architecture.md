@@ -29,7 +29,7 @@ flowchart BT
 | Layer | Module | Responsibility |
 |-------|--------|----------------|
 | **Core** | `core/` | Domain models (Pydantic), calibration algorithms, correction logic, slit image geometry, config constants |
-| **IO** | `io/` | Read/write `.dat`, FITS, flat-field pickles, and JSON metadata |
+| **IO** | `io/` | Read/write `.dat`, FITS, flat-field FITS cache, and JSON metadata |
 | **Pipeline** | `pipeline/` | Orchestrate per-measurement and per-day processing, flat-field caching, filesystem discovery |
 | **Prefect** | `prefect/` | Conditional decorators, flow definitions, retry policies, Prefect variable management |
 | **Plotting** | `plotting/` | Matplotlib-based Stokes profile and slit context image rendering |
@@ -54,7 +54,7 @@ Each observation day is stored in a directory with the structure:
             ├── 6302_m1_profile_corrected.png
             ├── 6302_m1_slit_preview.png
             └── _cache/
-                  ├── flat-field-cache/ # Flat-field correction cache (.pkl)
+                  ├── flat-field-cache/ # Flat-field correction cache (.fits)
                   └── sdo/  # Downloaded SDO FITS cache for slit image generation
 ```
 

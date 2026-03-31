@@ -21,7 +21,7 @@ flowchart TD
         P3["4.3 Apply flat-field correction"]
         P4["4.4 Wavelength auto-calibration"]
         P5["4.5 Write corrected FITS"]
-        P6["4.6 Write correction data (pickle)"]
+        P6["4.6 Write correction data (FITS)"]
         P7["4.7 Write processing metadata (JSON)"]
         P8["4.8 Generate profile plots (PNG)"]
 
@@ -48,7 +48,7 @@ flowchart TD
 
 For each flat-field `.dat` file:
 
-1. Check if a cached correction pickle exists on disk. If so, load it.
+1. Check if a cached correction FITS file exists on disk. If so, load it.
 2. Otherwise, load the flat-field `.dat`, run `analyze_flatfield()`, and persist the result.
 3. Add the `FlatFieldCorrection` to the in-memory `FlatFieldCache`, keyed by wavelength.
 
@@ -71,7 +71,7 @@ The 8-step pipeline for each measurement:
 | 4.3 | Apply dust-flat + smile correction | Corrected `StokesParameters` |
 | 4.4 | Run wavelength auto-calibration | `CalibrationResult` |
 | 4.5 | Write corrected FITS | `*_corrected.fits` |
-| 4.6 | Write flat-field correction data | `*_flat_field_correction_data.pkl` |
+| 4.6 | Write flat-field correction data | `*_flat_field_correction_data.fits` |
 | 4.7 | Write processing metadata | `*_metadata.json` |
 | 4.8 | Generate profile plots | `*_profile_original.png`, `*_profile_corrected.png` |
 
