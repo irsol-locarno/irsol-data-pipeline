@@ -42,7 +42,7 @@ from irsol_data_pipeline.pipeline.scanner import (
     build_scan_flatfield_report_markdown,
     scan_flatfield_dataset,
 )
-from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.patch_logging import PrefectLogLevel, setup_logging
 from irsol_data_pipeline.prefect.utils import create_prefect_markdown_report
 from irsol_data_pipeline.prefect.variables import resolve_dataset_root
 
@@ -66,6 +66,7 @@ def scan_dataset_task(root: Path) -> ScanResult:
 def run_day_processing_subflow_task(
     day_path: Path,
     max_delta_hours: float = 2.0,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Prefect task: execute the day-processing flow as a sub-flow."""
     with logger.contextualize(day=day_path.name):
@@ -73,6 +74,7 @@ def run_day_processing_subflow_task(
         result = process_daily_unprocessed_measurements(
             day_path=day_path,
             max_delta_hours=max_delta_hours,
+            log_level=log_level,
         )
         logger.success("Daily flat field correction completed")
         return result
@@ -87,6 +89,7 @@ def process_unprocessed_measurements(
     root: str = "",
     max_delta_hours: float = 2.0,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> list[DayProcessingResult]:
     """Scan the dataset and process all days with pending measurements.
 
@@ -94,11 +97,12 @@ def process_unprocessed_measurements(
         root: Dataset root path, if not set, the default path from Prefect Variable is used.
         max_delta_hours: Maximum flat-field time delta in hours.
         max_concurrent_days_to_process: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging()
+    setup_logging(level=log_level)
     dataset_root = resolve_dataset_root(root)
     logger.info(
         "Starting dataset scan flow",
@@ -137,6 +141,7 @@ def process_unprocessed_measurements(
             parameters={
                 "day_path": selected_day_paths,
                 "max_delta_hours": unmapped(max_delta_hours),
+                "log_level": unmapped(log_level),
             },
         ).result()
 
@@ -161,17 +166,19 @@ def process_unprocessed_measurements(
 def process_daily_unprocessed_measurements(
     day_path: Path,
     max_delta_hours: float = 2.0,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Process a single observation day.
 
     Args:
         day_path: Path to the observation day directory.
         max_delta_hours: Maximum flat-field time delta in hours.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging()
+    setup_logging(level=log_level)
     logger.info(
         "Starting day processing flow",
         day_path=day_path,

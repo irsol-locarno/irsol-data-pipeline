@@ -17,7 +17,7 @@ from prefect.server.schemas.filters import FlowRunFilter, FlowRunFilterEndTime
 from prefect.server.schemas.sorting import FlowRunSort
 from prefect.task_runners import ThreadPoolTaskRunner
 
-from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.patch_logging import PrefectLogLevel, setup_logging
 from irsol_data_pipeline.prefect.variables import (
     PrefectVariableName,
     aget_variable,
@@ -66,17 +66,19 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
 )
 async def delete_flow_runs_older_than(
     hours: float = 0.0,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> bool:
     """Delete Prefect flow runs older than a retention duration.
 
     Args:
         hours: Optional retention duration in hours. If unset (0), the Prefect
             Variable ``flow-run-expiration-hours`` is used.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         True if any flow runs were deleted, False if no old flow runs were found.
     """
-    setup_logging()
+    setup_logging(level=log_level)
     hours = hours or float(
         await aget_variable(
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS,

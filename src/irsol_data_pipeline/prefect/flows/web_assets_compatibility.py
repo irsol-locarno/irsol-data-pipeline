@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 from loguru import logger
-from prefect import flow, task
+from prefect import flow, task, unmapped
 from prefect.task_runners import ThreadPoolTaskRunner
 
 from irsol_data_pipeline.core.config import DEFAULT_PIOMBO_BASE_PATH
@@ -28,7 +28,7 @@ from irsol_data_pipeline.pipeline.filesystem import (
 from irsol_data_pipeline.pipeline.web_asset_compatibility import (
     process_day_web_asset_compatibility,
 )
-from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.patch_logging import PrefectLogLevel, setup_logging
 from irsol_data_pipeline.prefect.secrets import (
     PrefectSecretName,
     get_secret,
@@ -121,6 +121,7 @@ def run_day_web_assets_subflow_task(
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Prefect task: execute the day flow as a sub-flow.
 
@@ -132,6 +133,7 @@ def run_day_web_assets_subflow_task(
         piombo_password: SSH password for Piombo upload.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         Day-level compatibility processing summary.
@@ -145,6 +147,7 @@ def run_day_web_assets_subflow_task(
         piombo_password=piombo_password,
         jpeg_quality=jpeg_quality,
         force_overwrite=force_overwrite,
+        log_level=log_level,
     )
 
 
@@ -165,6 +168,7 @@ def publish_web_assets_for_root(
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
     max_concurrent_days: int = max(1, min(8, (os.cpu_count() or 1) - 1)),
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> list[DayProcessingResult]:
     """Scan a root and run web-assets compatibility processing per day.
 
@@ -177,11 +181,12 @@ def publish_web_assets_for_root(
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
         max_concurrent_days: Maximum number of day subflows to run concurrently.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         One DayProcessingResult per scanned day.
     """
-    setup_logging()
+    setup_logging(level=log_level)
     dataset_root = resolve_dataset_root(root)
     piombo_base_path = piombo_base_path or get_variable(
         PrefectVariableName.PIOMBO_BASE_PATH,
@@ -216,23 +221,19 @@ def publish_web_assets_for_root(
 
     day_paths = [day.path for day in observation_days]
     with ThreadPoolTaskRunner(max_workers=max_concurrent_days) as runner:
-        result_futures = []
-        for day_path in day_paths:
-            result_futures.append(
-                runner.submit(
-                    run_day_web_assets_subflow_task,
-                    {
-                        "day_path": day_path,
-                        "piombo_base_path": str(piombo_base_path),
-                        "piombo_hostname": str(piombo_hostname),
-                        "piombo_username": str(piombo_username),
-                        "piombo_password": str(piombo_password),
-                        "jpeg_quality": jpeg_quality,
-                        "force_overwrite": force_overwrite,
-                    },
-                ),
-            )
-        results = [result_future.result() for result_future in result_futures]
+        results = runner.map(
+            run_day_web_assets_subflow_task,
+            parameters={
+                "day_path": day_paths,
+                "piombo_base_path": unmapped(piombo_base_path),
+                "piombo_hostname": unmapped(piombo_hostname),
+                "piombo_username": unmapped(piombo_username),
+                "piombo_password": unmapped(piombo_password),
+                "jpeg_quality": unmapped(jpeg_quality),
+                "force_overwrite": unmapped(force_overwrite),
+                "log_level": unmapped(log_level),
+            },
+        ).result()
 
     logger.success(
         "Web-assets compatibility root flow complete",
@@ -257,6 +258,7 @@ def publish_web_assets_for_day(
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Convert and deploy compatible web assets for one day.
 
@@ -268,11 +270,12 @@ def publish_web_assets_for_day(
         piombo_password: SSH password for Piombo upload; if not provided, Prefect variable default is used.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         Day-level compatibility processing summary.
     """
-    setup_logging()
+    setup_logging(level=log_level)
 
     path = Path(day_path)
     day = ObservationDay(

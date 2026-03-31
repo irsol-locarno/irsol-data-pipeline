@@ -41,7 +41,7 @@ from irsol_data_pipeline.pipeline.scanner import (
 from irsol_data_pipeline.pipeline.slit_images_processor import (
     generate_slit_images_for_day,
 )
-from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.patch_logging import PrefectLogLevel, setup_logging
 from irsol_data_pipeline.prefect.utils import create_prefect_markdown_report
 from irsol_data_pipeline.prefect.variables import (
     PrefectVariableName,
@@ -136,6 +136,7 @@ def run_day_slit_generation_task(
     day_path: Path,
     jsoc_email: str,
     use_limbguider: bool = False,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Prefect task: generate slit images for a single day."""
     with logger.contextualize(day=day_path.name):
@@ -144,6 +145,7 @@ def run_day_slit_generation_task(
             day_path=day_path,
             jsoc_email=jsoc_email,
             use_limbguider=use_limbguider,
+            log_level=log_level,
         )
         logger.success("Daily slit generation completed")
         return result
@@ -159,6 +161,7 @@ def generate_slit_images(
     jsoc_email: str = "",
     use_limbguider: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> list[DayProcessingResult]:
     """Scan the dataset and generate slit preview images for all days with
     pending work.
@@ -176,11 +179,12 @@ def generate_slit_images(
         max_concurrent_days: Maximum number of concurrent day processing
             tasks. Defaults to CPU count - 1, capped at 4
             (lower than flat-field correction due to network I/O).
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging()
+    setup_logging(level=log_level)
 
     email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:
@@ -229,6 +233,7 @@ def generate_slit_images(
                 "day_path": day_paths,
                 "jsoc_email": unmapped(email),
                 "use_limbguider": unmapped(use_limbguider),
+                "log_level": unmapped(log_level),
             },
         ).result()
 
@@ -253,6 +258,7 @@ def generate_daily_slit_images(
     day_path: Path,
     jsoc_email: str = "",
     use_limbguider: bool = False,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> DayProcessingResult:
     """Generate slit preview images for a single observation day.
 
@@ -261,11 +267,12 @@ def generate_daily_slit_images(
         jsoc_email: Optional JSOC email override for DRMS queries. If unset,
             the Prefect Variable ``jsoc-email`` is used.
         use_limbguider: Whether to try using limbguider coordinates.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging()
+    setup_logging(level=log_level)
 
     email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:

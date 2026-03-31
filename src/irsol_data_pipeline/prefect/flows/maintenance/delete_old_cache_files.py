@@ -31,7 +31,7 @@ from irsol_data_pipeline.pipeline.filesystem import (
     reduced_dir_for_day,
 )
 from irsol_data_pipeline.prefect.decorators import flow, task
-from irsol_data_pipeline.prefect.patch_logging import setup_logging
+from irsol_data_pipeline.prefect.patch_logging import PrefectLogLevel, setup_logging
 from irsol_data_pipeline.prefect.utils import create_prefect_markdown_report
 from irsol_data_pipeline.prefect.variables import (
     PrefectVariableName,
@@ -69,6 +69,7 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
 def delete_old_day_cache_files(
     day_path: Path,
     hours: float = 0.0,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> CacheCleanupDayResult:
     """Delete stale cache files for a single observation day.
 
@@ -76,11 +77,12 @@ def delete_old_day_cache_files(
         day_path: Observation day path.
         hours: Optional cache retention window in hours. If unset (0),
             the Prefect Variable ``cache-expiration-hours`` is used.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         Cleanup summary for the day.
     """
-    setup_logging()
+    setup_logging(level=log_level)
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
     )
@@ -98,9 +100,12 @@ def delete_old_day_cache_files(
 def delete_old_day_cache_files_task(
     day_path: Path,
     hours: float,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> CacheCleanupDayResult:
     """Task wrapper for :func:`delete_old_day_cache_files`."""
-    return delete_old_day_cache_files(day_path=day_path, hours=hours)
+    return delete_old_day_cache_files(
+        day_path=day_path, hours=hours, log_level=log_level
+    )
 
 
 @flow(
@@ -112,6 +117,7 @@ def delete_old_day_cache_files_task(
 def delete_old_cache_files(
     root: str = "",
     hours: float = 0.0,
+    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> list[CacheCleanupDayResult]:
     """Delete stale cache files across all observation days.
 
@@ -119,11 +125,12 @@ def delete_old_cache_files(
         root: Dataset root path. If not set, the default path from Prefect Variable is used.
         hours: Optional cache retention window in hours. If unset (0),
             the Prefect Variable ``cache-expiration-hours`` is used.
+        log_level: Logging level for the Prefect flow.
 
     Returns:
         Per-day cleanup summaries.
     """
-    setup_logging()
+    setup_logging(level=log_level)
 
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
@@ -140,6 +147,7 @@ def delete_old_cache_files(
     results = delete_old_day_cache_files_task.map(
         day_path=[day.path for day in days],
         hours=unmapped(hours),
+        log_level=unmapped(log_level),
     ).result()
 
     report = build_cache_cleanup_report(root=root_path, results=results, hours=hours)

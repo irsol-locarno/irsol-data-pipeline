@@ -1,3 +1,4 @@
+import enum
 import logging as stdlib_logging
 import traceback
 
@@ -6,6 +7,16 @@ from prefect.logging import get_run_logger
 
 from irsol_data_pipeline.logging_config import LOG_LEVEL
 from irsol_data_pipeline.logging_config import setup_logging as _setup_base_logging
+
+
+class PrefectLogLevel(enum.Enum):
+    TRACE = "TRACE"
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
 
 _prefect_sink_added = False
 
@@ -28,20 +39,48 @@ def _extract_traceback_message(record: dict) -> str | None:
         return str(exception)
 
 
-def setup_logging(level: LOG_LEVEL = "DEBUG"):
+def _extract_loguru_level_from_prefect_log_level(level: PrefectLogLevel) -> LOG_LEVEL:
+    """Map PrefectLogLevel to the loguru LOG_LEVEL used in the pipeline."""
+    mapping: dict[PrefectLogLevel, LOG_LEVEL] = {
+        PrefectLogLevel.TRACE: "TRACE",
+        PrefectLogLevel.DEBUG: "DEBUG",
+        PrefectLogLevel.INFO: "INFO",
+        PrefectLogLevel.WARNING: "WARNING",
+        PrefectLogLevel.ERROR: "ERROR",
+        PrefectLogLevel.CRITICAL: "CRITICAL",
+    }
+    return mapping.get(level, "INFO")
+
+
+def _extract_std_level_from_loguru_level(level: LOG_LEVEL) -> int:
+    mapping: dict[LOG_LEVEL, int] = {
+        "TRACE": stdlib_logging.DEBUG,
+        "DEBUG": stdlib_logging.DEBUG,
+        "INFO": stdlib_logging.INFO,
+        "WARNING": stdlib_logging.WARNING,
+        "ERROR": stdlib_logging.ERROR,
+        "CRITICAL": stdlib_logging.CRITICAL,
+    }
+    return mapping.get(level, stdlib_logging.INFO)
+
+
+def setup_logging(level: PrefectLogLevel):
     """Configure loguru logging with a Prefect sink that forwards logs to the
     run logger."""
     global _prefect_sink_added  # noqa PLW0603 - it's ok to handle globals in this case
     if _prefect_sink_added:
         return
 
-    _setup_base_logging(level=level)
+    loguru_base_level = _extract_loguru_level_from_prefect_log_level(level)
+    _setup_base_logging(level=loguru_base_level)
+
+    std_base_level = _extract_std_level_from_loguru_level(loguru_base_level)
 
     def _prefect_sink(message):
         record = message.record
         try:
             run_logger = get_run_logger()
-            run_logger.setLevel(level)
+            run_logger.setLevel(std_base_level)
         except Exception:
             return  # Not inside a flow/task run context
 
@@ -68,5 +107,5 @@ def setup_logging(level: LOG_LEVEL = "DEBUG"):
 
         run_logger.log(level_no, full_message)
 
-    logger.add(_prefect_sink, format="{message}", level=level)
+    logger.add(_prefect_sink, format="{message}", level="TRACE")
     _prefect_sink_added = True
