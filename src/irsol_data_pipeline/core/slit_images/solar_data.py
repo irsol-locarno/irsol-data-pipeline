@@ -16,6 +16,7 @@ import requests
 import sunpy.map
 from astropy.io import fits
 from loguru import logger
+from tenacity import RetryCallState, retry, stop_after_attempt, wait_exponential
 
 from irsol_data_pipeline.core.slit_images.config import (
     DRMS_KEYS,
@@ -164,29 +165,104 @@ def fetch_sdo_maps(
         return results
 
 
-def _query_drms(client, series: str, time_range: str, segment: str):
-    """Query DRMS with retries for a given series and time range."""
+def _log_retry(retry_state: RetryCallState) -> None:
+    """Log a tenacity retry attempt using loguru."""
+    logger.warning(
+        "Retrying after failure",
+        attempt=retry_state.attempt_number,
+        error=str(retry_state.outcome.exception()),
+    )
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    before_sleep=_log_retry,
+    reraise=True,
+)
+def _execute_drms_query(
+    client: drms.Client,
+    series: str,
+    time_range: str,
+    segment: str,
+) -> tuple:
+    """Execute a single DRMS query attempt against the JSOC server.
+
+    Args:
+        client: DRMS client instance.
+        series: DRMS series name.
+        time_range: DRMS time range string.
+        segment: DRMS segment name.
+
+    Returns:
+        Tuple of (keys DataFrame, segments DataFrame) returned by the client.
+    """
+    return client.query(
+        f"{series}[{time_range}]",
+        key=",".join(DRMS_KEYS),
+        seg=segment,
+    )
+
+
+def _query_drms(
+    client: drms.Client,
+    series: str,
+    time_range: str,
+    segment: str,
+) -> tuple | None:
+    """Query DRMS with tenacity retries for a given series and time range."""
     with logger.contextualize(series=series):
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                result = client.query(
-                    f"{series}[{time_range}]",
-                    key=",".join(DRMS_KEYS),
-                    seg=segment,
-                )
-                if not hasattr(result[0], "WAVELNTH"):
-                    logger.warning("No data available")
-                    return None
-                return result
-            except Exception as exc:
-                logger.warning(
-                    "DRMS query failed",
-                    attempt=attempt + 1,
-                    max_retries=max_retries,
-                    error=str(exc),
-                )
-        return None
+        try:
+            result = _execute_drms_query(client, series, time_range, segment)
+        except Exception:
+            logger.warning("DRMS query failed after all retries", series=series)
+            return None
+        if not hasattr(result[0], "WAVELNTH"):
+            logger.warning("No data available")
+            return None
+        return result
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    before_sleep=_log_retry,
+    reraise=True,
+)
+def _fetch_fits_file(url: str, target: Path) -> int:
+    """Download a FITS file from the given URL and save it to target path.
+
+    Retries up to 3 times with exponential back-off on any network error.
+
+    Args:
+        url: URL to download the FITS file from.
+        target: Local path to write the downloaded bytes to.
+
+    Returns:
+        Total number of bytes written.
+
+    Raises:
+        requests.HTTPError: If the server returns an HTTP error status.
+        requests.RequestException: If all retry attempts are exhausted.
+    """
+    bytes_written = 0
+    bytes_2mb = 2 * 1024 * 1024
+    with requests.get(url, timeout=120, stream=True) as resp:
+        resp.raise_for_status()
+        total = int(resp.headers.get("content-length", 0))
+        logger.trace("Starting streamed download", total_bytes=total, url=url)
+        with open(target, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=bytes_2mb):
+                if chunk:
+                    f.write(chunk)
+                    bytes_written += len(chunk)
+                    if total:
+                        logger.trace(
+                            "Download progress",
+                            bytes_written=bytes_written,
+                            percent=round(100 * bytes_written / total, 2),
+                        )
+    return bytes_written
 
 
 def _find_closest_record(
@@ -251,6 +327,7 @@ def _download_and_load_map(
         filename = f"{series}_{wavelength}_{safe_time}.fits"
 
         target: Path | None = None
+        is_temp_file = False
         if cache_dir is not None:
             cache_dir.mkdir(parents=True, exist_ok=True)
             target = cache_dir / filename
@@ -264,66 +341,39 @@ def _download_and_load_map(
                 target=target,
                 url=url,
             )
+            if target is None:
+                # No cache directory — use a temporary file that we clean up
+                # ourselves once the FITS data has been loaded into memory.
+                with tempfile.NamedTemporaryFile(
+                    suffix=".fits",
+                    delete=False,
+                ) as tmp_file:
+                    target = Path(tmp_file.name)
+                is_temp_file = True
+
             try:
-                with requests.get(url, timeout=120, stream=True) as resp:
-                    resp.raise_for_status()
-                    total = int(resp.headers.get("content-length", 0))
-                    logger.trace(
-                        "Starting streamed download", total_bytes=total, url=url
-                    )
-                    bytes_written = 0
-                    bytes_2mb = 2 * 1024 * 1024
-                    if target is not None:
-                        logger.debug("Writing response to target file", target=target)
-                        with open(target, "wb") as f:
-                            for chunk in resp.iter_content(chunk_size=bytes_2mb):
-                                if chunk:
-                                    f.write(chunk)
-                                    bytes_written += len(chunk)
-                                    if total:
-                                        logger.trace(
-                                            "Download progress",
-                                            bytes_written=bytes_written,
-                                            percent=round(
-                                                100 * bytes_written / total, 2
-                                            ),
-                                        )
-                    else:
-                        # Use a temp approach; write to cache_dir if available
-                        with tempfile.NamedTemporaryFile(
-                            suffix=".fits",
-                            delete=False,
-                            dir=cache_dir,
-                        ) as tmp_file:
-                            logger.debug(
-                                "Writing response to temporary file",
-                                temp_path=tmp_file.name,
-                            )
-                            for chunk in resp.iter_content(chunk_size=bytes_2mb):
-                                if chunk:
-                                    tmp_file.write(chunk)
-                                    bytes_written += len(chunk)
-                                    if total:
-                                        logger.trace(
-                                            "Download progress",
-                                            bytes_written=bytes_written,
-                                            percent=round(
-                                                100 * bytes_written / total, 2
-                                            ),
-                                        )
-                            target = Path(tmp_file.name)
-                    logger.trace(
-                        "Download complete",
-                        total_bytes=bytes_written,
-                        target=str(target),
-                    )
+                bytes_written = _fetch_fits_file(url, target)
+                logger.trace(
+                    "Download complete",
+                    total_bytes=bytes_written,
+                    target=str(target),
+                )
             except Exception:
                 logger.exception("Failed to download the FITS file", url=url)
+                if is_temp_file:
+                    target.unlink(missing_ok=True)
+                return None
+
         try:
             data, header = fits.getdata(str(target), header=True)
         except Exception:
             logger.exception("Error reading FITS file", target=target)
             return None
+        finally:
+            # Remove the temporary FITS file now that its contents are in
+            # memory — whether the read succeeded or failed.
+            if is_temp_file:
+                target.unlink(missing_ok=True)
 
         for k, v in metadata.items():
             header[k] = v
@@ -334,6 +384,7 @@ def _download_and_load_map(
             header["CDELT2"] = -header["CDELT2"]
 
         smap = sunpy.map.Map(data, header)
+        del data  # Drop the local reference; the map object retains the array
 
         if is_hmi:
             smap = smap.rotate(angle=180 * u.Unit("deg"))

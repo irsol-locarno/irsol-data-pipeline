@@ -111,6 +111,7 @@ def generate_slit_image(
                 slit=slit_geometry,
                 output_path=output_path,
             )
+            del maps  # Release large SunPy map arrays promptly
 
             logger.success("Slit preview generated", output_path=output_path)
 

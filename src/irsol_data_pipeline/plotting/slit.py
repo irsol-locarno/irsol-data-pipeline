@@ -196,6 +196,7 @@ def plot(
         plt.close(fig)
     else:
         fig.clear()
+        del fig  # Release WCS axes / map references held by the figure
 
 
 def _plot_panel(
