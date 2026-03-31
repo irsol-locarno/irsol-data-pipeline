@@ -82,7 +82,7 @@ def delete_old_day_cache_files(
     Returns:
         Cleanup summary for the day.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
     )
@@ -130,7 +130,7 @@ def delete_old_cache_files(
     Returns:
         Per-day cleanup summaries.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
 
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),

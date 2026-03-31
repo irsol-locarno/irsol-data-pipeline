@@ -78,7 +78,7 @@ async def delete_flow_runs_older_than(
     Returns:
         True if any flow runs were deleted, False if no old flow runs were found.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
     hours = hours or float(
         await aget_variable(
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS,

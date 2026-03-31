@@ -184,7 +184,7 @@ def generate_slit_images(
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
 
     email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:
@@ -272,7 +272,7 @@ def generate_daily_slit_images(
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
 
     email = jsoc_email or get_variable(PrefectVariableName.JSOC_EMAIL, default="")
     if not email:

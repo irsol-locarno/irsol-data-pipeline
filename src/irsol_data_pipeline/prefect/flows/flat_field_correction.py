@@ -102,7 +102,7 @@ def process_unprocessed_measurements(
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
     dataset_root = resolve_dataset_root(root)
     logger.info(
         "Starting dataset scan flow",
@@ -178,7 +178,7 @@ def process_daily_unprocessed_measurements(
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
     logger.info(
         "Starting day processing flow",
         day_path=day_path,

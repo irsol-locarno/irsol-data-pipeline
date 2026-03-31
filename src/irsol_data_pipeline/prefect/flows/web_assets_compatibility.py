@@ -186,7 +186,7 @@ def publish_web_assets_for_root(
     Returns:
         One DayProcessingResult per scanned day.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
     dataset_root = resolve_dataset_root(root)
     piombo_base_path = piombo_base_path or get_variable(
         PrefectVariableName.PIOMBO_BASE_PATH,
@@ -275,7 +275,7 @@ def publish_web_assets_for_day(
     Returns:
         Day-level compatibility processing summary.
     """
-    setup_logging(log_level=log_level)
+    setup_logging(level=log_level)
 
     path = Path(day_path)
     day = ObservationDay(
