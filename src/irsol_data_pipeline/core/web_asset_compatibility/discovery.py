@@ -8,6 +8,7 @@ from loguru import logger
 
 from irsol_data_pipeline.core.config import (
     PROFILE_CORRECTED_PNG_SUFFIX,
+    PROFILE_ORIGINAL_PNG_SUFFIX,
     SLIT_PREVIEW_PNG_SUFFIX,
 )
 from irsol_data_pipeline.core.models import ObservationDay
@@ -16,10 +17,17 @@ from irsol_data_pipeline.core.web_asset_compatibility.models import (
     WebAssetSource,
 )
 
-# Maps each asset kind to the PNG suffix used to identify its source file.
-_KIND_SUFFIX_MAP: list[tuple[WebAssetKind, str]] = [
-    (WebAssetKind.QUICK_LOOK, PROFILE_CORRECTED_PNG_SUFFIX),
-    (WebAssetKind.CONTEXT, SLIT_PREVIEW_PNG_SUFFIX),
+# Maps each asset kind to an ordered list of PNG suffixes to check; the first
+# existing file wins.  The priority list for QUICK_LOOK prefers the corrected
+# profile (successful run) and falls back to the original (uncorrected) profile
+# so that measurements which failed flat-field correction still get a
+# quick-look asset.
+_KIND_SUFFIX_PRIORITY: list[tuple[WebAssetKind, list[str]]] = [
+    (
+        WebAssetKind.QUICK_LOOK,
+        [PROFILE_CORRECTED_PNG_SUFFIX, PROFILE_ORIGINAL_PNG_SUFFIX],
+    ),
+    (WebAssetKind.CONTEXT, [SLIT_PREVIEW_PNG_SUFFIX]),
 ]
 
 
@@ -59,11 +67,12 @@ def discover_measurement_names(processed_dir: Path) -> list[str]:
         return []
 
     names: set[str] = set()
-    for _kind, suffix in _KIND_SUFFIX_MAP:
-        names.update(
-            _extract_measurement_name(path.name, suffix)
-            for path in processed_dir.glob(f"*{suffix}")
-        )
+    for _kind, suffixes in _KIND_SUFFIX_PRIORITY:
+        for suffix in suffixes:
+            names.update(
+                _extract_measurement_name(path.name, suffix)
+                for path in processed_dir.glob(f"*{suffix}")
+            )
 
     return sorted(names)
 
@@ -79,6 +88,10 @@ def discover_assets_for_measurement(
     measurement name and returns a :class:`~irsol_data_pipeline.core.web_asset_compatibility.models.WebAssetSource`
     for each file that is present.
 
+    For asset kinds with multiple candidate suffixes (e.g. ``QUICK_LOOK``),
+    the first existing file in priority order is used and the remaining
+    candidates are skipped, ensuring exactly one source per kind.
+
     Args:
         measurement_name: Canonical measurement name (e.g. ``"5876_m01"``).
         observation_name: Observation day folder name (YYMMDD).
@@ -88,22 +101,24 @@ def discover_assets_for_measurement(
         List of web assets found for the measurement (may be empty).
     """
     sources: list[WebAssetSource] = []
-    for kind, suffix in _KIND_SUFFIX_MAP:
-        source_path = processed_dir / f"{measurement_name}{suffix}"
-        if source_path.exists():
-            logger.trace(
-                "Found web asset source",
-                kind=kind.value,
-                source_path=source_path,
-            )
-            sources.append(
-                WebAssetSource(
-                    kind=kind,
-                    observation_name=observation_name,
-                    measurement_name=measurement_name,
+    for kind, suffixes in _KIND_SUFFIX_PRIORITY:
+        for suffix in suffixes:
+            source_path = processed_dir / f"{measurement_name}{suffix}"
+            if source_path.exists():
+                logger.trace(
+                    "Found web asset source",
+                    kind=kind.value,
                     source_path=source_path,
-                ),
-            )
+                )
+                sources.append(
+                    WebAssetSource(
+                        kind=kind,
+                        observation_name=observation_name,
+                        measurement_name=measurement_name,
+                        source_path=source_path,
+                    ),
+                )
+                break  # first match wins for this kind
     return sources
 
 

@@ -160,12 +160,38 @@ flowchart TD
 
 ## Inputs / Outputs
 
+### Inputs
+
 | | Description | Format |
 |---|---|---|
 | **Input** | Raw flat-field `.dat` file | ZIMPOL IDL save-file |
 | **Input** | Raw measurement `.dat` file | ZIMPOL IDL save-file |
-| **Output** | Corrected Stokes parameters | In-memory `StokesParameters` model |
-| **Output** | Cached correction data | FITS file (`.fits`) |
+
+### Pipeline outputs — successful run
+
+| Artefact | File suffix | Description |
+|----------|-------------|-------------|
+| Corrected Stokes data | `_corrected.fits` | Flat-field and smile corrected Stokes I, Q/I, U/I, V/I with `FFCORR=True` |
+| Processing metadata | `_metadata.json` | Provenance record: flat-field used, timestamps, wavelength calibration result |
+| Original Stokes profile plot | `_profile_original.png` | Quick-look plot of the raw Stokes profiles (before correction) |
+| Corrected Stokes profile plot | `_profile_corrected.png` | Quick-look plot after all corrections |
+| Flat-field correction cache | `_cache/flat-field-cache/*_correction_cache.fits` | Serialised spectroflat result; reused on subsequent runs |
+
+### Pipeline outputs — failed run
+
+| Artefact | File suffix | Description |
+|----------|-------------|-------------|
+| Error metadata | `_error.json` | Error description and pipeline version |
+| Original Stokes profile plot | `_profile_original.png` | Best-effort quick-look plot from uncorrected Stokes data |
+
+When `convert_on_ff_failure=True` is set, two additional artefacts are produced:
+
+| Artefact | File suffix | Description |
+|----------|-------------|-------------|
+| Converted FITS | `_converted.fits` | Raw (uncorrected) Stokes data with `FFCORR=False` header |
+| Converted profile plot | `_profile_converted.png` | Quick-look plot generated alongside `_converted.fits` |
+
+See [Output Artefacts](../io/output_artefacts.md) for full file format details and the [Pipeline Overview](../pipeline/pipeline_overview.md) for the end-to-end processing sequence.
 
 
 ## Related Documentation

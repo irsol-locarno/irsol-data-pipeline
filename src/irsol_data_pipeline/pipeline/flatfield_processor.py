@@ -22,6 +22,7 @@ from irsol_data_pipeline.pipeline.flatfield_cache import (
 )
 from irsol_data_pipeline.pipeline.measurement_processor import (
     convert_measurement_to_fits,
+    plot_original_profile,
     process_single_measurement,
 )
 from irsol_data_pipeline.prefect.utils import (
@@ -54,6 +55,11 @@ def process_observation_day(
     clearly distinguishable from the happy-path ``*_corrected.fits`` artifacts
     both by filename suffix and by the ``FFCORR = False`` FITS header keyword.
 
+    Regardless of ``convert_on_ff_failure``, a ``*_profile_original.png``
+    profile plot is always attempted for failed measurements so that downstream
+    consumers (e.g. the web-asset pipeline) have a quick-look image even for
+    non-successful runs.
+
     By default, measurements that have already been processed (i.e. a
     ``*_corrected.fits``, ``*_converted.fits``, or ``*_error.json`` artifact
     exists in ``day.processed_dir``) are skipped.  Pass ``force=True`` to
@@ -68,7 +74,9 @@ def process_observation_day(
             exists.
         convert_on_ff_failure: When True, measurements that fail flat-field
             correction are additionally converted to ``*_converted.fits`` and
-            a ``*_profile_converted.png`` profile plot is generated.
+            a ``*_profile_converted.png`` profile plot is generated.  A
+            ``*_profile_original.png`` is always attempted on failure
+            regardless of this flag.
 
     Returns:
         DayProcessingResult summary.
@@ -144,6 +152,21 @@ def process_observation_day(
                         title=f"Error for failed processed measurement {stem}",
                         key=f"error-metadata-{meas_path.name}",
                     )
+
+                    # Always attempt to generate a profile plot for the
+                    # original (uncorrected) data so that downstream consumers
+                    # (e.g. the web-asset pipeline) have a quick-look image
+                    # even for non-successful measurements.
+                    try:
+                        plot_original_profile(
+                            measurement_path=meas_path,
+                            processed_dir=day.processed_dir,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to generate original profile plot after "
+                            "flat-field correction failure",
+                        )
 
                     # If requested, convert the raw measurement to FITS so
                     # consumers can still access the uncorrected Stokes data.

@@ -266,6 +266,52 @@ def _process_single_measurement(
         logger.success("Measurement processed")
 
 
+def plot_original_profile(
+    measurement_path: Path,
+    processed_dir: Path,
+) -> None:
+    """Generate a profile plot for the original (uncorrected) stokes data.
+
+    Intended for use when flat-field correction fails so that downstream
+    consumers (e.g. the web-asset pipeline) still have a quick-look plot
+    even for non-successful measurements.  Loads the raw ``.dat`` file,
+    runs a best-effort wavelength auto-calibration on the uncorrected Stokes
+    data, and writes a ``*_profile_original.png`` output.
+
+    Args:
+        measurement_path: Path to the measurement ``.dat`` file.
+        processed_dir: Output directory where the profile plot is written.
+    """
+    with logger.contextualize(file=measurement_path.name):
+        logger.info("Generating original profile plot for failed measurement")
+
+        stokes, metadata = dat_io.read(measurement_path)
+        solar_orientation = compute_solar_orientation(metadata)
+
+        calibration = calibrate_measurement(stokes)
+        logger.info(
+            "Wavelength calibration complete (best-effort on uncorrected data)",
+            pixel_scale=calibration.pixel_scale,
+            wavelength_offset=calibration.wavelength_offset,
+        )
+
+        processed_dir.mkdir(parents=True, exist_ok=True)
+
+        _plot_data(
+            stokes=stokes,
+            calibration=calibration,
+            metadata=metadata,
+            solar_orientation=solar_orientation,
+            filename_save=processed_output_path(
+                processed_dir,
+                measurement_path.name,
+                kind="profile_original_png",
+            ),
+        )
+
+        logger.success("Original profile plot generated")
+
+
 def convert_measurement_to_fits(
     measurement_path: Path,
     processed_dir: Path,

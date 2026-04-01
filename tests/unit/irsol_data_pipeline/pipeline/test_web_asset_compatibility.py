@@ -8,6 +8,7 @@ from PIL import Image
 
 from irsol_data_pipeline.core.config import (
     PROFILE_CORRECTED_PNG_SUFFIX,
+    PROFILE_ORIGINAL_PNG_SUFFIX,
     SLIT_PREVIEW_PNG_SUFFIX,
 )
 from irsol_data_pipeline.core.models import ObservationDay
@@ -225,3 +226,49 @@ class TestProcessDayWebAssetCompatibility:
         assert result.processed == 1
         assert result.skipped == 1
         assert result.failed == 0
+
+    def test_uploads_profile_original_when_corrected_absent(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """profile_original_png is uploaded as QUICK_LOOK when
+        profile_corrected_png is absent (non-successful measurement)."""
+        day = _make_day(tmp_path)
+        _write_png(day.processed_dir / f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}")
+
+        remote_fs = TestRemoteFileSystem()
+        result = process_day_web_asset_compatibility(
+            day=day,
+            remote_fs=remote_fs,
+        )
+
+        assert result.processed == 1
+        assert result.failed == 0
+        assert remote_fs.uploaded_files[0][1] == str(
+            Path(WebAssetFolderName.QUICK_LOOK.value) / day.name / "5876_m01.jpg",
+        )
+
+    def test_corrected_preferred_over_original_as_quicklook(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """When both profile_corrected and profile_original exist, only one
+        QUICK_LOOK asset is uploaded (the corrected one)."""
+        day = _make_day(tmp_path)
+        _write_png(day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}")
+        _write_png(day.processed_dir / f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}")
+
+        remote_fs = TestRemoteFileSystem()
+        result = process_day_web_asset_compatibility(
+            day=day,
+            remote_fs=remote_fs,
+        )
+
+        assert result.processed == 1
+        assert result.failed == 0
+        quick_look_uploads = [
+            r
+            for r in remote_fs.uploaded_files
+            if WebAssetFolderName.QUICK_LOOK.value in r[1]
+        ]
+        assert len(quick_look_uploads) == 1

@@ -8,6 +8,7 @@ import pytest
 
 from irsol_data_pipeline.core.config import (
     PROFILE_CORRECTED_PNG_SUFFIX,
+    PROFILE_ORIGINAL_PNG_SUFFIX,
     SLIT_PREVIEW_PNG_SUFFIX,
 )
 from irsol_data_pipeline.core.models import ObservationDay
@@ -128,6 +129,17 @@ class TestDiscoverMeasurementNames:
         result = discover_measurement_names(observation_day.processed_dir)
         assert result == sorted(result)
 
+    def test_discovers_from_original_suffix(
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
+    ) -> None:
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}"
+        ).touch()
+        result = discover_measurement_names(observation_day.processed_dir)
+        assert result == ["5876_m01"]
+
     def test_ignores_non_matching_files(
         self,
         tmp_path: Path,
@@ -214,6 +226,50 @@ class TestDiscoverAssetsForMeasurement:
             processed_dir=observation_day.processed_dir,
         )
         assert result[0].observation_name == observation_day.name
+
+    def test_fallback_to_original_png_when_corrected_absent(
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
+    ) -> None:
+        """When profile_corrected is absent, profile_original is used as
+        QUICK_LOOK (non-successful measurement)."""
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}"
+        ).touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        assert len(result) == 1
+        assert result[0].kind is WebAssetKind.QUICK_LOOK
+        assert result[0].source_path.name == f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}"
+
+    def test_corrected_preferred_over_original_when_both_present(
+        self,
+        tmp_path: Path,
+        observation_day: ObservationDay,
+    ) -> None:
+        """When both profile_corrected and profile_original exist, only
+        profile_corrected is returned as QUICK_LOOK (no duplicates)."""
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        ).touch()
+        (
+            observation_day.processed_dir / f"5876_m01{PROFILE_ORIGINAL_PNG_SUFFIX}"
+        ).touch()
+        result = discover_assets_for_measurement(
+            measurement_name="5876_m01",
+            observation_name=observation_day.name,
+            processed_dir=observation_day.processed_dir,
+        )
+        quick_look_sources = [s for s in result if s.kind is WebAssetKind.QUICK_LOOK]
+        assert len(quick_look_sources) == 1
+        assert (
+            quick_look_sources[0].source_path.name
+            == f"5876_m01{PROFILE_CORRECTED_PNG_SUFFIX}"
+        )
 
 
 class TestDiscoverDayWebAssetSources:
