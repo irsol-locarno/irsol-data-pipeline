@@ -305,8 +305,9 @@ def _render_post_install_instructions(
         return
 
     lines = ["sudo systemctl daemon-reload"]
-    for svc in written_services:
-        lines.append(f"sudo systemctl enable --now {svc}")  # noqa: PERF401
+    lines.extend(
+        f"sudo systemctl enable --now {svc}" for svc in written_services
+    )
 
     instructions = "\n".join(lines)
     console.print()

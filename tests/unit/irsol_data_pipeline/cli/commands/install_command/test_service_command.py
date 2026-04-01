@@ -1,4 +1,4 @@
-"""Tests for the install service command."""
+"""Tests for the install service command (systemd unit file generation)."""
 
 from __future__ import annotations
 
