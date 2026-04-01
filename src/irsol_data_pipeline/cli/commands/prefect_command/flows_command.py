@@ -135,9 +135,6 @@ def _build_flat_field_deployments() -> list[Any]:
     Returns:
         Deployment objects for the flat-field correction group.
     """
-    from prefect import serve
-
-    del serve
 
     from irsol_data_pipeline.prefect.flows.flat_field_correction import (
         process_daily_unprocessed_measurements,
