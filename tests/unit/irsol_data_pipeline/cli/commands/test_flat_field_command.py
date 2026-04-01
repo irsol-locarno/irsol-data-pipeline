@@ -319,7 +319,8 @@ class TestFlatFieldApply:
         self,
         tmp_path: Path,
     ) -> None:
-        """With --convert-on-ff-failure and no flat-fields, converts instead of exiting."""
+        """With --convert-on-ff-failure and no flat-fields, converts instead of
+        exiting."""
         measurement = tmp_path / "6302_m1.dat"
         measurement.write_text("placeholder")
         output_dir = tmp_path / "processed"
@@ -349,14 +350,17 @@ class TestFlatFieldApply:
 
         assert result is None
         mock_convert.assert_called_once()
-        assert mock_convert.call_args.kwargs["measurement_path"] == measurement.resolve()
+        assert (
+            mock_convert.call_args.kwargs["measurement_path"] == measurement.resolve()
+        )
         assert mock_convert.call_args.kwargs["processed_dir"] == output_dir.resolve()
 
     def test_apply_convert_on_ff_failure_converts_after_process_failure(
         self,
         tmp_path: Path,
     ) -> None:
-        """With --convert-on-ff-failure, a failed process triggers conversion (exits 1)."""
+        """With --convert-on-ff-failure, a failed process triggers conversion
+        (exits 1)."""
         measurement = tmp_path / "6302_m1.dat"
         measurement.write_text("placeholder")
         output_dir = tmp_path / "processed"
@@ -398,8 +402,11 @@ class TestFlatFieldApply:
         assert exc_info.value.code == 1
         mock_convert.assert_called_once()
 
-    def test_apply_no_flatfield_without_convert_flag_exits(self, tmp_path: Path) -> None:
-        """Without --convert-on-ff-failure, no flat-fields still exits with code 1."""
+    def test_apply_no_flatfield_without_convert_flag_exits(
+        self, tmp_path: Path
+    ) -> None:
+        """Without --convert-on-ff-failure, no flat-fields still exits with
+        code 1."""
         measurement = tmp_path / "6302_m1.dat"
         measurement.write_text("placeholder")
         output_dir = tmp_path / "processed"

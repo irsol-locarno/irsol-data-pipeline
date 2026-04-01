@@ -1,12 +1,12 @@
-"""Tests for measurement_processor — focusing on convert_measurement_to_fits."""
+"""Tests for measurement_processor — focusing on
+convert_measurement_to_fits."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
@@ -46,7 +46,8 @@ class TestConvertMeasurementToFits:
         tmp_path: Path,
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
-        """convert_measurement_to_fits calls fits_io.write with *_converted.fits and _plot_data with *_profile_converted.png."""
+        """convert_measurement_to_fits calls fits_io.write with
+        *_converted.fits and _plot_data with *_profile_converted.png."""
         measurement_path = tmp_path / "reduced" / "6302_m1.dat"
         measurement_path.parent.mkdir(parents=True)
         measurement_path.write_text("placeholder")
@@ -89,11 +90,23 @@ class TestConvertMeasurementToFits:
         mock_fits_write.assert_called_once()
         write_call = mock_fits_write.call_args
         # output_path is a positional arg
-        output_path = write_call.args[0] if write_call.args else write_call.kwargs.get("output_path")
+        output_path = (
+            write_call.args[0]
+            if write_call.args
+            else write_call.kwargs.get("output_path")
+        )
         assert output_path.name == "6302_m1_converted.fits"
-        stokes_arg = write_call.args[1] if len(write_call.args) > 1 else write_call.kwargs.get("stokes")
+        stokes_arg = (
+            write_call.args[1]
+            if len(write_call.args) > 1
+            else write_call.kwargs.get("stokes")
+        )
         assert stokes_arg is stokes
-        metadata_arg = write_call.args[2] if len(write_call.args) > 2 else write_call.kwargs.get("info")
+        metadata_arg = (
+            write_call.args[2]
+            if len(write_call.args) > 2
+            else write_call.kwargs.get("info")
+        )
         assert metadata_arg is sample_measurement_metadata
         assert write_call.kwargs.get("calibration") is calibration
 
@@ -106,7 +119,8 @@ class TestConvertMeasurementToFits:
         tmp_path: Path,
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
-        """The converted FITS extra_header must contain FFCORR=False (bare bool or (value, comment) tuple)."""
+        """The converted FITS extra_header must contain FFCORR=False (bare bool
+        or (value, comment) tuple)."""
         measurement_path = tmp_path / "6302_m1.dat"
         measurement_path.write_text("placeholder")
         processed_dir = tmp_path / "processed"
@@ -145,7 +159,9 @@ class TestConvertMeasurementToFits:
         assert FITS_KEY_FFCORR in extra_header
         ffcorr_value = extra_header[FITS_KEY_FFCORR]
         # Value may be a bare bool or a (value, comment) tuple
-        actual_value = ffcorr_value[0] if isinstance(ffcorr_value, tuple) else ffcorr_value
+        actual_value = (
+            ffcorr_value[0] if isinstance(ffcorr_value, tuple) else ffcorr_value
+        )
         assert actual_value is False
 
     def test_fits_header_does_not_have_fffile(
@@ -153,7 +169,8 @@ class TestConvertMeasurementToFits:
         tmp_path: Path,
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
-        """The converted FITS must NOT include FFFILE (no flat-field was used)."""
+        """The converted FITS must NOT include FFFILE (no flat-field was
+        used)."""
         measurement_path = tmp_path / "6302_m1.dat"
         measurement_path.write_text("placeholder")
         processed_dir = tmp_path / "processed"
@@ -196,7 +213,8 @@ class TestConvertMeasurementToFits:
         tmp_path: Path,
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
-        """convert_measurement_to_fits creates the processed_dir (including parents) when it does not exist."""
+        """convert_measurement_to_fits creates the processed_dir (including
+        parents) when it does not exist."""
         measurement_path = tmp_path / "6302_m1.dat"
         measurement_path.write_text("placeholder")
         processed_dir = tmp_path / "processed" / "does_not_exist"

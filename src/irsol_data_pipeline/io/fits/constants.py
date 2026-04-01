@@ -108,4 +108,6 @@ FITS_KEY_SLTANGL = "SLTANGL"  # SolarOrientationInfo.slit_angle_solar_deg
 # ---------------------------------------------------------------------------
 
 FITS_KEY_FFCORR = "FFCORR"  # True when the pipeline applied flat-field correction
-FITS_KEY_FFFILE = "FFFILE"  # Filename of the flat-field used (set only when FFCORR=True)
+FITS_KEY_FFFILE = (
+    "FFFILE"  # Filename of the flat-field used (set only when FFCORR=True)
+)

@@ -309,7 +309,9 @@ def is_measurement_flat_field_processed(processed_dir: Path, source_name: str) -
             source_name,
             kind="error_json",
         )
-        is_processed = corrected_fits.exists() or converted_fits.exists() or error.exists()
+        is_processed = (
+            corrected_fits.exists() or converted_fits.exists() or error.exists()
+        )
         logger.debug(
             "Checked processed state",
             has_corrected_fits=corrected_fits.exists(),

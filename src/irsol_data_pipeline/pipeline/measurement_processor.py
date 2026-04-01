@@ -194,7 +194,10 @@ def _process_single_measurement(
             solar_orientation=solar_orientation,
             extra_header={
                 **processing_history.to_fits_header_entries(),
-                FITS_KEY_FFCORR: (True, "True if pipeline applied flat-field correction"),
+                FITS_KEY_FFCORR: (
+                    True,
+                    "True if pipeline applied flat-field correction",
+                ),
                 FITS_KEY_FFFILE: (
                     ff_correction.source_flatfield_path.name,
                     "Flat-field file used by pipeline",
@@ -313,7 +316,10 @@ def convert_measurement_to_fits(
             calibration=calibration,
             solar_orientation=solar_orientation,
             extra_header={
-                FITS_KEY_FFCORR: (False, "True if pipeline applied flat-field correction"),
+                FITS_KEY_FFCORR: (
+                    False,
+                    "True if pipeline applied flat-field correction",
+                ),
             },
         )
 
