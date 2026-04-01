@@ -331,7 +331,3 @@ def publish_web_assets_for_day(
         failed=result.failed,
     )
     return result
-
-
-if __name__ == "__main__":
-    publish_web_assets_for_day(Path("data/2026/260312"))
