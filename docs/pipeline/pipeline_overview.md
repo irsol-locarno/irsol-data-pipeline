@@ -35,9 +35,9 @@ flowchart TD
 
 ### Non-happy path (flat-field correction fails)
 
-When flat-field correction fails, an `*_error.json` artifact is always written.
+When flat-field correction fails, an `*_error.json` artifact is always written and a `*_profile_original.png` profile plot is always attempted from the raw (uncorrected) Stokes data.
 If the `convert_on_ff_failure` option is enabled, the pipeline additionally
-converts the raw measurement to a FITS file and generates a profile plot so
+converts the raw measurement to a FITS file and generates a second profile plot so
 downstream consumers can still access the Stokes data.
 
 ```mermaid
@@ -45,24 +45,25 @@ flowchart TD
     LOAD["4.1 Load .dat file"]
     FAIL["4.2 Flat-field correction<br/>FAILS"]
     ERROR["Write *_error.json"]
+    PLOT_ORIG["Write *_profile_original.png<br/>(best-effort, always)"]
     CONVERT_CHECK{{"convert_on_ff_failure<br/>enabled?"}}
     CALIBRATE["Best-effort wavelength<br/>auto-calibration"]
     CONVERT["Write *_converted.fits<br/>FFCORR=False"]
     PLOT_CONV["Write *_profile_converted.png"]
     SKIP["Skip conversion"]
 
-    LOAD --> FAIL --> ERROR --> CONVERT_CHECK
+    LOAD --> FAIL --> ERROR --> PLOT_ORIG --> CONVERT_CHECK
     CONVERT_CHECK -- "Yes" --> CALIBRATE --> CONVERT --> PLOT_CONV
     CONVERT_CHECK -- "No" --> SKIP
 ```
 
 #### Output file naming
 
-| Scenario | FITS file | Profile plot | `FFCORR` header |
-|----------|-----------|--------------|-----------------|
-| Correction *succeeded* | `*_corrected.fits` | `*_profile_corrected.png`, `*_profile_original.png` | `True` |
-| Correction *failed*, `convert_on_ff_failure=True` | `*_converted.fits` | `*_profile_converted.png` | `False` |
-| Correction *failed*, `convert_on_ff_failure=False` | — | — | — |
+| Scenario | FITS file | Profile plot(s) | `FFCORR` header |
+|----------|-----------|-----------------|-----------------|
+| Correction *succeeded* | `*_corrected.fits` | `*_profile_original.png`, `*_profile_corrected.png` | `True` |
+| Correction *failed* | — | `*_profile_original.png` *(best-effort)* | — |
+| Correction *failed*, `convert_on_ff_failure=True` | `*_converted.fits` | `*_profile_original.png` *(best-effort)*, `*_profile_converted.png` | `False` |
 
 The `FFCORR` FITS keyword (boolean) and `FFFILE` keyword (flat-field filename,
 only present when `FFCORR=True`) are written to the primary HDU header so that
@@ -112,7 +113,7 @@ The 8-step pipeline for each measurement (happy path):
 | 4.7 | Write processing metadata | `*_metadata.json` |
 | 4.8 | Generate profile plots | `*_profile_original.png`, `*_profile_corrected.png` |
 
-If any step fails, an error JSON (`*_error.json`) is written and the measurement is marked as failed.
+If any step fails, an error JSON (`*_error.json`) is written and a `*_profile_original.png` is always attempted from the raw Stokes data so downstream consumers retain a quick-look image even for non-successful measurements.
 When `convert_on_ff_failure=True`, a best-effort FITS conversion is also attempted (see [Non-happy path](#non-happy-path-flat-field-correction-fails)).
 
 ### Configuring `convert_on_ff_failure`
@@ -257,8 +258,10 @@ flowchart TD
 ### Stage 2 — Asset Discovery
 
 - Scans `processed/` for generated PNG assets:
-    - `*_profile_corrected.png` (quicklook)
+    - `*_profile_corrected.png` (quicklook — successful runs)
+    - `*_profile_original.png` (quicklook fallback — failed runs; used when `*_profile_corrected.png` is absent)
     - `*_slit_preview.png` (context)
+- For the quicklook kind, `*_profile_corrected.png` takes priority; `*_profile_original.png` is used only when the corrected plot is absent, ensuring exactly one quicklook asset per measurement.
 - Builds `WebAssetSource` entries per measurement and asset kind.
 
 ### Stage 3 — Target Planning

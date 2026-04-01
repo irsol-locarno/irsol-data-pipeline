@@ -1,10 +1,12 @@
 # Output Artefacts
 
-The IRSOL Data Pipeline produces several distinct artefact types for each successfully processed observation measurement. This document describes the structure, naming conventions, and content of every output the pipeline generates.
+The IRSOL Data Pipeline produces several distinct artefact types for each processed observation measurement. This document describes the structure, naming conventions, and content of every output the pipeline generates.
 
 ## Overview
 
-For each reduced ZIMPOL `.dat` file the flat-field correction pipeline produces four artefacts:
+### Flat-field correction pipeline — successful run
+
+When flat-field correction succeeds, four artefacts are produced per measurement:
 
 | Artefact | File suffix | Format | Description |
 |----------|-------------|--------|-------------|
@@ -13,35 +15,75 @@ For each reduced ZIMPOL `.dat` file the flat-field correction pipeline produces 
 | [Original Stokes profile plot](#stokes-profile-plots-png) | `_profile_original.png` | PNG | Four-panel Stokes profile before flat-field correction |
 | [Corrected Stokes profile plot](#stokes-profile-plots-png) | `_profile_corrected.png` | PNG | Four-panel Stokes profile after all corrections |
 
+### Flat-field correction pipeline — failed run
+
+When flat-field correction fails, the pipeline always writes an error record and attempts to generate a profile plot from the raw (uncorrected) Stokes data:
+
+| Artefact | File suffix | Format | Description |
+|----------|-------------|--------|-------------|
+| [Error metadata](#error-metadata-json) | `_error.json` | JSON | Error description and pipeline version |
+| [Original Stokes profile plot](#stokes-profile-plots-png) | `_profile_original.png` | PNG | Four-panel Stokes profile from uncorrected data (best-effort) |
+
+When the `convert_on_ff_failure` option is enabled, two additional artefacts are produced:
+
+| Artefact | File suffix | Format | Description |
+|----------|-------------|--------|-------------|
+| [Converted FITS](#converted-fits-file) | `_converted.fits` | FITS | Raw (uncorrected) Stokes data with `FFCORR=False` header |
+| [Converted profile plot](#stokes-profile-plots-png) | `_profile_converted.png` | PNG | Four-panel Stokes profile plot generated alongside `_converted.fits` |
+
+### Slit image pipeline
+
 The slit image pipeline independently generates one additional artefact per measurement:
 
 | Artefact | File suffix | Format | Description |
 |----------|-------------|--------|-------------|
 | [Slit preview image](#slit-preview-image-png) | `_slit_preview.png` | PNG | Six-panel SDO context image showing the spectrograph slit on the solar disc |
 
-When processing fails, the pipeline writes a single error record instead of the four success artefacts above:
+### Summary by scenario
 
-| Artefact | File suffix | Format | Description |
-|----------|-------------|--------|-------------|
-| [Error metadata](#error-metadata-json) | `_error.json` | JSON | Error description and pipeline version |
+| Scenario | Artefacts produced |
+|----------|--------------------|
+| Correction **succeeded** | `_corrected.fits`, `_metadata.json`, `_profile_original.png`, `_profile_corrected.png` |
+| Correction **failed** | `_error.json`, `_profile_original.png` *(best-effort)* |
+| Correction **failed** + `convert_on_ff_failure=True` | `_error.json`, `_profile_original.png` *(best-effort)*, `_converted.fits`, `_profile_converted.png` |
 
 ### Naming Convention
 
-All output files share the same stem as the source `.dat` file:
+All output files share the same stem as the source `.dat` file.
+
+**Successful run:**
 
 ```
 processed/
-├── 6302_m1_corrected.fits  # The flat-field corrected stokes data of the measurement, in FITS format
-├── 6302_m1_flat_field_correction_data.fits  # The spectroflat correction data used for the flat-field correction, in FITS format
-├── 6302_m1_flat_field_correction_data_offset_map.fits  # The offset map used for the flat-field correction, in FITS format
-├── 6302_m1_metadata.json   # Metadata about the processing (timestamps, flat-field used, wavelength calibration result, etc.)
-├── 6302_m1_profile_original.png  # Quick-look plot of the original Stokes profiles (before correction)
-├── 6302_m1_profile_corrected.png  # Quick-look plot of the corrected Stokes profiles (after correction)
-├── 6302_m1_slit_preview.png  # Slit preview image showing the slit position on the solar disc at observation time
+├── 6302_m1_corrected.fits                           # Flat-field corrected Stokes data (FFCORR=True)
+├── 6302_m1_flat_field_correction_data.fits          # Spectroflat correction data used for the flat-field correction
+├── 6302_m1_flat_field_correction_data_offset_map.fits  # Offset map used for the smile correction
+├── 6302_m1_metadata.json                            # Provenance record (timestamps, flat-field used, calibration result)
+├── 6302_m1_profile_original.png                     # Quick-look plot of the original Stokes profiles (before correction)
+├── 6302_m1_profile_corrected.png                    # Quick-look plot of the corrected Stokes profiles (after correction)
+├── 6302_m1_slit_preview.png                         # Slit preview showing the slit position on the solar disc
 └── _cache/
     └── flat-field-cache/
-        └── ff6302_m1_correction_cache.fits  # The cached spectroflat correction data computed on a flat-field, in FITS format
-        └── ff6302_m1_correction_cache_offset_map.fits  # The cached spectroflat offset map data computed on a flat-field, in FITS format
+        ├── ff6302_m1_correction_cache.fits          # Cached spectroflat correction data for a flat-field file
+        └── ff6302_m1_correction_cache_offset_map.fits  # Cached offset map for a flat-field file
+```
+
+**Failed run (flat-field correction failed):**
+
+```
+processed/
+├── 6302_m1_error.json          # Error description and pipeline version
+└── 6302_m1_profile_original.png  # Quick-look plot from uncorrected Stokes data (best-effort)
+```
+
+**Failed run with `convert_on_ff_failure=True`:**
+
+```
+processed/
+├── 6302_m1_error.json             # Error description and pipeline version
+├── 6302_m1_profile_original.png   # Quick-look plot from uncorrected Stokes data (best-effort)
+├── 6302_m1_converted.fits         # Raw Stokes data without flat-field correction (FFCORR=False)
+└── 6302_m1_profile_converted.png  # Quick-look plot generated alongside _converted.fits
 ```
 
 
@@ -374,6 +416,25 @@ These values are computed at `DATE-OBS` for the IRSOL geodetic position.
 | `CRLT_OBS` | [deg] Carrington latitude of observer at observation time |
 
 
+## Converted FITS File
+
+File: `<stem>_converted.fits`
+
+The converted FITS file is produced when flat-field correction fails **and** the `convert_on_ff_failure` option is enabled. It contains the same raw Stokes data as the source `.dat` file, without any flat-field or smile correction applied. The HDU layout and metadata keywords are identical to the corrected FITS file, with the following key differences:
+
+| Aspect | Corrected FITS (`_corrected.fits`) | Converted FITS (`_converted.fits`) |
+|--------|-------------------------------------|--------------------------------------|
+| Flat-field applied | Yes | **No** |
+| `FFCORR` header | `True` | **`False`** |
+| `FFFILE` header | Present (flat-field filename) | **Absent** |
+| Wavelength calibration | Applied to corrected Stokes | Best-effort on uncorrected Stokes |
+
+The `FFCORR=False` header keyword unambiguously signals to downstream consumers that the Stokes data has **not** been flat-field corrected. Consumers should treat this file as a fallback of last resort.
+
+> The converted FITS is only written when `convert_on_ff_failure=True` is configured (off by default).
+> See [Pipeline Overview — non-happy path](../pipeline/pipeline_overview.md#non-happy-path-flat-field-correction-fails).
+
+
 ## Processing Metadata JSON
 
 Written alongside every successfully processed measurement. The file is human-readable JSON, formatted with two-space indentation.
@@ -426,7 +487,7 @@ Written alongside every successfully processed measurement. The file is human-re
 
 ### Error Metadata (`_error.json`)
 
-Written when processing fails. Replaces all four success artefacts.
+Written when processing fails. Replaces the success artefacts (`_corrected.fits`, `_metadata.json`, `_profile_corrected.png`). The `_profile_original.png` is also **always attempted** after the error is recorded — if the raw `.dat` file is readable, a best-effort profile plot from the uncorrected Stokes data will be present alongside the error file.
 
 ```json
 {
@@ -447,14 +508,17 @@ Written when processing fails. Replaces all four success artefacts.
 
 ## Stokes Profile Plots (PNG)
 
-Two PNG files are produced per measurement, one before and one after correction:
+Up to three profile plot variants can be produced per measurement depending on the processing outcome:
 
-| File | Content |
-|------|---------|
-| `_profile_original.png` | Four-panel Stokes profile from the raw reduced `.dat` data |
-| `_profile_corrected.png` | Four-panel Stokes profile after flat-field, smile, and wavelength corrections |
+| File | When produced | Content |
+|------|---------------|---------|
+| `_profile_original.png` | Always (success **and** failure) | Four-panel Stokes profile from the raw reduced `.dat` data, before any correction |
+| `_profile_corrected.png` | Successful runs only | Four-panel Stokes profile after flat-field, smile, and wavelength corrections |
+| `_profile_converted.png` | Failed runs with `convert_on_ff_failure=True` | Four-panel Stokes profile generated alongside `_converted.fits` |
 
 Each plot contains four sub-panels: **I**, **Q/I**, **U/I**, **V/I**, rendered as 2-D spectrograms (spatial axis vs. wavelength axis). These files are not intended for machine reading; they serve as quick-look quality control artefacts.
+
+The `_profile_original.png` is produced on **every** run — including failed ones — so that the web-asset compatibility pipeline always has a quick-look image to deploy, even for measurements where flat-field correction could not be applied.
 
 | Original profile | Corrected profile |
 |------------------|-------------------|

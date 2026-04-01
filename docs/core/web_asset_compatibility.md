@@ -48,7 +48,7 @@ src/irsol_data_pipeline/core/web_asset_compatibility/
 #### Models
 
 **`WebAssetKind`** (enum):
-- `quicklook` — Corrected Stokes profile visualization
+- `quicklook` — Stokes profile visualization (corrected if available, original as fallback for failed runs)
 - `context` — Slit geometry context image (SDO overlay)
 
 **`WebAssetFolderName`** (enum):
@@ -74,11 +74,17 @@ class WebAssetSource(BaseModel):
 
 **`discover_measurement_names(processed_dir: Path) -> list[str]`**
 
-Scans the `processed/` directory for all PNG files matching any known output suffix and returns a deduplicated, sorted list of measurement base names.
+Scans the `processed/` directory for all PNG files matching any known output suffix (including `_profile_corrected.png`, `_profile_original.png`, and `_slit_preview.png`) and returns a deduplicated, sorted list of measurement base names. Measurements that only have a `_profile_original.png` (e.g., failed runs) are included.
 
 **`discover_assets_for_measurement(measurement_name, observation_name, processed_dir) -> list[WebAssetSource]`**
 
 For a single measurement name, checks which asset PNGs exist on disk and returns a `WebAssetSource` for each one found.
+
+For the `quicklook` kind, the discovery uses a **priority-first** strategy:
+1. `_profile_corrected.png` — preferred; produced on successful runs.
+2. `_profile_original.png` — fallback; produced on all runs (including failures).
+
+Exactly one quicklook source is returned per measurement (no duplicates), ensuring that measurements from failed flat-field correction runs still have a quick-look image available for web deployment.
 
 **`discover_day_web_asset_sources(day: ObservationDay) -> list[WebAssetSource]`**
 
