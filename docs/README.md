@@ -66,6 +66,7 @@ flowchart TB
 | **User Guides** | |
 | [Installation](user/installation.md) | Setup, dependencies, and environment |
 | [Quick Start](user/quickstart.md) | Minimal working example and typical workflow |
+| [FAQ](user/faq.md) | Frequently asked questions and troubleshooting |
 | **Maintainer** | |
 | [Prefect Operations](maintainer/prefect_operations.md) | Deployment, monitoring, and troubleshooting |
 | [Creating a Release](maintainer/create_a_release.md) | Step-by-step guide to creating a new release on GitHub and publishing to PyPI |
