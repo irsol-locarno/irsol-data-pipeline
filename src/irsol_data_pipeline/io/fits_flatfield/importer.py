@@ -53,7 +53,9 @@ def load_correction_data(path: Path | str) -> FlatFieldCorrection:
                 )
                 position_angle_raw = primary_hdr.get("POSANGLE")
                 position_angle: float | None = (
-                    float(position_angle_raw) if position_angle_raw is not None else None
+                    float(position_angle_raw)
+                    if position_angle_raw is not None
+                    else None
                 )
                 dust_flat = np.array(hdul["DUSTFLAT"].data, dtype=np.float64)
                 desmiled = np.array(hdul["DESMILED"].data, dtype=np.float64)

@@ -60,8 +60,8 @@ class FlatFieldCache:
         position_angle: float | None = None,
         max_angle_delta: float | None = None,
     ) -> FlatFieldCorrection | None:
-        """Find the closest flat-field correction for a given wavelength,
-        time, and optional derotator position angle.
+        """Find the closest flat-field correction for a given wavelength, time,
+        and optional derotator position angle.
 
         A candidate correction is eligible only when:
 

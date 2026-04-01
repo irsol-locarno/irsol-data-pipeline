@@ -106,7 +106,9 @@ class TestFitsFlatfieldExporter:
             dust_flat=np.ones((50, 200), dtype=np.float64),
             offset_map=None,
             desmiled=np.ones((50, 200), dtype=np.float64),
-            timestamp=datetime.datetime(2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc),
+            timestamp=datetime.datetime(
+                2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc
+            ),
             wavelength=6302,
             position_angle=42.5,
         )
@@ -149,7 +151,9 @@ class TestFitsFlatfieldImporter:
             dust_flat=np.ones((50, 200), dtype=np.float64),
             offset_map=None,
             desmiled=np.ones((50, 200), dtype=np.float64),
-            timestamp=datetime.datetime(2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc),
+            timestamp=datetime.datetime(
+                2024, 7, 13, 10, 0, tzinfo=datetime.timezone.utc
+            ),
             wavelength=6302,
             position_angle=33.7,
         )
