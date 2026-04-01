@@ -15,6 +15,8 @@ flowchart TD
     SETUP["setup"]
     SETUP_USER["user"]
     SETUP_SERVER["server"]
+    INSTALL["install"]
+    INSTALL_SERVICE["service"]
     PLOT["plot"]
     PREFECT["prefect"]
     FF["flat-field"]
@@ -47,6 +49,7 @@ flowchart TD
 
     IDP --> INFO
     IDP --> SETUP
+    IDP --> INSTALL
     IDP --> PLOT
     IDP --> FF
     IDP --> SI
@@ -54,6 +57,8 @@ flowchart TD
 
     SETUP --> SETUP_USER
     SETUP --> SETUP_SERVER
+
+    INSTALL --> INSTALL_SERVICE
 
     PLOT --> PROFILE
     PLOT --> SLIT
@@ -155,6 +160,60 @@ The command writes:
 - `PREFECT_API_DATABASE_CONNECTION_URL`
 - `PREFECT_API_URL`
 - `PREFECT_SERVER_ANALYTICS_ENABLED=false`
+
+### `idp install`
+
+The `install` command group provides guided installation of pipeline components as system services.
+
+#### `idp install service`
+
+Interactively generate and install systemd service unit files for the Prefect server and flow
+runners.  The command walks you through configuration and writes unit files to a target directory
+(by default `/etc/systemd/system/`).
+
+```bash
+idp install service
+```
+
+The command will:
+
+1. **Detect existing services** — check whether any pipeline systemd services are already
+   installed or registered, and display their status.
+2. **Prompt for configuration** — ask for the systemd unit directory, Unix user, `idp`
+   executable path, and which services to install.
+3. **Generate unit files** — render service templates with the provided values and write them
+   to the target directory.
+4. **Show next steps** — print the `systemctl` commands needed to activate the services.
+
+| Prompt | Default | Description |
+|--------|---------|-------------|
+| Systemd unit directory | `/etc/systemd/system` | Directory where service unit files are written |
+| Unix user | `irsol-prefect` (when root) or current user | User under which services run |
+| `idp` executable path | Auto-detected | Absolute path to the `idp` binary |
+| Prefect server service | Yes | Whether to install the Prefect API server service |
+| Flow runner services | Yes (each) | Whether to install each flow-runner service |
+
+**Services generated:**
+
+| Service file | Description |
+|-------------|-------------|
+| `irsol-prefect-server.service` | Prefect API server |
+| `irsol-prefect-serve-flatfield.service` | Flat-field correction flow runner |
+| `irsol-prefect-serve-slitimages.service` | Slit-image generation flow runner |
+| `irsol-prefect-serve-web-assets-compatibility.service` | Web-assets compatibility flow runner |
+| `irsol-prefect-serve-maintenance.service` | Maintenance flow runner |
+
+If a service file already exists, the command will ask for confirmation before overwriting.
+
+After the files are written the command prints the `systemctl` commands to enable and start
+the services:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now irsol-prefect-server.service
+sudo systemctl enable --now irsol-prefect-serve-flatfield.service
+# ... etc.
+```
 
 ### `idp info`
 
@@ -602,8 +661,10 @@ flowchart LR
     CLI --> VARS_CMD
     SETUP_USER_CMD["setup user → configure client profile"]
     SETUP_SERVER_CMD["setup server → configure server profile"]
+    INSTALL_CMD["install service → generate systemd units"]
     CLI --> SETUP_USER_CMD
     CLI --> SETUP_SERVER_CMD
+    CLI --> INSTALL_CMD
 
     PLOT_CMD --> IO_MOD
     PLOT_CMD --> CORE

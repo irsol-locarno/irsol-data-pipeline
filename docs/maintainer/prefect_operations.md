@@ -112,7 +112,17 @@ Now the `idp` command line tool is ready to manage the Prefect server and flow r
 
 ### systemd Services
 
-Create a service unit for each process. Example for the Prefect server:
+Use the built-in installer command to generate and write systemd service unit files:
+
+```bash
+idp install service
+```
+
+This interactive command will guide you through selecting the Unix user, `idp` executable
+path, and which services to install. It detects existing services and prompts before
+overwriting. See [CLI Usage — `idp install service`](../cli/cli_usage.md#idp-install-service) for full details.
+
+Alternatively, you can create the unit files manually. Example for the Prefect server:
 
 ```ini
 # /etc/systemd/system/irsol-prefect-server.service
