@@ -83,7 +83,7 @@ flowchart LR
    idp prefect secrets configure
    ```
    Required variables:
-   - `data-root-path` — Path to the dataset root directory.
+   - `data-root-path` — Path to the dataset root directories, you can set multiple root directories, comma separated.
    - `jsoc-email` — Email registered with JSOC for SDO data queries.
    - `jsoc-data-delay-days` — Minimum age (days) for observation-day folders processed by `slit-images-full` (default: 14).
    - `cache-expiration-hours` — Cache file retention (default: 672 hours = 28 days).

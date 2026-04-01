@@ -171,7 +171,7 @@ Runtime configuration is stored as Prefect Variables, accessible via the dashboa
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `data-root-path` | Dataset root directory | `/data/observations` |
+| `data-root-path` | Dataset root directories | `/dati/mdata/pdata/irsol/zimpol,/dati/mdata/pdata/gregor/zimpol` |
 | `jsoc-email` | Email for JSOC DRMS queries | `user@example.com` |
 | `jsoc-data-delay-days` | Minimum day age for `slit-images-full` scanning | `14` |
 | `cache-expiration-hours` | Cache file retention (hours) | `672` |
