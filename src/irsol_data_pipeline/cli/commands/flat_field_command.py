@@ -10,7 +10,7 @@ Provides two sub-commands under ``idp flat-field``:
     ``--output-dir``:
 
     * ``<stem>_corrected.fits``     - flat-field corrected Stokes FITS file
-    * ``<stem>_flat_field_correction_data.pkl`` - serialised correction object
+    * ``<stem>_flat_field_correction_data.fits`` - serialised correction object
     * ``<stem>_metadata.json``      - processing metadata
     * ``<stem>_profile_corrected.png`` - Stokes profile plot (corrected)
     * ``<stem>_profile_original.png``  - Stokes profile plot (original)
@@ -185,7 +185,7 @@ def _find_existing_outputs(processed_dir: Path, source_name: str) -> list[Path]:
         "  • Writes multiple output artifacts to --output-dir (corrected FITS, "
         "flat-field correction FITS, metadata JSON, profile PNG plots).\n"
         "  • If --cache-dir is provided, flat-field analysis results are cached "
-        "there as .pkl files to speed up subsequent runs.\n"
+        "there as .fits files to speed up subsequent runs.\n"
         "  • Prompts for confirmation when output artifacts already exist "
         "(bypassed by --force).\n"
         "  • With --convert-on-ff-failure, a failed measurement is additionally "

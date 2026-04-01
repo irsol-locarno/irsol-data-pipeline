@@ -22,10 +22,10 @@ There's potential to add more automations in the future, such as:
 - Notification automation for flows that fail or crash, sending alerts to maintainers (see https://docs.prefect.io/v3/api-ref/python/prefect-blocks-notifications)
 
 ## How It Works
-Automations are defined in the `src/irsol_data_pipeline/prefect/automations/` directory and registered via the CLI (`idp configure`). They use Prefect's `EventTrigger` and `ChangeFlowRunState` to specify the conditions and actions.
+Automations are defined in the `src/irsol_data_pipeline/prefect/automations/` directory and registered via the CLI (`idp prefect automations configure`). They use Prefect's `EventTrigger` and `ChangeFlowRunState` to specify the conditions and actions.
 
 ## Customization
-You can adjust the time thresholds or add new automations by editing the relevant Python files in the automations directory. After making changes, re-run `idp configure` to update the registered automations.
+You can adjust the time thresholds or add new automations by editing the relevant Python files in the automations directory. After making changes, re-run `idp prefect automations configure` to update the registered automations.
 
 
 See the [CLI documentation](../cli/cli_usage.md#automations) for usage details.

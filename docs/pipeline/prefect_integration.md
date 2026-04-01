@@ -178,14 +178,22 @@ Runtime configuration is stored as Prefect Variables, accessible via the dashboa
 | `flow-run-expiration-hours` | Prefect run history retention (hours) | `672` |
 | `piombo-hostname` | Piombo SFTP server hostname | `piombo.example.com` |
 | `piombo-username` | SFTP login username | `web-assets` |
-| `piombo-password` | SFTP login password | (securely stored) |
 | `piombo-base-path` | Base path on Piombo SFTP server | `/irsol_db/docs/web-site/assets` |
+
+## Prefect Secrets
+
+Sensitive credentials are stored as Prefect Secret blocks, not as plain Variables:
+
+| Secret | Description |
+|--------|-------------|
+| `piombo-password` | SFTP login password for Piombo uploads |
+
 Access in code:
 
 ```python
-from irsol_data_pipeline.prefect.variables import resolve_dataset_root, get_variable
+from irsol_data_pipeline.prefect.variables import resolve_dataset_roots, get_variable
 
-root = resolve_dataset_root()  # from arg, or Prefect Variable, or error
+roots = resolve_dataset_roots()  # from arg, or Prefect Variable, or error
 email = get_variable(PrefectVariableName.JSOC_EMAIL, default="")
 ```
 

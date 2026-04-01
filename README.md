@@ -51,7 +51,7 @@ flowchart LR
 ## Quick Start
 
 ```bash
-uv install irsol-data-pipeline
+uv tool install irsol-data-pipeline
 idp --version
 ```
 

@@ -491,7 +491,7 @@ idp prefect flows list flat-field-correction
 idp prefect flows list --format json
 ```
 
-**Flow groups:** `flat-field-correction`, `slit-images`, `maintenance`
+**Flow groups:** `flat-field-correction`, `slit-images`, `web-assets-compatibility`, `maintenance`
 
 #### `idp prefect flows serve`
 

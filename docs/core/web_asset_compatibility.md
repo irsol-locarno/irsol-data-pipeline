@@ -86,13 +86,13 @@ Combines the above two helpers: iterates all measurements in the day's processed
 
 #### Conversion
 
-**Function:** `convert_png_to_jpeg(source: Path, target: Path, quality: int = 85) -> None`
+**Function:** `convert_png_to_jpeg(source_path: Path, target_path: Path, jpeg_quality: int) -> None`
 
 Validates quality level (1-95) and converts PNG to JPEG using Pillow:
 
 ```python
-result = Image.open(source).convert("RGB")
-result.save(target, format="JPEG", quality=quality, optimize=True)
+image_data = Image.open(source_path).convert("RGB")
+image_data.save(target_path, format="JPEG", quality=jpeg_quality, optimize=True, progressive=False)
 ```
 
 ### Pipeline Layer
@@ -155,15 +155,17 @@ class SftpRemoteFileSystem:
         hostname: str,
         username: str,
         password: str,
-        base_path: str = "/irsol_db/docs/web-site/assets",
+        base_path: str = "",
     ): ...
 ```
 
-Configuration is read from Prefect Variables:
+Configuration is read from Prefect Variables and Secrets:
 - `piombo-hostname` — SFTP server
 - `piombo-username` — Login username
-- `piombo-password` — Login password (securely stored)
 - `piombo-base-path` — Base path on server (e.g., `/irsol_db/docs/web-site/assets`)
+
+And from Prefect Secrets:
+- `piombo-password` — Login password (stored as a Prefect Secret block)
 
 ## Workflows
 
@@ -171,7 +173,7 @@ Configuration is read from Prefect Variables:
 
 Prefect flow: `publish_web_assets_for_root()`
 
-1. Query Prefect Variables to resolve dataset root and Piombo credentials
+1. Query Prefect Variables to resolve dataset root and Piombo credentials, and Prefect Secrets to resolve `piombo-password`
 2. Scan dataset for all observation days
 3. For each day, run `process_day_web_asset_compatibility`:
    a. Iterate measurements → identify assets → plan which to convert
@@ -195,9 +197,14 @@ Prefect flow: `publish_web_assets_for_day(day_path: str)`
 |----------|------|----------|---------|
 | `piombo-hostname` | str | Yes | `piombo.example.com` |
 | `piombo-username` | str | Yes | `web-deploy-user` |
-| `piombo-password` | str | Yes | (securely stored in Prefect) |
 | `piombo-base-path` | str | No | `/irsol_db/docs/web-site/assets` |
 | `data-root-path` | str | Yes | `/data/observations` |
+
+### Prefect Secrets
+
+| Secret | Type | Required | Description |
+|--------|------|----------|-------------|
+| `piombo-password` | str | Yes | SFTP password stored as a Prefect Secret block |
 
 ### Scheduling
 

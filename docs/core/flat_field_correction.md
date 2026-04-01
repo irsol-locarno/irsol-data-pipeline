@@ -82,8 +82,8 @@ All four Stokes parameters (I, Q, U, V) are independently corrected using the `s
 
 ```python
 interpolator = SmileInterpolator(offset_map, data, mod_state=0)
-interpolator.run()
-corrected = interpolator.result
+desmiled = interpolator.run()
+corrected = desmiled.result
 ```
 
 The interpolator shifts each row by the sub-pixel offsets from the `OffsetMap`, using spline interpolation to preserve spectral resolution.
