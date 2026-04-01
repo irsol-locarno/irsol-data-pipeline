@@ -149,6 +149,9 @@ def process_observation_day(
                     # consumers can still access the uncorrected Stokes data.
                     if convert_on_ff_failure:
                         try:
+                            logger.info(
+                                "Writing converted FITS file for original dat file, non-flat-field corrected."
+                            )
                             convert_measurement_to_fits(
                                 measurement_path=meas_path,
                                 processed_dir=day.processed_dir,
