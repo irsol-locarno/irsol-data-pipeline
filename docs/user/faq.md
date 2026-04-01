@@ -43,6 +43,8 @@ The pipeline's flat-field correction involves two stages: (1) **analyzing** a fl
 ### Minimal code example
 
 ```python
+from __future__ import annotations
+
 from pathlib import Path
 
 from irsol_data_pipeline.core.correction.analyzer import analyze_flatfield
@@ -93,6 +95,8 @@ Slit-image generation produces a six-panel SDO context image showing the spectro
 ### Minimal code example
 
 ```python
+from __future__ import annotations
+
 from pathlib import Path
 
 from irsol_data_pipeline.core.slit_images.coordinates import compute_slit_geometry
