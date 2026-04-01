@@ -51,7 +51,7 @@ Organize your data following the standard directory convention:
 If you are the user who **runs the server** (maintainer), configure the full server profile first:
 
 ```bash
-idp configure
+idp setup server
 ```
 This sets up the Prefect server profile and prompts you to confirm the database path and API port.
 
@@ -78,7 +78,7 @@ idp info
 If you are a **regular user** connecting to an already-running server, point your client at it:
 
 ```bash
-idp setup
+idp setup user
 ```
 
 You can now try to check you connection via:

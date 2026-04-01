@@ -12,7 +12,7 @@ flowchart LR
         SERVER["Prefect Server<br/>(port 4200)"]
         FF["Flow Runner:<br/>flat-field-correction"]
         SLIT["Flow Runner:<br/>slit-images"]
-        WEB["Flow Runner:<br/>web-asset-compatibility"]
+        WEB["Flow Runner:<br/>web-assets-compatibility"]
         MAINT["Flow Runner:<br/>maintenance"]
     end
 
@@ -28,7 +28,7 @@ flowchart LR
 | Prefect Server | `idp prefect start` | API server and web dashboard |
 | Flat-field runner | `idp prefect flows serve flat-field-correction` | Scheduled + manual flat-field correction |
 | Slit images runner | `idp prefect flows serve slit-images` | Scheduled + manual slit image generation |
-| Web asset compatibility runner | `idp prefect flows serve web-asset-compatibility` | Scheduled + manual web asset compatibility generation |
+| Web asset compatibility runner | `idp prefect flows serve web-assets-compatibility` | Scheduled + manual web asset compatibility generation |
 | Maintenance runner | `idp prefect flows serve maintenance` | Cache cleanup and run history pruning |
 
 ## Deployment
@@ -55,7 +55,7 @@ flowchart LR
 
 4. **Configure the default Prefect profile for the pipeline:**
    ```bash
-   idp configure
+   idp setup server
    ```
    This command creates or updates a `default` Prefect profile and sets:
    - `PREFECT_API_DATABASE_CONNECTION_URL`
@@ -105,7 +105,7 @@ flowchart LR
 
 8. **Upgrade the package:**
    ```bash
-   uv tool upgrade irsol-data-pipeline --no-cache-dir --python 3.10
+   uv tool upgrade irsol-data-pipeline-cli --no-cache-dir --python 3.10
    ```
 
 Now the `idp` command line tool is ready to manage the Prefect server and flow runners globally for the current user.
@@ -223,7 +223,7 @@ Use this only as a last resort when the Prefect database is corrupted.
 
 2. **Upgrade the package:**
    ```bash
-   uv tool upgrade irsol-data-pipeline --no-cache-dir --python 3.10
+   uv tool upgrade irsol-data-pipeline-cli --no-cache-dir --python 3.10
    ```
 
 3. **Verify the new version:**

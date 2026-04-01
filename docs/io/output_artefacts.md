@@ -189,7 +189,9 @@ These keywords describe the ZIMPOL-internal calibration (distinct from the wavel
 
 | Keyword | Description |
 |---------|-------------|
-| `FFSTAT` | Flat-field correction applied (`T`/`F`) |
+| `FFSTAT` | ZIMPOL internal flat-field reduction status (`T`/`F`) from raw metadata |
+| `FFCORR` | Pipeline-applied flat-field correction flag (`T`/`F`) |
+| `FFFILE` | Filename of the flat-field used (set only when `FFCORR=True`) |
 | `GLBNOISE` | Global noise levels from ZIMPOL reduction |
 | `GLBMEAN` | Global mean values from ZIMPOL reduction |
 | `SLTANGL` | [deg] Slit angle in the solar reference frame |

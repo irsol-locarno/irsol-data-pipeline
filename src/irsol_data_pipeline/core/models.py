@@ -580,7 +580,7 @@ class CacheCleanupDayResult(BaseModel):
 
     Attributes:
         day_name: Observation day folder name.
-        checked_files: Number of ``.pkl`` files found in cache directories.
+        checked_files: Number of ``.fits`` files found in cache directories.
         deleted_files: Number of stale files successfully deleted.
         deleted_bytes: Total size in bytes of all successfully deleted files.
         skipped_recent_files: Number of recent files kept because they are

@@ -64,7 +64,7 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
 @flow(
     name="maintenance-cache-cleanup-daily",
     flow_run_name="maintenance/cache-cleanup/daily/{day_path.name}",
-    description="Delete old .pkl cache files for one observation day",
+    description="Delete old .fits cache files for one observation day",
 )
 def delete_old_day_cache_files(
     day_path: Path,
