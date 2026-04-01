@@ -160,7 +160,7 @@ def run_day_web_assets_subflow_task(
     ),
 )
 def publish_web_assets_for_root(
-    roots: tuple[str, ...],
+    roots: tuple[str, ...] = tuple(),
     piombo_base_path: str = "",
     piombo_hostname: str = "",
     piombo_username: str = "",
@@ -331,3 +331,7 @@ def publish_web_assets_for_day(
         failed=result.failed,
     )
     return result
+
+
+if __name__ == "__main__":
+    publish_web_assets_for_day(Path("data/2026/260312"))

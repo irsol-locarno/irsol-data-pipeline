@@ -158,7 +158,7 @@ def run_day_slit_generation_task(
     description="Scans the dataset roots and generates slit preview images for all observation days with pending work",
 )
 def generate_slit_images(
-    roots: tuple[str, ...] = (),
+    roots: tuple[str, ...] = tuple(),
     jsoc_email: str = "",
     use_limbguider: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
