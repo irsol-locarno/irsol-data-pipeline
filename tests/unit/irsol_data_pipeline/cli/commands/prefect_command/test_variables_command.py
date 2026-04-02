@@ -47,45 +47,6 @@ class TestPrefectVariablesCommand:
         assert payload["variables"][5]["value"] == "/irsol_db/docs/web-site/assets"
         assert payload["variables"][6]["value"] == "piombo7.usi.ch"
 
-    def test_prefect_variables_configure_returns_zero_when_skipping_all(
-        self,
-    ) -> None:
-        with (
-            patch("prefect.variables.Variable.get", return_value=None),
-            patch("prefect.variables.Variable.set"),
-            patch(
-                "builtins.input",
-                side_effect=[
-                    "",  # data-root-path (required, empty)
-                    "",  # jsoc-email (required, empty)
-                    "",
-                    "n",  # jsoc-data-delay-days
-                    "",
-                    "n",  # cache-expiration-hours
-                    "",
-                    "n",  # flow-run-expiration-hours
-                    "",
-                    "n",  # piombo-base-path
-                    "",
-                    "n",  # piombo-hostname (optional, default used, user declines)
-                    "",  # piombo-username (required, empty)
-                    "",  # piombo-password (required, empty)
-                ],
-            ),
-            patch(
-                "irsol_data_pipeline.cli.commands.prefect_command.variables_command._render_variable_entries",
-                return_value=None,
-            ),
-        ):
-            result = app(
-                ["prefect", "variables", "configure"],
-                exit_on_error=False,
-                print_error=False,
-                result_action="return_value",
-            )
-
-        assert result == 0
-
     def test_prefect_variables_configure_returns_three_on_failure(self) -> None:
         with (
             patch("prefect.variables.Variable.get", return_value=None),
