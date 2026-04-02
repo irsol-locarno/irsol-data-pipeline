@@ -64,15 +64,24 @@ def _extract_std_level_from_loguru_level(level: LOG_LEVEL) -> int:
     return mapping.get(level, stdlib_logging.INFO)
 
 
-def setup_logging(level: PrefectLogLevel):
+def setup_logging(
+    level: PrefectLogLevel,
+    log_file: str | None = None,
+) -> None:
     """Configure loguru logging with a Prefect sink that forwards logs to the
-    run logger."""
+    run logger.
+
+    Args:
+        level: Logging level for both the stdout and the optional file sink.
+        log_file: Path to the rotating log file. When ``None`` (the default)
+            no file sink is created.
+    """
     global _prefect_sink_added  # noqa PLW0603 - it's ok to handle globals in this case
     if _prefect_sink_added:
         return
 
     loguru_base_level = _extract_loguru_level_from_prefect_log_level(level)
-    _setup_base_logging(level=loguru_base_level)
+    _setup_base_logging(level=loguru_base_level, log_file=log_file)
 
     std_base_level = _extract_std_level_from_loguru_level(loguru_base_level)
 

@@ -70,6 +70,7 @@ def delete_old_day_cache_files(
     day_path: Path,
     hours: float = 0.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "maintenance-cache-cleanup-daily.log",
 ) -> CacheCleanupDayResult:
     """Delete stale cache files for a single observation day.
 
@@ -78,11 +79,13 @@ def delete_old_day_cache_files(
         hours: Optional cache retention window in hours. If unset (0),
             the Prefect Variable ``cache-expiration-hours`` is used.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``maintenance-cache-cleanup-daily.log``.
+            Pass ``None`` to disable file logging.
 
     Returns:
         Cleanup summary for the day.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),
     )
@@ -118,6 +121,7 @@ def delete_old_cache_files(
     roots: tuple[str, ...] = tuple(),
     hours: float = 0.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "maintenance-cache-cleanup.log",
 ) -> list[CacheCleanupDayResult]:
     """Delete stale cache files across all observation days.
 
@@ -128,11 +132,13 @@ def delete_old_cache_files(
         hours: Optional cache retention window in hours. If unset (0),
             the Prefect Variable ``cache-expiration-hours`` is used.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``maintenance-cache-cleanup.log``.
+            Pass ``None`` to disable file logging.
 
     Returns:
         Per-day cleanup summaries.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
 
     hours = hours or float(
         get_variable(PrefectVariableName.CACHE_EXPIRATION_HOURS, default="672"),

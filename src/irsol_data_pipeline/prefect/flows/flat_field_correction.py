@@ -94,6 +94,7 @@ def process_unprocessed_measurements(
     max_delta_hours: float = 2.0,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "ff-correction-full.log",
     convert_on_ff_failure: bool = True,
     force_override: bool = False,
 ) -> list[DayProcessingResult]:
@@ -106,6 +107,8 @@ def process_unprocessed_measurements(
         max_delta_hours: Maximum flat-field time delta in hours.
         max_concurrent_days_to_process: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``ff-correction-full.log``.
+            Pass ``None`` to disable file logging.
         convert_on_ff_failure: When True, measurements that fail flat-field
             correction are converted to ``*_converted.fits`` FITS files with a
             ``*_profile_converted.png`` profile plot so their data is still
@@ -118,7 +121,7 @@ def process_unprocessed_measurements(
     Returns:
         List of DayProcessingResult for each processed day.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
     root_paths = resolve_dataset_roots(roots)
     logger.info(
         "Starting dataset scan flow",
@@ -194,6 +197,7 @@ def process_daily_unprocessed_measurements(
     day_path: Path,
     max_delta_hours: float = 2.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "ff-correction-daily.log",
     convert_on_ff_failure: bool = True,
     force_override: bool = False,
 ) -> DayProcessingResult:
@@ -203,6 +207,8 @@ def process_daily_unprocessed_measurements(
         day_path: Path to the observation day directory.
         max_delta_hours: Maximum flat-field time delta in hours.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``ff-correction-daily.log``.
+            Pass ``None`` to disable file logging.
         convert_on_ff_failure: When True, measurements that fail flat-field
             correction are converted to ``*_converted.fits`` FITS files with a
             ``*_profile_converted.png`` profile plot so their data is still
@@ -214,7 +220,7 @@ def process_daily_unprocessed_measurements(
     Returns:
         DayProcessingResult summary.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
     logger.info(
         "Starting day processing flow",
         day_path=day_path,

@@ -173,6 +173,7 @@ def publish_web_assets_for_root(
     force_overwrite: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "web-assets-compatibility-full.log",
 ) -> list[DayProcessingResult]:
     """Scan one or more roots and run web-assets compatibility processing per
     day.
@@ -188,11 +189,13 @@ def publish_web_assets_for_root(
         force_overwrite: Whether to overwrite existing JPG outputs.
         max_concurrent_days: Maximum number of day subflows to run concurrently. Defaults to number of CPU cores minus one, capped at 4.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``web-assets-compatibility-full.log``.
+            Pass ``None`` to disable file logging.
 
     Returns:
         One DayProcessingResult per scanned day.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
     root_paths = resolve_dataset_roots(roots)
     piombo_base_path = piombo_base_path or get_variable(
         PrefectVariableName.PIOMBO_BASE_PATH,
@@ -271,6 +274,7 @@ def publish_web_assets_for_day(
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "web-assets-compatibility-daily.log",
 ) -> DayProcessingResult:
     """Convert and deploy compatible web assets for one day.
 
@@ -283,11 +287,13 @@ def publish_web_assets_for_day(
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``web-assets-compatibility-daily.log``.
+            Pass ``None`` to disable file logging.
 
     Returns:
         Day-level compatibility processing summary.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
 
     path = Path(day_path)
     day = ObservationDay(

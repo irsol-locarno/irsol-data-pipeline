@@ -82,6 +82,7 @@ async def retrieve_old_flow_ids(dt: datetime.timedelta) -> list[UUID]:
 async def delete_flow_runs_older_than(
     hours: float = 0.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    log_file: str | None = "maintenance-cleanup.log",
 ) -> bool:
     """Delete Prefect flow runs older than a retention duration.
 
@@ -89,11 +90,13 @@ async def delete_flow_runs_older_than(
         hours: Optional retention duration in hours. If unset (0), the Prefect
             Variable ``flow-run-expiration-hours`` is used.
         log_level: Logging level for the Prefect flow.
+        log_file: Path to the rotating log file. Defaults to ``maintenance-cleanup.log``.
+            Pass ``None`` to disable file logging.
 
     Returns:
         True if any flow runs were deleted, False if no old flow runs were found.
     """
-    setup_logging(level=log_level)
+    setup_logging(level=log_level, log_file=log_file)
     hours = hours or float(
         await aget_variable(
             PrefectVariableName.FLOW_RUN_EXPIRATION_HOURS,

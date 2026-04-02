@@ -1,8 +1,8 @@
 """Loguru logging configuration.
 
-Configures two sinks:
+Configures one or two sinks:
 - stdout with colorized, human-friendly formatting
-- Rotating file sink for persistent logs
+- Optional rotating file sink for persistent logs (only when a log_file path is given)
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ LOG_LEVEL = Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 def setup_logging(
     level: LOG_LEVEL = "INFO",
-    log_file: str = "irsol-data-pipeline.log",
+    log_file: str | None = None,
     rotation: str = "10 MB",
     retention: str = "1 week",
     force: bool = False,
@@ -56,7 +56,8 @@ def setup_logging(
 
     Args:
         level: Minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-        log_file: Path to the rotating log file.
+        log_file: Path to the rotating log file. When ``None`` (the default)
+            no file sink is created and log output goes to stdout only.
         rotation: When to rotate the log file (e.g. "10 MB", "1 day").
         retention: How long to keep rotated logs (e.g. "1 week", "30 days").
         force: Reconfigure logging even if setup was already called.
@@ -83,14 +84,15 @@ def setup_logging(
         colorize=True,
     )
 
-    # File sink — rotating
-    logger.add(
-        log_file,
-        format=LOG_FORMAT_FILE,
-        level=level,
-        rotation=rotation,
-        retention=retention,
-        encoding="utf-8",
-    )
+    # File sink — rotating (only when a path is provided)
+    if log_file is not None:
+        logger.add(
+            log_file,
+            format=LOG_FORMAT_FILE,
+            level=level,
+            rotation=rotation,
+            retention=retention,
+            encoding="utf-8",
+        )
 
     _configured = True
