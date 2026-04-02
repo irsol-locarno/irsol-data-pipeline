@@ -110,6 +110,7 @@ def _resolve_jsoc_data_delay_days(raw_value: object) -> int:
 def scan_slit_dataset_task(
     root: Path,
     jsoc_data_delay_days: int,
+    force_override: bool,
 ) -> ScanResult:
     """Prefect task: scan the dataset root for pending slit preview work.
 
@@ -122,6 +123,7 @@ def scan_slit_dataset_task(
             min_age_days=jsoc_data_delay_days,
             today=datetime.datetime.now(datetime.timezone.utc).date(),
         ),
+        force_override=force_override,
     )
     markdown = build_slit_scan_report_markdown(root=root, scan_result=scan_result)
     create_prefect_markdown_report(
@@ -136,8 +138,9 @@ def scan_slit_dataset_task(
 def run_day_slit_generation_task(
     day_path: Path,
     jsoc_email: str,
-    use_limbguider: bool = False,
-    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    use_limbguider: bool,
+    log_level: PrefectLogLevel,
+    force_override: bool,
 ) -> DayProcessingResult:
     """Prefect task: generate slit images for a single day."""
     with logger.contextualize(day=day_path.name):
@@ -147,6 +150,7 @@ def run_day_slit_generation_task(
             jsoc_email=jsoc_email,
             use_limbguider=use_limbguider,
             log_level=log_level,
+            force_override=force_override,
         )
         logger.success("Daily slit generation completed")
         return result
@@ -163,6 +167,7 @@ def generate_slit_images(
     use_limbguider: bool = False,
     max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    force_override: bool = False,
 ) -> list[DayProcessingResult]:
     """Scan one or more dataset roots and generate slit preview images for all
     days with pending work.
@@ -170,7 +175,8 @@ def generate_slit_images(
     Observation days for which every measurement already has a slit preview
     (or a slit preview error file) are skipped entirely — no sub-task is
     submitted for those days.  This mirrors the behaviour of the flat-field
-    correction pipeline.
+    correction pipeline.  Pass ``force_override=True`` to reprocess all
+    measurements regardless of existing artifacts.
 
     Args:
         roots: Dataset root path(s). If not set, the default path(s) from the Prefect Variable
@@ -182,6 +188,9 @@ def generate_slit_images(
             tasks. Defaults to CPU count - 1, capped at 4
             (lower than flat-field correction due to network I/O).
         log_level: Logging level for the Prefect flow.
+        force_override: When True, all measurements are reprocessed and output
+            files are re-written even if they already exist in the target
+            folder.
 
     Returns:
         List of DayProcessingResult for each processed day.
@@ -210,12 +219,15 @@ def generate_slit_images(
         roots=[str(p) for p in root_paths],
         root_count=len(root_paths),
         jsoc_email=email,
+        force_override=force_override,
     )
 
     # Scan all roots and collect pending day paths
     all_scan_results = [
         scan_slit_dataset_task(
-            root=root_path, jsoc_data_delay_days=jsoc_data_delay_days
+            root=root_path,
+            jsoc_data_delay_days=jsoc_data_delay_days,
+            force_override=force_override,
         )
         for root_path in root_paths
     ]
@@ -247,6 +259,7 @@ def generate_slit_images(
                 "jsoc_email": unmapped(email),
                 "use_limbguider": unmapped(use_limbguider),
                 "log_level": unmapped(log_level),
+                "force_override": unmapped(force_override),
             },
         ).result()
 
@@ -272,6 +285,7 @@ def generate_daily_slit_images(
     jsoc_email: str = "",
     use_limbguider: bool = False,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
+    force_override: bool = False,
 ) -> DayProcessingResult:
     """Generate slit preview images for a single observation day.
 
@@ -281,6 +295,9 @@ def generate_daily_slit_images(
             the Prefect Variable ``jsoc-email`` is used.
         use_limbguider: Whether to try using limbguider coordinates.
         log_level: Logging level for the Prefect flow.
+        force_override: When True, all measurements are reprocessed and output
+            files are re-written even if they already exist in the target
+            folder.
 
     Returns:
         DayProcessingResult summary.
@@ -304,6 +321,7 @@ def generate_daily_slit_images(
         day=day_path.name,
         jsoc_email=email,
         use_limbguider=use_limbguider,
+        force_override=force_override,
     )
 
     path = Path(day_path)
@@ -318,6 +336,7 @@ def generate_daily_slit_images(
         day=day,
         jsoc_email=email,
         use_limbguider=use_limbguider,
+        force=force_override,
     )
 
     logger.success(

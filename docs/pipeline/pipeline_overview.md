@@ -151,6 +151,35 @@ idp flat-field apply-day 2025/250101 --convert-on-ff-failure
 ```
 
 
+### Configuring `force_override`
+
+Both the full and daily flat-field correction flows accept a ``force_override``
+parameter (default ``False``).  When enabled, **every** measurement is
+reprocessed and output files are re-written even if they already exist in the
+target folder — measurements that would normally be skipped are processed again.
+
+The scanner also respects this flag: when ``force_override=True``, all
+measurements are treated as pending regardless of existing output artifacts,
+so the full flow submits every observation day for processing.
+
+**Prefect flows:**
+```python
+# Full scan — reprocess everything
+process_unprocessed_measurements(force_override=True)
+
+# Single day — reprocess everything in that day
+process_daily_unprocessed_measurements(
+    day_path=Path("/data/2025/250101"),
+    force_override=True,
+)
+```
+
+**CLI — observation day:**
+```bash
+idp flat-field apply-day 2025/250101 --force
+```
+
+
 ## Slit Image Generation
 
 ```mermaid
@@ -206,6 +235,36 @@ The 4-step slit image pipeline for each measurement:
 | 4.4 | Render slit overlay figure | `*_slit_preview.png` |
 
 If generation fails, an error file `*_slit_preview_error.json` is written and the measurement is marked as failed.
+
+### Configuring `force_override`
+
+Both the full and daily slit image generation flows accept a ``force_override``
+parameter (default ``False``).  When enabled, **every** measurement is
+regenerated and slit preview files are re-written even if they already exist in
+the target folder — measurements that would normally be skipped are processed
+again.
+
+The scanner also respects this flag: when ``force_override=True``, all
+measurements are treated as pending regardless of existing slit preview or
+error artifacts.
+
+**Prefect flows:**
+```python
+# Full scan — regenerate everything
+generate_slit_images(jsoc_email="user@example.com", force_override=True)
+
+# Single day — regenerate everything in that day
+generate_daily_slit_images(
+    day_path=Path("/data/2025/250101"),
+    jsoc_email="user@example.com",
+    force_override=True,
+)
+```
+
+**CLI — observation day:**
+```bash
+idp slit-image generate-day 2025/250101 --jsoc-email user@example.com --force
+```
 
 
 ## Cache Cleanup

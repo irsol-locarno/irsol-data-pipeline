@@ -48,9 +48,9 @@ from irsol_data_pipeline.prefect.variables import resolve_dataset_roots
 
 
 @task(task_run_name="ff-correction/scan-dataset/{root}")
-def scan_dataset_task(root: Path) -> ScanResult:
+def scan_dataset_task(root: Path, force_override: bool) -> ScanResult:
     """Prefect task: scan the dataset root."""
-    scan_result = scan_flatfield_dataset(root)
+    scan_result = scan_flatfield_dataset(root, force_override=force_override)
     markdown = build_scan_flatfield_report_markdown(root=root, scan_result=scan_result)
     create_prefect_markdown_report(
         content=markdown,
@@ -65,9 +65,10 @@ def scan_dataset_task(root: Path) -> ScanResult:
 )
 def run_day_processing_subflow_task(
     day_path: Path,
-    max_delta_hours: float = 2.0,
-    log_level: PrefectLogLevel = PrefectLogLevel.INFO,
-    convert_on_ff_failure: bool = True,
+    max_delta_hours: float,
+    log_level: PrefectLogLevel,
+    convert_on_ff_failure: bool,
+    force_override: bool,
 ) -> DayProcessingResult:
     """Prefect task: execute the day-processing flow as a sub-flow."""
     with logger.contextualize(day=day_path.name):
@@ -77,6 +78,7 @@ def run_day_processing_subflow_task(
             max_delta_hours=max_delta_hours,
             log_level=log_level,
             convert_on_ff_failure=convert_on_ff_failure,
+            force_override=force_override,
         )
         logger.success("Daily flat field correction completed")
         return result
@@ -93,6 +95,7 @@ def process_unprocessed_measurements(
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
     convert_on_ff_failure: bool = True,
+    force_override: bool = False,
 ) -> list[DayProcessingResult]:
     """Scan one or more dataset roots and process all days with pending
     measurements.
@@ -107,6 +110,10 @@ def process_unprocessed_measurements(
             correction are converted to ``*_converted.fits`` FITS files with a
             ``*_profile_converted.png`` profile plot so their data is still
             accessible to downstream consumers.
+        force_override: When True, all measurements are reprocessed and output
+            files are re-written even if they already exist in the target
+            folder.  Measurements that would normally be skipped are processed
+            again.
 
     Returns:
         List of DayProcessingResult for each processed day.
@@ -119,10 +126,14 @@ def process_unprocessed_measurements(
         root_count=len(root_paths),
         max_delta_hours=max_delta_hours,
         convert_on_ff_failure=convert_on_ff_failure,
+        force_override=force_override,
     )
 
     # Scan all roots and collect pending day paths
-    all_scan_results = [scan_dataset_task(root=root_path) for root_path in root_paths]
+    all_scan_results = [
+        scan_dataset_task(root=root_path, force_override=force_override)
+        for root_path in root_paths
+    ]
 
     total_pending = sum(r.total_pending for r in all_scan_results)
     logger.info(
@@ -157,6 +168,7 @@ def process_unprocessed_measurements(
                 "max_delta_hours": unmapped(max_delta_hours),
                 "log_level": unmapped(log_level),
                 "convert_on_ff_failure": unmapped(convert_on_ff_failure),
+                "force_override": unmapped(force_override),
             },
         ).result()
 
@@ -183,6 +195,7 @@ def process_daily_unprocessed_measurements(
     max_delta_hours: float = 2.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
     convert_on_ff_failure: bool = True,
+    force_override: bool = False,
 ) -> DayProcessingResult:
     """Process a single observation day.
 
@@ -194,6 +207,9 @@ def process_daily_unprocessed_measurements(
             correction are converted to ``*_converted.fits`` FITS files with a
             ``*_profile_converted.png`` profile plot so their data is still
             accessible to downstream consumers.
+        force_override: When True, all measurements are reprocessed and output
+            files are re-written even if they already exist in the target
+            folder.
 
     Returns:
         DayProcessingResult summary.
@@ -204,6 +220,7 @@ def process_daily_unprocessed_measurements(
         day_path=day_path,
         max_delta_hours=max_delta_hours,
         convert_on_ff_failure=convert_on_ff_failure,
+        force_override=force_override,
     )
 
     path = Path(day_path)
@@ -218,6 +235,7 @@ def process_daily_unprocessed_measurements(
     result = process_observation_day(
         day=day,
         max_delta_policy=policy,
+        force=force_override,
         convert_on_ff_failure=convert_on_ff_failure,
     )
 

@@ -86,7 +86,7 @@ The pipeline defines four independent flow groups, each served as a separate Pre
 
 **`process_unprocessed_measurements`** (full):
 1. Resolves the dataset root from arguments or Prefect Variables.
-2. Scans the dataset for pending measurements.
+2. Scans the dataset for pending measurements (or all measurements when `force_override=True`).
 3. Creates a markdown scan report artifact.
 4. Dispatches day-processing subflows via `ThreadPoolTaskRunner` (max workers = CPU count − 1, capped at 12).
 5. Collects results and logs a summary.
@@ -94,6 +94,7 @@ The pipeline defines four independent flow groups, each served as a separate Pre
 **`process_daily_unprocessed_measurements`** (daily):
 1. Constructs an `ObservationDay` from the provided path.
 2. Calls `process_observation_day()` with the configured `MaxDeltaPolicy`.
+3. When `force_override=True`, skips the "already processed" check and reprocesses every measurement.
 
 ### Slit Image Generation Flows
 
@@ -101,12 +102,14 @@ The pipeline defines four independent flow groups, each served as a separate Pre
 **`generate_slit_images`** (full):
 1. Resolves JSOC email and dataset root.
 2. Scans observation days and keeps only days at least `jsoc-data-delay-days` old (inclusive, based on `YYMMDD` folder date).
-3. Dispatches per-day generation tasks (max workers = CPU count − 1, capped at 4 due to network I/O).
-4. Collects results.
+3. When `force_override=True`, all measurements are treated as pending regardless of existing artifacts.
+4. Dispatches per-day generation tasks (max workers = CPU count − 1, capped at 4 due to network I/O).
+5. Collects results.
 
 **`generate_daily_slit_images`** (daily):
 1. Resolves JSOC email.
 2. Generates slit images for a single observation day.
+3. When `force_override=True`, skips the "already generated" check and regenerates every measurement.
 
 ### Maintenance Flows
 

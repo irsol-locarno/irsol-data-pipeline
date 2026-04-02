@@ -29,6 +29,7 @@ def _scan_dataset(
     *,
     is_measurment_already_processed: MeasurementDonePredicate,
     day_predicate: ObservationDayPredicate | None = None,
+    force_override: bool,
 ) -> ScanResult:
     """Core dataset scan implementation.
 
@@ -46,6 +47,8 @@ def _scan_dataset(
             for slit images).
         day_predicate: Optional filter returning ``True`` for observation days
             that should be included in the scan.
+        force_override: When ``True``, all measurements are treated as pending
+            regardless of existing output artifacts.
 
     Returns:
         ScanResult with discovered days and pending measurements.
@@ -59,11 +62,14 @@ def _scan_dataset(
         measurements = discover_measurement_files(day.reduced_dir)
         total += len(measurements)
 
-        unprocessed = [
-            m
-            for m in measurements
-            if not is_measurment_already_processed(day.processed_dir, m.name)
-        ]
+        if force_override:
+            unprocessed = list(measurements)
+        else:
+            unprocessed = [
+                m
+                for m in measurements
+                if not is_measurment_already_processed(day.processed_dir, m.name)
+            ]
 
         if unprocessed:
             pending[day.name] = unprocessed
@@ -84,16 +90,23 @@ def _scan_dataset(
     )
 
 
-def scan_flatfield_dataset(root: Path) -> ScanResult:
+def scan_flatfield_dataset(
+    root: Path,
+    *,
+    force_override: bool = False,
+) -> ScanResult:
     """Scan the dataset root and find measurements that need flat-field
     correction.
 
     For each observation day, checks the ``reduced/`` folder for
     measurement files and the ``processed/`` folder for existing outputs.
-    Only measurements without processed outputs are reported.
+    Only measurements without processed outputs are reported unless
+    ``force_override`` is ``True``.
 
     Args:
         root: The dataset root directory.
+        force_override: When ``True``, all measurements are treated as pending
+            regardless of existing output artifacts.
 
     Returns:
         ScanResult with discovered days and pending measurements.
@@ -101,6 +114,7 @@ def scan_flatfield_dataset(root: Path) -> ScanResult:
     return _scan_dataset(
         root,
         is_measurment_already_processed=is_measurement_flat_field_processed,
+        force_override=force_override,
     )
 
 
@@ -149,6 +163,8 @@ def build_scan_flatfield_report_markdown(root: Path, scan_result: ScanResult) ->
 def scan_slit_dataset(
     root: Path,
     predicate: ObservationDayPredicate | None = None,
+    *,
+    force_override: bool = False,
 ) -> ScanResult:
     """Scan the dataset root and find measurements that need slit preview
     generation.
@@ -156,12 +172,15 @@ def scan_slit_dataset(
     For each observation day that satisfies the optional predicate, checks the
     ``reduced/`` folder for measurement files and the ``processed/`` folder for
     existing slit preview outputs.  Only measurements without a slit preview
-    (or a slit preview error file) are reported as pending.
+    (or a slit preview error file) are reported as pending unless
+    ``force_override`` is ``True``.
 
     Args:
         root: The dataset root directory.
         predicate: Optional filter returning ``True`` for observation days that
             should be included in the scan (e.g. a JSOC age predicate).
+        force_override: When ``True``, all measurements are treated as pending
+            regardless of existing output artifacts.
 
     Returns:
         ScanResult with discovered days and pending slit-preview measurements.
@@ -170,6 +189,7 @@ def scan_slit_dataset(
         root,
         is_measurment_already_processed=is_measurement_slit_preview_generated,
         day_predicate=predicate,
+        force_override=force_override,
     )
 
 

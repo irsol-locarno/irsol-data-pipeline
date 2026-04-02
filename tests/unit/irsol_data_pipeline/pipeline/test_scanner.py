@@ -72,6 +72,34 @@ class TestScanDataset:
         result = scan_flatfield_dataset(tmp_path)
         assert result.total_pending == 0
 
+    def test_force_override_includes_processed(self, tmp_path):
+        day = tmp_path / "2024" / "240713"
+        reduced = day / "reduced"
+        processed = day / "processed"
+        reduced.mkdir(parents=True)
+        processed.mkdir(parents=True)
+        (reduced / "6302_m1.dat").touch()
+        (reduced / "6302_m2.dat").touch()
+        # Mark m1 as processed
+        (processed / "6302_m1_corrected.fits").touch()
+
+        result = scan_flatfield_dataset(tmp_path, force_override=True)
+        assert result.total_measurements == 2
+        assert result.total_pending == 2
+        assert "240713" in result.pending_measurements
+
+    def test_force_override_includes_errored(self, tmp_path):
+        day = tmp_path / "2024" / "240713"
+        reduced = day / "reduced"
+        processed = day / "processed"
+        reduced.mkdir(parents=True)
+        processed.mkdir(parents=True)
+        (reduced / "6302_m1.dat").touch()
+        (processed / "6302_m1_error.json").touch()
+
+        result = scan_flatfield_dataset(tmp_path, force_override=True)
+        assert result.total_pending == 1
+
 
 def test_build_scan_report_markdown_with_pending_measurements():
     scan_result = ScanResult(
@@ -155,6 +183,33 @@ class TestScanSlitDataset:
 
         result = scan_slit_dataset(tmp_path)
         assert result.total_pending == 0
+
+    def test_force_override_includes_generated(self, tmp_path):
+        day = tmp_path / "2024" / "240713"
+        reduced = day / "reduced"
+        processed = day / "processed"
+        reduced.mkdir(parents=True)
+        processed.mkdir(parents=True)
+        (reduced / "6302_m1.dat").touch()
+        (reduced / "6302_m2.dat").touch()
+        (processed / "6302_m1_slit_preview.png").touch()
+
+        result = scan_slit_dataset(tmp_path, force_override=True)
+        assert result.total_measurements == 2
+        assert result.total_pending == 2
+        assert "240713" in result.pending_measurements
+
+    def test_force_override_includes_errored(self, tmp_path):
+        day = tmp_path / "2024" / "240713"
+        reduced = day / "reduced"
+        processed = day / "processed"
+        reduced.mkdir(parents=True)
+        processed.mkdir(parents=True)
+        (reduced / "6302_m1.dat").touch()
+        (processed / "6302_m1_slit_preview_error.json").touch()
+
+        result = scan_slit_dataset(tmp_path, force_override=True)
+        assert result.total_pending == 1
 
     def test_day_with_no_pending_is_excluded_from_pending_measurements(self, tmp_path):
         day = tmp_path / "2024" / "240713"
