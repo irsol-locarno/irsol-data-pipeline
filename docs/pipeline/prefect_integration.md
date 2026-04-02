@@ -146,23 +146,6 @@ The compatibility flow is responsible for:
 3. Enforcing idempotent upload behavior (skip existing by default, overwrite only when forced).
 4. Making deployment state explicit in Prefect (retries, logs, failures, run history).
 
-## Task Structure and Retries
-
-Pipeline tasks use retry logic with exception-based conditions:
-
-```python
-@task(
-    retries=2,
-    retry_delay_seconds=10,
-    retry_condition_fn=retry_condition_except_on_exceptions(
-        FlatFieldAssociationNotFoundException,
-    ),
-)
-def _process_single_measurement(...):
-    ...
-```
-
-The `retry_condition_except_on_exceptions()` helper prevents retries for errors that would never succeed on retry (e.g., no matching flat-field exists). Transient failures (network errors, temporary file locks) are retried.
 
 ## Prefect Variables
 

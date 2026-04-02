@@ -39,15 +39,20 @@ class FlatFieldAssociationNotFoundException(IrsolDataPipelineException):
         *,
         measurement: Measurement | None = None,
         max_delta: datetime.timedelta | None = None,
+        target_angle: float | None = None,
     ):
         self.measurement = measurement
         self.max_delta = max_delta
+        self.target_angle = target_angle
 
         super().__init__(
             message,
             f"No flat-field within {max_delta or '<unspecified>'} for wavelength "
             f"{measurement.wavelength} at {measurement.timestamp}"
             if measurement
+            else "<unspecified>",
+            f"and target angle {target_angle}"
+            if target_angle is not None
             else "<unspecified>",
         )
 

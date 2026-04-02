@@ -140,6 +140,7 @@ def _process_single_measurement(
             raise FlatFieldAssociationNotFoundException(
                 measurement=measurement,
                 max_delta=max_delta,
+                target_angle=measurement.metadata.derotator.position_angle,
             )
         ff_time_delta = abs(
             (ff_correction.timestamp - measurement.timestamp).total_seconds(),

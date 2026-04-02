@@ -492,7 +492,7 @@ Written when processing fails. Replaces the success artefacts (`_corrected.fits`
 ```json
 {
   "source_file": "6302_m1.dat",
-  "error": "FlatFieldAssociationNotFoundException: no flat-field within 2h",
+  "error": "FlatFieldAssociationNotFoundException: no flat-field within 2h for wavelength 6302.5 at 2025-11-11T08:17:17+00:00 and target angle 42.0",
   "processing_timestamp": "2024-03-15T12:00:00+00:00",
   "pipeline_version": "1.4.0"
 }
