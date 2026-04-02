@@ -33,146 +33,181 @@ flowchart LR
 
 ## Deployment
 
-### Bootstrap Checklist
+The pipeline is deployed on the `sirius` server under the dedicated `operator` Unix user. The
+orchestration processes run as systemd services that are automatically restarted on reboot.
 
-1. **Install the pipeline:**
-   ```bash
-   uv tool install irsol-data-pipeline-cli --no-cache-dir --python 3.10
-   ```
-   Note: we recommend installing `irsol-data-pipeline-cli` instead of the `irsol-data-pipeline` pip package. The CLI flavour of the package will come with pinned dependencies, including a compatible Prefect version, and will receive updates on a more stable cadence. The CLI package is designed for managing the Prefect server and flows in production, while the main package is intended for development and local usage.
+The installation requires **two user accounts**:
 
-2. **Verify installation:**
-   ```bash
-   idp --version
-   idp info
-   ```
+| Account | Role |
+|---------|------|
+| `operator` | Owns the `idp` installation and all pipeline processes |
+| `root` | Registers the systemd unit files (requires write access to `/etc/systemd/system`) |
 
-3. Install auto-completion for your shell (optional but recommended):
-   ```bash
-   idp --install-completion
-   ```
-   and restart your shell or source the completion script.
+Both accounts must have `irsol-data-pipeline-cli` installed independently so that each user
+can invoke `idp install service` (root) or the Prefect commands (operator) from their own
+managed environment.
 
-4. **Configure the default Prefect profile for the pipeline:**
-   ```bash
-   idp setup server
-   ```
-   This command creates or updates a `default` Prefect profile and sets:
-   - `PREFECT_API_DATABASE_CONNECTION_URL`
-   - `PREFECT_API_URL=http://127.0.0.1:4200/api`
-   - `PREFECT_SERVER_ANALYTICS_ENABLED=false`
+### Step 1 — Install and configure as `operator`
 
-   During setup, you are prompted to:
-   - confirm the database path (default: `/dati/.prefect/prefect.db`). This is the path where the prefect flows are stored and made visible in the dashboard. It should be on a persistent volume with sufficient space (a few hundred MB to a few GB depending on run history retention). When the default database path is accepted, its parent directory is created automatically.
+Log in as `operator` and install the CLI tool:
 
-   - select the API port (default: `4200`, from the pipeline Prefect config). This is the port where the Prefect server will be accessible from.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install irsol-data-pipeline-cli --no-cache-dir --python 3.10
+```
 
-   You only need to configure Prefect once. The resulting profile is stored in
-   `~/.prefect/profiles.toml` and will be used by all `idp prefect` commands.
+Verify the installation and note the executable path (you will need it in Step 3):
 
-5. **Start the Prefect server:**
-   ```bash
-   idp prefect start
-   ```
-   The server port is inferred from the active profile's `PREFECT_API_URL`.
+```bash
+idp --version
+which idp           # e.g. /home/operator/.local/bin/idp
+```
 
+Optionally, install shell auto-completion:
 
-6. **Configure variables and secrets:**
-   ```bash
-   idp prefect variables configure
-   idp prefect secrets configure
-   ```
-   Required variables:
-   - `data-root-path` — Path to the dataset root directories, you can set multiple root directories, comma separated.
-   - `jsoc-email` — Email registered with JSOC for SDO data queries.
-   - `jsoc-data-delay-days` — Minimum age (days) for observation-day folders processed by `slit-images-full` (default: 14).
-   - `cache-expiration-hours` — Cache file retention (default: 672 hours = 28 days).
-   - `flow-run-expiration-hours` — Prefect run history retention (default: 672 hours).
+```bash
+idp --install-completion
+source ~/.bashrc
+```
 
-   Required secrets:
-   - `piombo-password` — SFTP password for Piombo uploads (used by web asset compatibility flows).
+Configure the Prefect server profile:
 
-   You will be prompted to enter the value for each secret. Secrets are stored securely in Prefect Secret blocks and are not shown in plaintext after entry.
+```bash
+idp setup server
+```
 
+This command creates or updates the `default` Prefect profile and sets:
+- `PREFECT_API_DATABASE_CONNECTION_URL`
+- `PREFECT_API_URL=http://127.0.0.1:4200/api`
+- `PREFECT_SERVER_ANALYTICS_ENABLED=false`
 
-7. **Verify configuration:**
-   ```bash
-   idp info
-   idp prefect variables list
-   idp prefect secrets list
-   idp prefect flows list
-   ```
+During setup you are prompted to:
+- Confirm the database path (default: `/dati/.prefect/prefect.db`). This is the path where
+  Prefect flow history is stored. It should be on a persistent volume with sufficient space
+  (a few hundred MB to a few GB depending on run history retention). When the default path is
+  accepted, its parent directory is created automatically.
+- Select the API port (default: `4200`).
 
-8. **Upgrade the package:**
-   ```bash
-   uv tool upgrade irsol-data-pipeline-cli --no-cache-dir --python 3.10
-   ```
+The resulting profile is stored in `~/.prefect/profiles.toml` and will be used by all
+`idp prefect` commands.
 
-Now the `idp` command line tool is ready to manage the Prefect server and flow runners globally for the current user.
+Start the Prefect server to verify it works:
 
-### systemd Services
+```bash
+idp prefect start
+```
 
-Use the built-in installer command to generate and write systemd service unit files:
+Configure variables and secrets (the server must be running):
+
+```bash
+idp prefect variables configure
+idp prefect secrets configure
+```
+
+Required variables:
+
+| Variable | Description |
+|----------|-------------|
+| `data-root-path` | Path(s) to the dataset root directories (comma-separated for multiple) |
+| `jsoc-email` | Email registered with JSOC for SDO data queries |
+| `jsoc-data-delay-days` | Minimum age (days) for observation-day folders processed by `slit-images-full` (default: 14) |
+| `cache-expiration-hours` | Cache file retention in hours (default: 672 = 28 days) |
+| `flow-run-expiration-hours` | Prefect run history retention in hours (default: 672) |
+
+Required secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `piombo-password` | SFTP password for Piombo uploads (used by web asset compatibility flows) |
+
+Verify the configuration:
+
+```bash
+idp info
+idp prefect variables list
+idp prefect secrets list
+idp prefect flows list
+```
+
+Stop the server (the systemd services started in Step 3 will manage it from this point on):
+
+```bash
+# Press Ctrl+C in the terminal where `idp prefect start` is running
+```
+
+### Step 2 — Install as `root`
+
+Log in as `root` (or use `sudo -i`) and install the CLI tool using the same procedure:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install irsol-data-pipeline-cli --no-cache-dir --python 3.10
+```
+
+Verify:
+
+```bash
+idp --version
+```
+
+`root` needs its own `idp` installation so it can invoke the `idp install service` command
+in the next step.
+
+### Step 3 — Register systemd services as `root`
+
+Still logged in as `root`, run the interactive service installer:
 
 ```bash
 idp install service
 ```
 
-This interactive command will guide you through selecting the Unix user, `idp` executable
-path, and which services to install. It detects existing services and prompts before
-overwriting. See [CLI Usage — `idp install service`](../cli/cli_usage.md#idp-install-service) for full details.
+When prompted, provide the following values:
 
-Alternatively, you can create the unit files manually. Example for the Prefect server:
+| Prompt | Value |
+|--------|-------|
+| Systemd unit directory | `/etc/systemd/system` (default) |
+| Unix user to run services as | `operator` |
+| Path to `idp` executable | `/home/operator/.local/bin/idp` (from `which idp` in Step 1) |
+| Working directory | `/home/operator` (or another suitable directory) |
+| Services to install | Select all (server + all flow runners) |
 
-```ini
-# /etc/systemd/system/irsol-prefect-server.service
-[Unit]
-Description=IRSOL Prefect Server
-After=network.target
+The command writes unit files to `/etc/systemd/system/` and prints the next steps.
 
-[Service]
-Type=simple
-User=operator
-ExecStart=/home/operator/.local/bin/idp prefect start
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Example for a flow runner:
-
-```ini
-# /etc/systemd/system/irsol-prefect-serve-flatfield.service
-[Unit]
-Description=IRSOL Flat-Field Correction Runner
-After=irsol-prefect-server.service
-Requires=irsol-prefect-server.service
-
-[Service]
-Type=simple
-User=operator
-ExecStart=/home/operator/.local/bin/idp prefect flows serve flat-field-correction
-Environment=PREFECT_ENABLED=1
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Repeat for `slit-images` and `maintenance` runners.
-
-Enable and start all services:
+Reload systemd and enable all services so they start automatically on boot:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now irsol-prefect-server
-sudo systemctl enable --now irsol-prefect-serve-flatfield
-sudo systemctl enable --now irsol-prefect-serve-slitimages
-sudo systemctl enable --now irsol-prefect-serve-maintenance
+systemctl daemon-reload
+systemctl enable --now irsol-prefect-server
+systemctl enable --now irsol-prefect-serve-flatfield
+systemctl enable --now irsol-prefect-serve-slitimages
+systemctl enable --now irsol-prefect-serve-web-assets-compatibility
+systemctl enable --now irsol-prefect-serve-maintenance
 ```
+
+Verify that all services are running:
+
+```bash
+systemctl status irsol-prefect-server
+systemctl status irsol-prefect-serve-flatfield
+systemctl status irsol-prefect-serve-slitimages
+systemctl status irsol-prefect-serve-web-assets-compatibility
+systemctl status irsol-prefect-serve-maintenance
+```
+
+> **How the services run:** Each unit file sets `User=operator` so all pipeline processes run
+> under the `operator` account using its `idp` installation and Prefect profile, even though
+> the unit files were registered by `root`.
+
+### Bootstrap Checklist
+
+| # | Who | Action |
+|---|-----|--------|
+| 1 | `operator` | Install `irsol-data-pipeline-cli` with `uv tool install` |
+| 2 | `operator` | Run `idp setup server` to configure the Prefect profile |
+| 3 | `operator` | Start `idp prefect start` and configure variables/secrets, then stop |
+| 4 | `root` | Install `irsol-data-pipeline-cli` with `uv tool install` |
+| 5 | `root` | Run `idp install service`, selecting `operator` user and `operator`'s `idp` path |
+| 6 | `root` | `systemctl daemon-reload` and `systemctl enable --now` all services |
 
 ## Monitoring
 
@@ -196,6 +231,7 @@ idp prefect status --format json
 systemctl status irsol-prefect-server
 systemctl status irsol-prefect-serve-flatfield
 systemctl status irsol-prefect-serve-slitimages
+systemctl status irsol-prefect-serve-web-assets-compatibility
 systemctl status irsol-prefect-serve-maintenance
 ```
 
@@ -221,29 +257,34 @@ Use this only as a last resort when the Prefect database is corrupted.
 
 ## Upgrade Procedure
 
-1. **Stop flow runner services** (keep the Prefect server running):
+The upgrade must be performed as `operator` (who owns the installation). The systemd services
+are managed by `root`, but the package itself lives in `operator`'s `uv` tool environment.
+
+1. **Stop flow runner services as `root`** (keep the Prefect server running so in-flight flows can finish):
    ```bash
-   sudo systemctl stop irsol-prefect-serve-flatfield
-   sudo systemctl stop irsol-prefect-serve-slitimages
-   sudo systemctl stop irsol-prefect-serve-maintenance
+   systemctl stop irsol-prefect-serve-flatfield
+   systemctl stop irsol-prefect-serve-slitimages
+   systemctl stop irsol-prefect-serve-web-assets-compatibility
+   systemctl stop irsol-prefect-serve-maintenance
    ```
 
-2. **Upgrade the package:**
+2. **Upgrade the package as `operator`:**
    ```bash
    uv tool upgrade irsol-data-pipeline-cli --no-cache-dir --python 3.10
    ```
 
-3. **Verify the new version:**
+3. **Verify the new version as `operator`:**
    ```bash
    idp --version
    idp info
    ```
 
-4. **Restart the flow runners:**
+4. **Restart the flow runners as `root`:**
    ```bash
-   sudo systemctl start irsol-prefect-serve-flatfield
-   sudo systemctl start irsol-prefect-serve-slitimages
-   sudo systemctl start irsol-prefect-serve-maintenance
+   systemctl start irsol-prefect-serve-flatfield
+   systemctl start irsol-prefect-serve-slitimages
+   systemctl start irsol-prefect-serve-web-assets-compatibility
+   systemctl start irsol-prefect-serve-maintenance
    ```
 
 
