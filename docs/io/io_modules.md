@@ -141,6 +141,8 @@ def write_processing_metadata(
     flat_field_timestamp: datetime.datetime,
     measurement_timestamp: datetime.datetime,
     flat_field_time_delta_seconds: float,
+    flat_field_angle: float | None,
+    measuremetn_angle: float | None,
     calibration_info: dict[str, Any],
     extra: dict[str, Any] | None = None,
 ) -> Path:

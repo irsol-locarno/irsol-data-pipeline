@@ -19,6 +19,8 @@ def write_processing_metadata(
     flat_field_timestamp: datetime.datetime,
     measurement_timestamp: datetime.datetime,
     flat_field_time_delta_seconds: float,
+    flat_field_angle: float | None,
+    measurement_angle: float | None,
     calibration_info: dict[str, Any],
     extra: dict[str, Any] | None = None,
 ) -> Path:
@@ -32,6 +34,8 @@ def write_processing_metadata(
         measurement_timestamp: Timestamp of the measurement observation.
         flat_field_time_delta_seconds: Time delta in seconds between
             measurement and flat-field.
+        flat_field_angle: Position angle of the flat-field observation.
+        measurement_angle: Position angle of the measurement observation.
         calibration_info: Wavelength calibration result dict.
         extra: Any additional metadata to include.
 
@@ -47,6 +51,8 @@ def write_processing_metadata(
             "flat_field_timestamp": flat_field_timestamp.isoformat(),
             "measurement_timestamp": measurement_timestamp.isoformat(),
             "flat_field_time_delta_seconds": flat_field_time_delta_seconds,
+            "flat_field_angle": flat_field_angle,
+            "measurement_angle": measurement_angle,
             "auto_calibrated_wavelength": calibration_info,
             "processing_timestamp": datetime.datetime.now(
                 datetime.timezone.utc,

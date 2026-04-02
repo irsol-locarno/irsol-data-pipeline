@@ -30,6 +30,8 @@ class TestWriteProcessingMetadata:
                 tzinfo=datetime.timezone.utc,
             ),
             flat_field_time_delta_seconds=842.0,
+            flat_field_angle=0.32,
+            measurement_angle=43.5,
             calibration_info={"pixel_scale": 0.01, "wavelength_offset": 6300.0},
         )
 
@@ -40,6 +42,8 @@ class TestWriteProcessingMetadata:
         assert data["flat_field_timestamp"] == "2024-06-01T12:00:00+00:00"
         assert data["measurement_timestamp"] == "2024-06-01T12:14:00+00:00"
         assert data["flat_field_time_delta_seconds"] == 842.0
+        assert data["flat_field_angle"] == 0.32
+        assert data["measurement_angle"] == 43.5
         assert "processing_timestamp" in data
         assert "pipeline_version" in data
 

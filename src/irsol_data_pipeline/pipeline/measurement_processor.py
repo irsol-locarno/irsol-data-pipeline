@@ -148,6 +148,8 @@ def _process_single_measurement(
             "Using flat-field correction",
             flat_field=ff_correction.source_flatfield_path.name,
             delta_seconds=ff_time_delta,
+            flat_field_angle=ff_correction.position_angle,
+            measurement_angle=measurement.metadata.derotator.position_angle,
         )
 
         # 3. Apply flat-field correction
@@ -229,6 +231,8 @@ def _process_single_measurement(
             measurement_timestamp=measurement.timestamp,
             flat_field_used=ff_correction.source_flatfield_path.name,
             flat_field_time_delta_seconds=ff_time_delta,
+            flat_field_angle=ff_correction.position_angle,
+            measurement_angle=measurement.metadata.derotator.position_angle,
             calibration_info=calibration.model_dump(),
         )
 
