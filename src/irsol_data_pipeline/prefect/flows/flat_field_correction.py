@@ -67,7 +67,7 @@ def run_day_processing_subflow_task(
     day_path: Path,
     max_delta_hours: float = 2.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
-    convert_on_ff_failure: bool = False,
+    convert_on_ff_failure: bool = True,
     force_override: bool = False,
 ) -> DayProcessingResult:
     """Prefect task: execute the day-processing flow as a sub-flow."""
@@ -94,7 +94,7 @@ def process_unprocessed_measurements(
     max_delta_hours: float = 2.0,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
-    convert_on_ff_failure: bool = False,
+    convert_on_ff_failure: bool = True,
     force_override: bool = False,
 ) -> list[DayProcessingResult]:
     """Scan one or more dataset roots and process all days with pending
@@ -194,7 +194,7 @@ def process_daily_unprocessed_measurements(
     day_path: Path,
     max_delta_hours: float = 2.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
-    convert_on_ff_failure: bool = False,
+    convert_on_ff_failure: bool = True,
     force_override: bool = False,
 ) -> DayProcessingResult:
     """Process a single observation day.

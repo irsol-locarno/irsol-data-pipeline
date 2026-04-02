@@ -34,7 +34,7 @@ def process_observation_day(
     day: ObservationDay,
     max_delta_policy: MaxDeltaPolicy | None = None,
     force: bool = False,
-    convert_on_ff_failure: bool = False,
+    convert_on_ff_failure: bool = True,
 ) -> DayProcessingResult:
     """Process all measurements for a single observation day.
 

@@ -112,7 +112,11 @@ def scan_observation_days_task(root: Path) -> list[ObservationDay]:
     return observation_days
 
 
-@task(task_run_name="web-assets-compatibility/process-day/{day_path.name}")
+@task(
+    task_run_name="web-assets-compatibility/process-day/{day_path.name}",
+    retries=2,
+    retry_delay_seconds=30,
+)
 def run_day_web_assets_subflow_task(
     day_path: Path,
     piombo_base_path: str = DEFAULT_PIOMBO_BASE_PATH,
@@ -167,7 +171,7 @@ def publish_web_assets_for_root(
     piombo_password: str = "",
     jpeg_quality: int = 50,
     force_overwrite: bool = False,
-    max_concurrent_days: int = max(1, min(8, (os.cpu_count() or 1) - 1)),
+    max_concurrent_days: int = max(1, min(4, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
 ) -> list[DayProcessingResult]:
     """Scan one or more roots and run web-assets compatibility processing per
@@ -182,7 +186,7 @@ def publish_web_assets_for_root(
         piombo_password: SSH password for Piombo upload; if not provided, Prefect variable default is used.
         jpeg_quality: JPEG quality used for conversion.
         force_overwrite: Whether to overwrite existing JPG outputs.
-        max_concurrent_days: Maximum number of day subflows to run concurrently.
+        max_concurrent_days: Maximum number of day subflows to run concurrently. Defaults to number of CPU cores minus one, capped at 4.
         log_level: Logging level for the Prefect flow.
 
     Returns:
