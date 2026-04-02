@@ -169,7 +169,14 @@ def discover_observation_days(
 
         for year_dir in year_dirs:
             with logger.contextualize(year=year_dir):
-                if not year_dir.is_dir():
+                try:
+                    year_is_dir = year_dir.is_dir()
+                except PermissionError:
+                    logger.warning(
+                        "Permission denied checking year directory, skipping",
+                    )
+                    continue
+                if not year_is_dir:
                     logger.warning("Skipping non-directory in root")
                     continue
                 logger.info("Scanning year")
@@ -182,11 +189,25 @@ def discover_observation_days(
                     continue
                 for day_dir in day_dirs:
                     with logger.contextualize(day=day_dir.name):
-                        if not day_dir.is_dir():
+                        try:
+                            day_is_dir = day_dir.is_dir()
+                        except PermissionError:
+                            logger.warning(
+                                "Permission denied checking day directory, skipping",
+                            )
+                            continue
+                        if not day_is_dir:
                             logger.warning("Skipping non-directory")
                             continue
                         reduced = day_dir / REDUCED_DIRNAME
-                        if not reduced.is_dir():
+                        try:
+                            reduced_is_dir = reduced.is_dir()
+                        except PermissionError:
+                            logger.warning(
+                                "Permission denied checking reduced directory, skipping",
+                            )
+                            continue
+                        if not reduced_is_dir:
                             logger.warning(
                                 "Skipping day without reduced directory",
                             )
