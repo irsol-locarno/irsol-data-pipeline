@@ -20,6 +20,21 @@ class TestVersion:
 
         assert module.__version__ == "1.2.3"
 
+    def test_falls_back_to_cli_distribution_when_main_is_missing(self) -> None:
+        sys.modules.pop("irsol_data_pipeline.version", None)
+
+        def _version_side_effect(name: str) -> str:
+            if name == "irsol-data-pipeline":
+                raise importlib.metadata.PackageNotFoundError(name)
+            if name == "irsol-data-pipeline-cli":
+                return "2.0.0"
+            return "0.0.0"
+
+        with patch("importlib.metadata.version", side_effect=_version_side_effect):
+            module = importlib.import_module("irsol_data_pipeline.version")
+
+        assert module.__version__ == "2.0.0"
+
     def test_falls_back_when_distribution_metadata_is_missing(self) -> None:
         sys.modules.pop("irsol_data_pipeline.version", None)
 
