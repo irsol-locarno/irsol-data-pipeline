@@ -23,7 +23,7 @@ _FLOW_RUNNER_TEMPLATE_NAME = "irsol-prefect-flow-runner.service"
 _SERVER_SERVICE_NAME = "irsol-prefect-server.service"
 
 _DEFAULT_SYSTEMD_DIR = Path("/etc/systemd/system")
-_DEFAULT_USER = "irsol-prefect"
+_DEFAULT_USER = "operator"
 _DEFAULT_WORKING_DIRECTORY: Path = Path(f"/home/{_DEFAULT_USER}")
 
 _FLOW_GROUP_SERVICE_NAMES: dict[str, str] = {

@@ -4,7 +4,7 @@ This guide covers deploying, monitoring, and maintaining the IRSOL Data Pipeline
 
 ## Operating Model
 
-The pipeline runs as four long-lived processes under a dedicated Unix user (e.g., `irsol-prefect`):
+The pipeline runs as four long-lived processes under a dedicated Unix user (e.g., `operator`):
 
 ```mermaid
 flowchart LR
@@ -132,8 +132,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=irsol-prefect
-ExecStart=/home/irsol-prefect/.local/bin/idp prefect start
+User=operator
+ExecStart=/home/operator/.local/bin/idp prefect start
 Restart=always
 RestartSec=5
 
@@ -152,8 +152,8 @@ Requires=irsol-prefect-server.service
 
 [Service]
 Type=simple
-User=irsol-prefect
-ExecStart=/home/irsol-prefect/.local/bin/idp prefect flows serve flat-field-correction
+User=operator
+ExecStart=/home/operator/.local/bin/idp prefect flows serve flat-field-correction
 Environment=PREFECT_ENABLED=1
 Restart=always
 RestartSec=5
@@ -207,9 +207,6 @@ journalctl -u irsol-prefect-server -n 200 --no-pager
 
 # Flow runner logs
 journalctl -u irsol-prefect-serve-flatfield -n 200 --no-pager
-
-# Pipeline application log (rotating)
-tail -f irsol-data-pipeline.log
 ```
 
 ## Database Reset

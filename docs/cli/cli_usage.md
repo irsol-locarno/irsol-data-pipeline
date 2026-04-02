@@ -188,7 +188,7 @@ The command will:
 | Prompt | Default | Description |
 |--------|---------|-------------|
 | Systemd unit directory | `/etc/systemd/system` | Directory where service unit files are written |
-| Unix user | `irsol-prefect` (when root) or current user | User under which services run |
+| Unix user | `operator` (when root) or current user | User under which services run |
 | `idp` executable path | Auto-detected | Absolute path to the `idp` binary |
 | Prefect server service | Yes | Whether to install the Prefect API server service |
 | Flow runner services | Yes (each) | Whether to install each flow-runner service |
