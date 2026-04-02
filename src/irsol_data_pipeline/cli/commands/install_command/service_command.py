@@ -278,10 +278,14 @@ def _write_unit_file(
         True when the file was written.
     """
     target = systemd_dir / service_name
-    if target.exists() and not overwrite and not Confirm.ask(
-        f"[yellow]{target}[/yellow] already exists. Overwrite?",
-        default=False,
-        console=console,
+    if (
+        target.exists()
+        and not overwrite
+        and not Confirm.ask(
+            f"[yellow]{target}[/yellow] already exists. Overwrite?",
+            default=False,
+            console=console,
+        )
     ):
         console.print(f"  [dim]Skipped {service_name}[/dim]")
         return False
@@ -305,9 +309,7 @@ def _render_post_install_instructions(
         return
 
     lines = ["sudo systemctl daemon-reload"]
-    lines.extend(
-        f"sudo systemctl enable --now {svc}" for svc in written_services
-    )
+    lines.extend(f"sudo systemctl enable --now {svc}" for svc in written_services)
 
     instructions = "\n".join(lines)
     console.print()
