@@ -168,6 +168,13 @@ def _prompt_unix_user(console: Console) -> str:
 def _prompt_idp_path(console: Console) -> str:
     """Prompt for the path to the ``idp`` executable.
 
+    When this command is executed as root (required to write to
+    ``/etc/systemd/system``), the auto-detected path may be wrong or
+    missing because root's ``PATH`` does not include the target user's
+    virtual environment.  The caller should supply the full absolute path
+    from the target user's environment (e.g.
+    ``/home/<user>/.venv/bin/idp``).
+
     Args:
         console: Rich console for output.
 
@@ -176,7 +183,9 @@ def _prompt_idp_path(console: Console) -> str:
     """
     detected = _detect_idp_path()
     return Prompt.ask(
-        "Path to the [bold]idp[/bold] executable",
+        "Full path to the [bold]idp[/bold] executable\n"
+        "  [dim](if running as root, provide the path from the target "
+        "user's environment, e.g. /home/<user>/.venv/bin/idp)[/dim]",
         default=detected,
         console=console,
     )
@@ -199,21 +208,26 @@ def _prompt_systemd_dir(console: Console) -> Path:
     return Path(raw).expanduser().resolve()
 
 
-def _prompt_working_directory(console: Console) -> Path:
+def _prompt_working_directory(console: Console, username: str | None = None) -> Path:
     """Prompt for the working directory used by the services.
 
     This directory becomes the CWD of each service process and is the
     location where any relative log or stderr paths will resolve to.
 
+    When *username* is provided the default is ``/home/<username>``;
+    otherwise ``_DEFAULT_WORKING_DIRECTORY`` is used as the fallback.
+
     Args:
         console: Rich console for output.
+        username: Unix username to derive the default working directory from.
 
     Returns:
         Working directory as a Path.
     """
+    default = f"/home/{username}" if username else str(_DEFAULT_WORKING_DIRECTORY)
     raw = Prompt.ask(
         "Working directory for the services",
-        default=str(_DEFAULT_WORKING_DIRECTORY),
+        default=default,
         console=console,
     )
     return Path(raw).expanduser().resolve()
@@ -499,7 +513,7 @@ def install_service() -> int:
 
     user = _prompt_unix_user(console)
     idp_path = _prompt_idp_path(console)
-    working_dir = _prompt_working_directory(console)
+    working_dir = _prompt_working_directory(console, user)
 
     install_server = Confirm.ask(
         "Install the [bold]Prefect server[/bold] service?",

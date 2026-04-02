@@ -168,7 +168,7 @@ class TestPromptWorkingDirectory:
             result = _prompt_working_directory(console)
         assert result == tmp_path
 
-    def test_default_is_default_working_directory(self) -> None:
+    def test_default_is_default_working_directory_when_no_username(self) -> None:
         console = MagicMock()
         with patch(
             "irsol_data_pipeline.cli.commands.install_command.service_command.Prompt.ask",
@@ -177,6 +177,17 @@ class TestPromptWorkingDirectory:
             _prompt_working_directory(console)
         _, kwargs = mock_ask.call_args
         assert kwargs["default"] == str(_DEFAULT_WORKING_DIRECTORY)
+
+    def test_default_derived_from_username(self) -> None:
+        console = MagicMock()
+        with patch(
+            "irsol_data_pipeline.cli.commands.install_command.service_command.Prompt.ask",
+            return_value="/home/alice",
+        ) as mock_ask:
+            result = _prompt_working_directory(console, username="alice")
+        _, kwargs = mock_ask.call_args
+        assert kwargs["default"] == "/home/alice"
+        assert result == Path("/home/alice")
 
 
 class TestPromptFlowGroups:
