@@ -64,11 +64,13 @@ def _plot_data(
     stokes: StokesParameters,
     metadata: MeasurementMetadata,
     solar_orientation: SolarOrientationInfo,
-    calibration: CalibrationResult,
+    calibration: CalibrationResult | None,
     filename_save: Path,
 ) -> None:
-    wavelength_offset = calibration.wavelength_offset
-    pixel_scale = calibration.pixel_scale
+    wavelength_offset = (
+        calibration.wavelength_offset if calibration is not None else None
+    )
+    pixel_scale = calibration.pixel_scale if calibration is not None else None
     logger.debug(
         "Plotting profile",
         output_path=str(filename_save),
@@ -172,18 +174,32 @@ def _process_single_measurement(
         logger.info("Flat-field correction applied")
 
         # 4. Wavelength auto-calibration
-        calibration = calibrate_measurement(corrected_stokes)
-        logger.info(
-            "Wavelength calibration complete",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
-            reference_file=calibration.reference_file,
+        calibration = calibrate_measurement(
+            corrected_stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
         )
-
-        processing_history.record(
-            "Wavelength auto-calibration",
-            details=f"Reference file used: {calibration.reference_file}",
-        )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated",
+            )
+            processing_history.record(
+                "Wavelength auto-calibration",
+                details=(
+                    "No reliable reference found; published uncalibrated on a "
+                    "pixel axis"
+                ),
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+                reference_file=calibration.reference_file,
+            )
+            processing_history.record(
+                "Wavelength auto-calibration",
+                details=f"Reference file used: {calibration.reference_file}",
+            )
 
         # 5. Save corrected data
         fits_io.write(
@@ -234,7 +250,9 @@ def _process_single_measurement(
             flat_field_time_delta_seconds=ff_time_delta,
             flat_field_angle=ff_correction.position_angle,
             measurement_angle=measurement.metadata.derotator.position_angle,
-            calibration_info=calibration.model_dump(),
+            calibration_info=(
+                calibration.model_dump() if calibration is not None else {}
+            ),
         )
 
         create_prefect_json_report(
@@ -293,12 +311,21 @@ def plot_original_profile(
         stokes, metadata = dat_io.read(measurement_path)
         solar_orientation = compute_solar_orientation(metadata)
 
-        calibration = calibrate_measurement(stokes)
-        logger.info(
-            "Wavelength calibration complete (best-effort on uncorrected data)",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
+        calibration = calibrate_measurement(
+            stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
         )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated "
+                "(best-effort on uncorrected data)",
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete (best-effort on uncorrected data)",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+            )
 
         processed_dir.mkdir(parents=True, exist_ok=True)
 
@@ -346,12 +373,21 @@ def convert_measurement_to_fits(
         solar_orientation = compute_solar_orientation(metadata)
 
         # Best-effort wavelength calibration on uncorrected data
-        calibration = calibrate_measurement(stokes)
-        logger.info(
-            "Wavelength calibration complete (best-effort on uncorrected data)",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
+        calibration = calibrate_measurement(
+            stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
         )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated "
+                "(best-effort on uncorrected data)",
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete (best-effort on uncorrected data)",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+            )
 
         processing_dir = processed_dir
         processing_dir.mkdir(parents=True, exist_ok=True)

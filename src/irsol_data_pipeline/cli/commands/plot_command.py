@@ -115,7 +115,10 @@ def _load_stokes_and_calibration_and_solar_orientation(
                 calibrate_measurement,
             )
 
-            calibration = calibrate_measurement(stokes)
+            calibration = calibrate_measurement(
+                stokes,
+                nominal_wavelength=metadata.spectrograph.grtwl,
+            )
         else:
             calibration = None
 
@@ -138,7 +141,12 @@ def _load_stokes_and_calibration_and_solar_orientation(
                 calibrate_measurement,
             )
 
-            calibration = calibrate_measurement(stokes)
+            calibration = calibrate_measurement(
+                stokes,
+                nominal_wavelength=(
+                    metadata.spectrograph.grtwl if metadata is not None else None
+                ),
+            )
 
         return (stokes, metadata), calibration, solar_orientation
     raise ValidationError(

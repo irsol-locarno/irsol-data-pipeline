@@ -83,7 +83,7 @@ def test_fits_header_keys_presence(
             assert stokes_i.header.get("CRVAL3") == 6301.5
             assert stokes_i.header.get("CDELT3") == 0.012
         else:
-            assert stokes_i.header.get("WAVECAL", None) is None
+            assert stokes_i.header.get("WAVECAL") == 0
             crval3 = stokes_i.header.get("CRVAL3")
             cdelt3 = stokes_i.header.get("CDELT3")
             assert crval3 == 0.0

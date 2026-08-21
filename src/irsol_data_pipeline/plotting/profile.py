@@ -295,7 +295,7 @@ def plot(
         str_wlt_axis = r"Wavelength [$\AA{}$]"
     else:
         wavelength_min, wavelength_max = 0, si.shape[1]
-        str_wlt_axis = "Wavelength dimension [px]"
+        str_wlt_axis = "Wavelength dimension [px] (not calibrated)"
     spatial_min, spatial_max = 0, si.shape[0]
     extent = [wavelength_min, wavelength_max, spatial_min, spatial_max]
 
