@@ -82,6 +82,7 @@ class TestProcessObservationDayErrorPath:
         mock_plot_original.assert_called_once_with(
             measurement_path=day.reduced_dir / "6302_m1.dat",
             processed_dir=day.processed_dir,
+            max_band_center_offset_angstrom=5.0,
         )
 
     def test_plot_original_profile_called_even_with_convert_on_ff_failure(

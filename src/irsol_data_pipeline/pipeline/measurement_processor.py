@@ -8,7 +8,10 @@ from tempfile import NamedTemporaryFile
 
 from loguru import logger
 
-from irsol_data_pipeline.core.calibration.autocalibrate import calibrate_measurement
+from irsol_data_pipeline.core.calibration.autocalibrate import (
+    DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
+    calibrate_measurement,
+)
 from irsol_data_pipeline.core.correction.corrector import apply_correction
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
@@ -42,6 +45,7 @@ def process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: MaxDeltaPolicy | None = None,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Process a single measurement.
 
@@ -50,6 +54,8 @@ def process_single_measurement(
         processed_dir: Output directory for processed files.
         ff_cache: Prebuilt flat-field correction cache.
         max_delta_policy: Policy for flat-field time thresholds.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     max_delta_policy = max_delta_policy or MaxDeltaPolicy()
     _process_single_measurement(
@@ -57,6 +63,7 @@ def process_single_measurement(
         processed_dir=processed_dir,
         ff_cache=ff_cache,
         max_delta_policy=max_delta_policy,
+        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
     )
 
 
@@ -95,6 +102,7 @@ def _process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: MaxDeltaPolicy,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Internal: process one measurement.
 
@@ -177,6 +185,7 @@ def _process_single_measurement(
         calibration = calibrate_measurement(
             corrected_stokes,
             nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
         if calibration is None:
             logger.warning(
@@ -292,6 +301,7 @@ def _process_single_measurement(
 def plot_original_profile(
     measurement_path: Path,
     processed_dir: Path,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Generate a profile plot for the original (uncorrected) stokes data.
 
@@ -304,6 +314,8 @@ def plot_original_profile(
     Args:
         measurement_path: Path to the measurement ``.dat`` file.
         processed_dir: Output directory where the profile plot is written.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     with logger.contextualize(file=measurement_path.name):
         logger.info("Generating original profile plot for failed measurement")
@@ -314,6 +326,7 @@ def plot_original_profile(
         calibration = calibrate_measurement(
             stokes,
             nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
         if calibration is None:
             logger.warning(
@@ -347,6 +360,7 @@ def plot_original_profile(
 def convert_measurement_to_fits(
     measurement_path: Path,
     processed_dir: Path,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Convert a measurement to FITS without applying flat-field correction.
 
@@ -364,6 +378,8 @@ def convert_measurement_to_fits(
     Args:
         measurement_path: Path to the measurement ``.dat`` file.
         processed_dir: Output directory where converted artifacts are written.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     with logger.contextualize(file=measurement_path.name):
         logger.info("Converting measurement to FITS without flat-field correction")
@@ -376,6 +392,7 @@ def convert_measurement_to_fits(
         calibration = calibrate_measurement(
             stokes,
             nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
         if calibration is None:
             logger.warning(
