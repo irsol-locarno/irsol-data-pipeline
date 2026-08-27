@@ -66,6 +66,7 @@ def scan_dataset_task(root: Path, force_override: bool) -> ScanResult:
 def run_day_processing_subflow_task(
     day_path: Path,
     max_delta_hours: float,
+    max_band_center_offset_angstrom: float,
     log_level: PrefectLogLevel,
     convert_on_ff_failure: bool,
     force_override: bool,
@@ -76,6 +77,7 @@ def run_day_processing_subflow_task(
         result = process_daily_unprocessed_measurements(
             day_path=day_path,
             max_delta_hours=max_delta_hours,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
             log_level=log_level,
             convert_on_ff_failure=convert_on_ff_failure,
             force_override=force_override,
@@ -92,6 +94,7 @@ def run_day_processing_subflow_task(
 def process_unprocessed_measurements(
     roots: tuple[str, ...] = tuple(),
     max_delta_hours: float = 2.0,
+    max_band_center_offset_angstrom: float = 5.0,
     max_concurrent_days_to_process: int = max(1, min(12, (os.cpu_count() or 1) - 1)),
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
     log_file: str | None = "ff-correction-full.log",
@@ -105,6 +108,10 @@ def process_unprocessed_measurements(
         roots: Dataset root path(s). If not set, the default path(s) from the Prefect Variable
             ``data-root-path`` are used.
         max_delta_hours: Maximum flat-field time delta in hours.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted wavelength band center and the grating
+            wavelength (``SPGRTWL``).  Calibrations landing further away are
+            rejected and the measurement is published uncalibrated.
         max_concurrent_days_to_process: Maximum number of concurrent day processing tasks. Defaults to CPU count - 1, capped at 12.
         log_level: Logging level for the Prefect flow.
         log_file: Path to the rotating log file. Defaults to ``ff-correction-full.log``.
@@ -128,6 +135,7 @@ def process_unprocessed_measurements(
         roots=[str(p) for p in root_paths],
         root_count=len(root_paths),
         max_delta_hours=max_delta_hours,
+        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         convert_on_ff_failure=convert_on_ff_failure,
         force_override=force_override,
     )
@@ -169,6 +177,9 @@ def process_unprocessed_measurements(
             parameters={
                 "day_path": selected_day_paths,
                 "max_delta_hours": unmapped(max_delta_hours),
+                "max_band_center_offset_angstrom": unmapped(
+                    max_band_center_offset_angstrom,
+                ),
                 "log_level": unmapped(log_level),
                 "convert_on_ff_failure": unmapped(convert_on_ff_failure),
                 "force_override": unmapped(force_override),
@@ -196,6 +207,7 @@ def process_unprocessed_measurements(
 def process_daily_unprocessed_measurements(
     day_path: Path,
     max_delta_hours: float = 2.0,
+    max_band_center_offset_angstrom: float = 5.0,
     log_level: PrefectLogLevel = PrefectLogLevel.INFO,
     log_file: str | None = "ff-correction-daily.log",
     convert_on_ff_failure: bool = True,
@@ -206,6 +218,10 @@ def process_daily_unprocessed_measurements(
     Args:
         day_path: Path to the observation day directory.
         max_delta_hours: Maximum flat-field time delta in hours.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted wavelength band center and the grating
+            wavelength (``SPGRTWL``).  Calibrations landing further away are
+            rejected and the measurement is published uncalibrated.
         log_level: Logging level for the Prefect flow.
         log_file: Path to the rotating log file. Defaults to ``ff-correction-daily.log``.
             Pass ``None`` to disable file logging.
@@ -225,6 +241,7 @@ def process_daily_unprocessed_measurements(
         "Starting day processing flow",
         day_path=day_path,
         max_delta_hours=max_delta_hours,
+        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         convert_on_ff_failure=convert_on_ff_failure,
         force_override=force_override,
     )
@@ -241,6 +258,7 @@ def process_daily_unprocessed_measurements(
     result = process_observation_day(
         day=day,
         max_delta_policy=policy,
+        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         force=force_override,
         convert_on_ff_failure=convert_on_ff_failure,
     )

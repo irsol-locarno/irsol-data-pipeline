@@ -8,7 +8,10 @@ from tempfile import NamedTemporaryFile
 
 from loguru import logger
 
-from irsol_data_pipeline.core.calibration.autocalibrate import calibrate_measurement
+from irsol_data_pipeline.core.calibration.autocalibrate import (
+    DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
+    calibrate_measurement,
+)
 from irsol_data_pipeline.core.correction.corrector import apply_correction
 from irsol_data_pipeline.core.models import (
     CalibrationResult,
@@ -42,6 +45,7 @@ def process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: MaxDeltaPolicy | None = None,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Process a single measurement.
 
@@ -50,6 +54,8 @@ def process_single_measurement(
         processed_dir: Output directory for processed files.
         ff_cache: Prebuilt flat-field correction cache.
         max_delta_policy: Policy for flat-field time thresholds.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     max_delta_policy = max_delta_policy or MaxDeltaPolicy()
     _process_single_measurement(
@@ -57,6 +63,7 @@ def process_single_measurement(
         processed_dir=processed_dir,
         ff_cache=ff_cache,
         max_delta_policy=max_delta_policy,
+        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
     )
 
 
@@ -64,11 +71,13 @@ def _plot_data(
     stokes: StokesParameters,
     metadata: MeasurementMetadata,
     solar_orientation: SolarOrientationInfo,
-    calibration: CalibrationResult,
+    calibration: CalibrationResult | None,
     filename_save: Path,
 ) -> None:
-    wavelength_offset = calibration.wavelength_offset
-    pixel_scale = calibration.pixel_scale
+    wavelength_offset = (
+        calibration.wavelength_offset if calibration is not None else None
+    )
+    pixel_scale = calibration.pixel_scale if calibration is not None else None
     logger.debug(
         "Plotting profile",
         output_path=str(filename_save),
@@ -93,6 +102,7 @@ def _process_single_measurement(
     processed_dir: Path,
     ff_cache: FlatFieldCache,
     max_delta_policy: MaxDeltaPolicy,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Internal: process one measurement.
 
@@ -172,18 +182,33 @@ def _process_single_measurement(
         logger.info("Flat-field correction applied")
 
         # 4. Wavelength auto-calibration
-        calibration = calibrate_measurement(corrected_stokes)
-        logger.info(
-            "Wavelength calibration complete",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
-            reference_file=calibration.reference_file,
+        calibration = calibrate_measurement(
+            corrected_stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
-
-        processing_history.record(
-            "Wavelength auto-calibration",
-            details=f"Reference file used: {calibration.reference_file}",
-        )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated",
+            )
+            processing_history.record(
+                "Wavelength auto-calibration",
+                details=(
+                    "No reliable reference found; published uncalibrated on a "
+                    "pixel axis"
+                ),
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+                reference_file=calibration.reference_file,
+            )
+            processing_history.record(
+                "Wavelength auto-calibration",
+                details=f"Reference file used: {calibration.reference_file}",
+            )
 
         # 5. Save corrected data
         fits_io.write(
@@ -234,7 +259,9 @@ def _process_single_measurement(
             flat_field_time_delta_seconds=ff_time_delta,
             flat_field_angle=ff_correction.position_angle,
             measurement_angle=measurement.metadata.derotator.position_angle,
-            calibration_info=calibration.model_dump(),
+            calibration_info=(
+                calibration.model_dump() if calibration is not None else {}
+            ),
         )
 
         create_prefect_json_report(
@@ -274,6 +301,7 @@ def _process_single_measurement(
 def plot_original_profile(
     measurement_path: Path,
     processed_dir: Path,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Generate a profile plot for the original (uncorrected) stokes data.
 
@@ -286,6 +314,8 @@ def plot_original_profile(
     Args:
         measurement_path: Path to the measurement ``.dat`` file.
         processed_dir: Output directory where the profile plot is written.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     with logger.contextualize(file=measurement_path.name):
         logger.info("Generating original profile plot for failed measurement")
@@ -293,12 +323,22 @@ def plot_original_profile(
         stokes, metadata = dat_io.read(measurement_path)
         solar_orientation = compute_solar_orientation(metadata)
 
-        calibration = calibrate_measurement(stokes)
-        logger.info(
-            "Wavelength calibration complete (best-effort on uncorrected data)",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
+        calibration = calibrate_measurement(
+            stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated "
+                "(best-effort on uncorrected data)",
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete (best-effort on uncorrected data)",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+            )
 
         processed_dir.mkdir(parents=True, exist_ok=True)
 
@@ -320,6 +360,7 @@ def plot_original_profile(
 def convert_measurement_to_fits(
     measurement_path: Path,
     processed_dir: Path,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
 ) -> None:
     """Convert a measurement to FITS without applying flat-field correction.
 
@@ -337,6 +378,8 @@ def convert_measurement_to_fits(
     Args:
         measurement_path: Path to the measurement ``.dat`` file.
         processed_dir: Output directory where converted artifacts are written.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength.
     """
     with logger.contextualize(file=measurement_path.name):
         logger.info("Converting measurement to FITS without flat-field correction")
@@ -346,12 +389,22 @@ def convert_measurement_to_fits(
         solar_orientation = compute_solar_orientation(metadata)
 
         # Best-effort wavelength calibration on uncorrected data
-        calibration = calibrate_measurement(stokes)
-        logger.info(
-            "Wavelength calibration complete (best-effort on uncorrected data)",
-            pixel_scale=calibration.pixel_scale,
-            wavelength_offset=calibration.wavelength_offset,
+        calibration = calibrate_measurement(
+            stokes,
+            nominal_wavelength=metadata.spectrograph.grtwl,
+            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
         )
+        if calibration is None:
+            logger.warning(
+                "No reliable wavelength reference, publishing uncalibrated "
+                "(best-effort on uncorrected data)",
+            )
+        else:
+            logger.info(
+                "Wavelength calibration complete (best-effort on uncorrected data)",
+                pixel_scale=calibration.pixel_scale,
+                wavelength_offset=calibration.wavelength_offset,
+            )
 
         processing_dir = processed_dir
         processing_dir.mkdir(parents=True, exist_ok=True)

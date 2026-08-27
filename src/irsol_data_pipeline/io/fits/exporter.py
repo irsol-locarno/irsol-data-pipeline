@@ -631,7 +631,7 @@ def _fill_data_header(
         header["WAVEMIN"] = (round(a0, 2), "Minimum wavelength in data")
 
         header["WAVEMAX"] = (
-            round(a1 * float(si_hdu.header["NAXIS1"]) + a0, 2),
+            round(a1 * float(si_hdu.header["NAXIS3"]) + a0, 2),
             "Maximum wavelength in data",
         )
         header["WAVECAL"] = (1, "Wavelength calibration done")
@@ -644,6 +644,7 @@ def _fill_data_header(
         )  # no error as not fit happened
         header["WAVEMIN"] = (metadata.wavelength - 1.0, "Minimum wavelength in data")
         header["WAVEMAX"] = (metadata.wavelength + 1.0, "Maximum wavelength in data")
+        header["WAVECAL"] = (0, "Wavelength calibration not done")
 
     # specify that we don't have any wavelength calibration based on movement
     # as per SVO 3.2

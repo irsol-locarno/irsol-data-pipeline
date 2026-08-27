@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from loguru import logger
 
+from irsol_data_pipeline.core.calibration.autocalibrate import (
+    DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
+)
 from irsol_data_pipeline.core.models import (
     DayProcessingResult,
     MaxDeltaPolicy,
@@ -33,6 +36,7 @@ from irsol_data_pipeline.prefect.utils import (
 def process_observation_day(
     day: ObservationDay,
     max_delta_policy: MaxDeltaPolicy | None = None,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
     force: bool = False,
     convert_on_ff_failure: bool = True,
 ) -> DayProcessingResult:
@@ -69,6 +73,10 @@ def process_observation_day(
     Args:
         day: ObservationDay to process.
         max_delta_policy: Policy for flat-field time matching thresholds.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and the grating wavelength
+            (``SPGRTWL``).  Wavelength calibrations landing further away are
+            rejected and the measurement is published uncalibrated.
         force: When True, skip the "already processed" check and reprocess
             every measurement even if an output or error artifact already
             exists.
@@ -127,6 +135,7 @@ def process_observation_day(
                         processed_dir=day.processed_dir,
                         ff_cache=ff_cache,
                         max_delta_policy=max_delta_policy,
+                        max_band_center_offset_angstrom=max_band_center_offset_angstrom,
                     )
                     result.processed += 1
                 except Exception as e:
@@ -161,6 +170,7 @@ def process_observation_day(
                         plot_original_profile(
                             measurement_path=meas_path,
                             processed_dir=day.processed_dir,
+                            max_band_center_offset_angstrom=max_band_center_offset_angstrom,
                         )
                     except Exception:
                         logger.exception(
@@ -178,6 +188,7 @@ def process_observation_day(
                             convert_measurement_to_fits(
                                 measurement_path=meas_path,
                                 processed_dir=day.processed_dir,
+                                max_band_center_offset_angstrom=max_band_center_offset_angstrom,
                             )
                         except Exception:
                             logger.exception(

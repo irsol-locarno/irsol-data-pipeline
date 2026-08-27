@@ -24,20 +24,33 @@ from irsol_data_pipeline.exceptions import AutocalibrationReferenceFilesNotFound
 # Default: reference data shipped with this package
 _DEFAULT_REFDATA_DIR = Path(__file__).parent / "refdata"
 
+# Reject a fit landing more than this many A from the grating wavelength; a correct calibration lands within a few A.
+DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM = 5.0
+
 
 def calibrate_measurement(
     stokes: StokesParameters,
     refdata_dir: Path = _DEFAULT_REFDATA_DIR,
-) -> CalibrationResult:
+    nominal_wavelength: float | None = None,
+    max_band_center_offset_angstrom: float = DEFAULT_MAX_BAND_CENTER_OFFSET_ANGSTROM,
+) -> CalibrationResult | None:
     """Run wavelength auto-calibration on a measurement.
 
     Args:
         stokes: Stokes parameters from the measurement.
         refdata_dir: Directory containing bundled or user-supplied ``.npy``
             reference data files.
+        nominal_wavelength: Grating wavelength (``SPGRTWL``) in Angstrom, used to
+            sanity-check the fitted band. When ``None`` the check is skipped.
+        max_band_center_offset_angstrom: Maximum accepted distance in Angstrom
+            between the fitted band center and ``nominal_wavelength``. Fits
+            landing further away are rejected and the measurement is published
+            uncalibrated.
 
     Returns:
-        CalibrationResult with fitted pixel scale and offset.
+        CalibrationResult with fitted pixel scale and offset, or ``None`` when no
+        reference plausibly matches the observed band. ``None`` means the
+        measurement should be published uncalibrated, on a pixel axis.
 
     Raises:
         RuntimeError: If calibration fails.
@@ -56,6 +69,22 @@ def calibrate_measurement(
         shift,
         simean,
     )
+
+    # Reject a reference that cannot correspond to this band at all.
+    if nominal_wavelength is not None:
+        band_center = a0 + a1 * (simean.size / 2)
+        band_offset = abs(band_center - nominal_wavelength)
+        if band_offset > max_band_center_offset_angstrom:
+            logger.warning(
+                "Rejecting wavelength calibration: best reference is too far from "
+                "the nominal wavelength, publishing uncalibrated",
+                reference_file=ref_data["filename"],
+                band_center=round(float(band_center), 2),
+                nominal_wavelength=nominal_wavelength,
+                offset_angstrom=round(float(band_offset), 2),
+                max_offset_angstrom=max_band_center_offset_angstrom,
+            )
+            return None
 
     # Check calibration quality
     if a1 != 0:
