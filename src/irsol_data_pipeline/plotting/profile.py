@@ -22,6 +22,7 @@ from irsol_data_pipeline.core.models import (
 COLORBAR_TICK_LABEL_SIZE = 16
 AXIS_LABEL_FONT_SIZE = 16
 TITLE_FONT_SIZE = 16
+STOKES_I_AUTO_VMAX_PERCENTILE = 99
 
 
 def _resolve_vrange(
@@ -308,6 +309,7 @@ def plot(
             extent=extent,
             origin="lower",
             interpolation="none",
+            vmax=np.percentile(si, STOKES_I_AUTO_VMAX_PERCENTILE),
         )
     else:
         im0 = axes[0].imshow(
