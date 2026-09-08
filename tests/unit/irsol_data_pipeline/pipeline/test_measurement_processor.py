@@ -48,8 +48,8 @@ class TestConvertMeasurementToFits:
         tmp_path: Path,
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
-        """convert_measurement_to_fits calls fits_io.write with
-        *_noff.fits and _plot_data with *_profile_converted.png."""
+        """convert_measurement_to_fits calls fits_io.write with *_noff.fits and
+        _plot_data with *_profile_converted.png."""
         measurement_path = tmp_path / "reduced" / "6302_m1.dat"
         measurement_path.parent.mkdir(parents=True)
         measurement_path.write_text("placeholder")
