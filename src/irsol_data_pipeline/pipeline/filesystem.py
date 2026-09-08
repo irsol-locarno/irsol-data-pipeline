@@ -118,8 +118,8 @@ def processed_output_path(
 ) -> Path:
     """Build a canonical processed output path for a source measurement name.
 
-    A *timestamp* is rendered as a filename prefix for the timestamp-prefixed
-    kinds, and ignored for all others.
+    A *timestamp* is rendered as a filename prefix for the timestamp-
+    prefixed kinds, and ignored for all others.
     """
     stem = get_processed_stem(source_name)
     if timestamp is not None and kind in TIMESTAMP_PREFIXED_KINDS:
@@ -348,8 +348,8 @@ def find_timestamp_prefixed_outputs(
     source_name: str,
     kind: ProcessedOutputKind,
 ) -> list[Path]:
-    """Find outputs for a measurement whose timestamp prefix is unknown
-    without reading its metadata, so matched by glob rather than exact path."""
+    """Find outputs for a measurement whose timestamp prefix is unknown without
+    reading its metadata, so matched by glob rather than exact path."""
     stem = get_processed_stem(source_name)
     suffix = PROCESSED_SUFFIX_BY_KIND[kind]
     pattern = f"{_TIMESTAMP_GLOB_PREFIX}{stem}{suffix}"
