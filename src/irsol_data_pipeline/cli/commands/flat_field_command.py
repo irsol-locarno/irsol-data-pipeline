@@ -50,7 +50,10 @@ from irsol_data_pipeline.cli.common import get_console
 from irsol_data_pipeline.core.config import REDUCED_DIRNAME
 from irsol_data_pipeline.core.models import DayProcessingResult, ObservationDay
 from irsol_data_pipeline.pipeline.filesystem import (
+    PROCESSED_SUFFIX_BY_KIND,
+    TIMESTAMP_PREFIXED_KINDS,
     discover_flatfield_files,
+    find_timestamp_prefixed_outputs,
     processed_dir_for_day,
     processed_output_path,
 )
@@ -145,29 +148,15 @@ def _print_day_result(result: DayProcessingResult, console: Console) -> None:
 
 
 def _find_existing_outputs(processed_dir: Path, source_name: str) -> list[Path]:
-    """Return all processed output paths that already exist on disk.
+    """Return all processed output paths that already exist on disk."""
+    existing: list[Path] = []
+    for kind in TIMESTAMP_PREFIXED_KINDS:
+        existing.extend(
+            find_timestamp_prefixed_outputs(processed_dir, source_name, kind=kind),
+        )
 
-    Args:
-        processed_dir: Directory to check.
-        source_name: Source ``.dat`` filename.
-
-    Returns:
-        List of existing output :class:`Path` objects.
-    """
-    from irsol_data_pipeline.pipeline.filesystem import ProcessedOutputKind
-
-    kinds: list[ProcessedOutputKind] = [
-        "corrected_fits",
-        "converted_fits",
-        "error_json",
-        "metadata_json",
-        "flatfield_correction_data",
-        "profile_corrected_png",
-        "profile_original_png",
-        "profile_converted_png",
-    ]
-    existing = []
-    for kind in kinds:
+    exact_kinds = set(PROCESSED_SUFFIX_BY_KIND) - set(TIMESTAMP_PREFIXED_KINDS)
+    for kind in sorted(exact_kinds):
         p = processed_output_path(processed_dir, source_name, kind=kind)
         if p.exists():
             existing.append(p)

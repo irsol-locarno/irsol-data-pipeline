@@ -163,7 +163,7 @@ class TestFlatFieldApply:
         output_dir = tmp_path / "processed"
         output_dir.mkdir()
         # Simulate an existing corrected FITS
-        (output_dir / "6302_m1_corrected.fits").write_text("placeholder")
+        (output_dir / "260907_143022_6302_m1_corrected.fits").write_text("placeholder")
 
         ff_cache = _make_ff_cache(6302)
 
@@ -206,7 +206,7 @@ class TestFlatFieldApply:
         measurement.write_text("placeholder")
         output_dir = tmp_path / "processed"
         output_dir.mkdir()
-        (output_dir / "6302_m1_corrected.fits").write_text("placeholder")
+        (output_dir / "260907_143022_6302_m1_corrected.fits").write_text("placeholder")
 
         with (
             patch(
@@ -240,7 +240,7 @@ class TestFlatFieldApply:
         measurement.write_text("placeholder")
         output_dir = tmp_path / "processed"
         output_dir.mkdir()
-        (output_dir / "6302_m1_corrected.fits").write_text("placeholder")
+        (output_dir / "260907_143022_6302_m1_corrected.fits").write_text("placeholder")
 
         ff_cache = _make_ff_cache(6302)
 

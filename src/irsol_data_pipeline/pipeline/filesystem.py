@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -57,7 +58,19 @@ ProcessedOutputKind = Literal[
 
 ObservationDayPredicate = Callable[[ObservationDay], bool]
 
-_PROCESSED_SUFFIX_BY_KIND: dict[ProcessedOutputKind, str] = {
+# Output kinds whose filename gets a timestamp prefix.
+TIMESTAMP_PREFIXED_KINDS: tuple[ProcessedOutputKind, ...] = (
+    "corrected_fits",
+    "converted_fits",
+)
+
+# A pair: the glob must match whatever the format produces or
+# the find-on-disk checks stop matching and everything reprocesses forever.
+# contrast reads this convention in sirius_extraction/raw_extractor.py -> update it alongside!
+_TIMESTAMP_PREFIX_FORMAT = "%y%m%d_%H%M%S"
+_TIMESTAMP_GLOB_PREFIX = "??????_??????_"
+
+PROCESSED_SUFFIX_BY_KIND: dict[ProcessedOutputKind, str] = {
     "corrected_fits": CORRECTED_FITS_SUFFIX,
     "converted_fits": CONVERTED_FITS_SUFFIX,
     "error_json": ERROR_JSON_SUFFIX,
@@ -101,11 +114,17 @@ def processed_output_path(
     processed_dir: Path,
     source_name: str,
     kind: ProcessedOutputKind,
+    timestamp: datetime | None = None,
 ) -> Path:
-    """Build a canonical processed output path for a source measurement
-    name."""
+    """Build a canonical processed output path for a source measurement name.
+
+    A *timestamp* is rendered as a filename prefix for the timestamp-prefixed
+    kinds, and ignored for all others.
+    """
     stem = get_processed_stem(source_name)
-    return processed_dir / f"{stem}{_PROCESSED_SUFFIX_BY_KIND[kind]}"
+    if timestamp is not None and kind in TIMESTAMP_PREFIXED_KINDS:
+        stem = f"{timestamp.strftime(_TIMESTAMP_PREFIX_FORMAT)}_{stem}"
+    return processed_dir / f"{stem}{PROCESSED_SUFFIX_BY_KIND[kind]}"
 
 
 def flatfield_correction_cache_path(flatfield_path: Path) -> Path:
@@ -324,46 +343,47 @@ def get_processed_stem(source_name: str) -> str:
     return Path(source_name).stem
 
 
+def find_timestamp_prefixed_outputs(
+    processed_dir: Path,
+    source_name: str,
+    kind: ProcessedOutputKind,
+) -> list[Path]:
+    """Find outputs for a measurement whose timestamp prefix is unknown
+    without reading its metadata, so matched by glob rather than exact path."""
+    stem = get_processed_stem(source_name)
+    suffix = PROCESSED_SUFFIX_BY_KIND[kind]
+    pattern = f"{_TIMESTAMP_GLOB_PREFIX}{stem}{suffix}"
+    return list(processed_dir.glob(pattern))
+
+
 def is_measurement_flat_field_processed(processed_dir: Path, source_name: str) -> bool:
-    """Check whether a measurement has already been processed.
-
-    A measurement is considered processed if any of the following artifacts
-    exist in the processed directory:
-
-    * ``*_corrected.fits`` — flat-field corrected output.
-    * ``*_converted.fits`` — converted output (no flat-field correction applied).
-    * ``*_error.json`` — error recorded during a previous processing attempt.
-
-    Args:
-        processed_dir: Path to the processed/ folder.
-        source_name: Source .dat filename.
-
-    Returns:
-        True if already processed.
-    """
+    """Check whether a ``*_corrected.fits``, ``*_converted.fits`` or
+    ``*_error.json`` artifact already exists for a measurement."""
     with logger.contextualize(processed_dir=processed_dir, source_name=source_name):
-        corrected_fits = processed_output_path(
-            processed_dir,
-            source_name,
-            kind="corrected_fits",
+        has_corrected_fits = bool(
+            find_timestamp_prefixed_outputs(
+                processed_dir,
+                source_name,
+                kind="corrected_fits",
+            ),
         )
-        converted_fits = processed_output_path(
-            processed_dir,
-            source_name,
-            kind="converted_fits",
+        has_converted_fits = bool(
+            find_timestamp_prefixed_outputs(
+                processed_dir,
+                source_name,
+                kind="converted_fits",
+            ),
         )
         error = processed_output_path(
             processed_dir,
             source_name,
             kind="error_json",
         )
-        is_processed = (
-            corrected_fits.exists() or converted_fits.exists() or error.exists()
-        )
+        is_processed = has_corrected_fits or has_converted_fits or error.exists()
         logger.debug(
             "Checked processed state",
-            has_corrected_fits=corrected_fits.exists(),
-            has_converted_fits=converted_fits.exists(),
+            has_corrected_fits=has_corrected_fits,
+            has_converted_fits=has_converted_fits,
             has_error_json=error.exists(),
             is_processed=is_processed,
         )
