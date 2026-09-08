@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -20,6 +21,8 @@ from irsol_data_pipeline.core.config import (
     REDUCED_DIRNAME,
 )
 from irsol_data_pipeline.pipeline.filesystem import (
+    _TIMESTAMP_GLOB_PREFIX,
+    _TIMESTAMP_PREFIX_FORMAT,
     FLATFIELD_PATTERN,
     OBSERVATION_PATTERN,
     delete_empty_dirs,
@@ -284,17 +287,68 @@ class TestProcessedOutputPath:
         path = processed_output_path(tmp_path, "nested.name.dat", kind="corrected_fits")
         assert path == tmp_path / f"nested.name{CORRECTED_FITS_SUFFIX}"
 
+    def test_corrected_fits_path_without_timestamp_unchanged(self, tmp_path: Path):
+        path = processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="corrected_fits",
+            timestamp=None,
+        )
+        assert path == tmp_path / f"6302_m1{CORRECTED_FITS_SUFFIX}"
+
+    def test_corrected_fits_path_with_timestamp_is_prefixed(self, tmp_path: Path):
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        path = processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="corrected_fits",
+            timestamp=timestamp,
+        )
+        assert path == tmp_path / f"260907_143022_6302_m1{CORRECTED_FITS_SUFFIX}"
+
+    def test_converted_fits_path_with_timestamp_is_prefixed(self, tmp_path: Path):
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        path = processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="converted_fits",
+            timestamp=timestamp,
+        )
+        assert path == tmp_path / f"260907_143022_6302_m1{CONVERTED_FITS_SUFFIX}"
+
+    def test_metadata_json_path_ignores_timestamp(self, tmp_path: Path):
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        path = processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="metadata_json",
+            timestamp=timestamp,
+        )
+        assert path == tmp_path / f"6302_m1{METADATA_JSON_SUFFIX}"
+
 
 class TestIsMeasurementProcessed:
     def test_not_processed(self, tmp_path: Path):
         assert not is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_corrected_fits_exists(self, tmp_path: Path):
-        processed_output_path(tmp_path, "6302_m1.dat", kind="corrected_fits").touch()
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="corrected_fits",
+            timestamp=timestamp,
+        ).touch()
         assert is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_converted_fits_exists(self, tmp_path: Path):
-        processed_output_path(tmp_path, "6302_m1.dat", kind="converted_fits").touch()
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        processed_output_path(
+            tmp_path,
+            "6302_m1.dat",
+            kind="converted_fits",
+            timestamp=timestamp,
+        ).touch()
         assert is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_error_exists(self, tmp_path: Path):
@@ -302,13 +356,35 @@ class TestIsMeasurementProcessed:
         assert is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
 
     def test_prefers_centralized_output_builder(self, tmp_path: Path):
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
         corrected_path = processed_output_path(
             tmp_path,
             "4078_m12.dat",
             kind="corrected_fits",
+            timestamp=timestamp,
         )
         corrected_path.touch()
         assert is_measurement_flat_field_processed(tmp_path, "4078_m12.dat")
+
+    def test_unprefixed_legacy_corrected_fits_is_not_matched(self, tmp_path: Path):
+        # Pre-existing files written before the timestamp prefix was
+        # introduced do not match the glob and are treated as not processed.
+        processed_output_path(tmp_path, "6302_m1.dat", kind="corrected_fits").touch()
+        assert not is_measurement_flat_field_processed(tmp_path, "6302_m1.dat")
+
+
+class TestTimestampPrefixFormatAndGlobStayInSync:
+    def test_glob_matches_what_the_format_produces(self, tmp_path: Path):
+        # Drift guard: the write-side strftime format and the read-side glob
+        # are a pair. If one changes without the other, nothing matches and
+        # every measurement reprocesses forever.
+        timestamp = datetime(2026, 9, 7, 14, 30, 22)
+        filename = f"{timestamp.strftime(_TIMESTAMP_PREFIX_FORMAT)}_6302_m1.fits"
+        (tmp_path / filename).touch()
+
+        assert list(tmp_path.glob(f"{_TIMESTAMP_GLOB_PREFIX}6302_m1.fits")) == [
+            tmp_path / filename,
+        ]
 
 
 class TestDeleteEmptyDirs:

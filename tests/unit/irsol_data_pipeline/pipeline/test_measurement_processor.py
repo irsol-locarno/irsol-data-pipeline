@@ -14,6 +14,7 @@ from irsol_data_pipeline.core.models import (
     StokesParameters,
 )
 from irsol_data_pipeline.core.solar_orientation import SolarOrientationInfo
+from irsol_data_pipeline.pipeline.filesystem import _TIMESTAMP_PREFIX_FORMAT
 from irsol_data_pipeline.pipeline.measurement_processor import (
     convert_measurement_to_fits,
     plot_original_profile,
@@ -96,7 +97,10 @@ class TestConvertMeasurementToFits:
             if write_call.args
             else write_call.kwargs.get("output_path")
         )
-        assert output_path.name == "6302_m1_converted.fits"
+        timestamp_prefix = sample_measurement_metadata.datetime_start.strftime(
+            _TIMESTAMP_PREFIX_FORMAT,
+        )
+        assert output_path.name == f"{timestamp_prefix}_6302_m1_converted.fits"
         stokes_arg = (
             write_call.args[1]
             if len(write_call.args) > 1
