@@ -49,7 +49,7 @@ class TestConvertMeasurementToFits:
         sample_measurement_metadata: MeasurementMetadata,
     ) -> None:
         """convert_measurement_to_fits calls fits_io.write with
-        *_converted.fits and _plot_data with *_profile_converted.png."""
+        *_noff.fits and _plot_data with *_profile_converted.png."""
         measurement_path = tmp_path / "reduced" / "6302_m1.dat"
         measurement_path.parent.mkdir(parents=True)
         measurement_path.write_text("placeholder")
@@ -100,7 +100,7 @@ class TestConvertMeasurementToFits:
         timestamp_prefix = sample_measurement_metadata.datetime_start.strftime(
             _TIMESTAMP_PREFIX_FORMAT,
         )
-        assert output_path.name == f"{timestamp_prefix}_6302_m1_converted.fits"
+        assert output_path.name == f"{timestamp_prefix}_6302_m1_noff.fits"
         stokes_arg = (
             write_call.args[1]
             if len(write_call.args) > 1

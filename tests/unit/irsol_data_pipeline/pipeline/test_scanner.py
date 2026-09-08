@@ -54,7 +54,7 @@ class TestScanDataset:
         (reduced / "6302_m1.dat").touch()
         (reduced / "6302_m2.dat").touch()
         # Mark m1 as processed
-        (processed / "260907_143022_6302_m1_corrected.fits").touch()
+        (processed / "260907_143022_6302_m1_ffcorr.fits").touch()
 
         result = scan_flatfield_dataset(tmp_path)
         assert result.total_measurements == 2
@@ -81,7 +81,7 @@ class TestScanDataset:
         (reduced / "6302_m1.dat").touch()
         (reduced / "6302_m2.dat").touch()
         # Mark m1 as processed
-        (processed / "260907_143022_6302_m1_corrected.fits").touch()
+        (processed / "260907_143022_6302_m1_ffcorr.fits").touch()
 
         result = scan_flatfield_dataset(tmp_path, force_override=True)
         assert result.total_measurements == 2
