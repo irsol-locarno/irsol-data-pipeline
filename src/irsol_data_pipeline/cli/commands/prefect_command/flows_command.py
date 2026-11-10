@@ -243,7 +243,9 @@ def _build_maintenance_deployments() -> list[Any]:
         delete_old_cache_files_flow.to_deployment(
             name="cache-cleanup",
             description=("Delete stale cache files under processed/_cache."),
-            cron="30 0 * * *",
+            # 03:00 UTC: outside the 00:00-00:40 UTC window where
+            # prefect-run-cleanup's deletion storm locks the SQLite DB.
+            cron="0 3 * * *",
             tags=[
                 PrefectDeploymentTopicTag.MAINTENANCE.value,
                 DeploymentScheduleTag.DAILY.value,
