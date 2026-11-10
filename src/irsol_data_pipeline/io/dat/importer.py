@@ -43,13 +43,22 @@ def read_zimpol_dat(
         sv = np.array(data["sv"])
         info = np.array(data["info"])
 
-        # If data is 3D (no TCU averaging), average to 2D
-        if si.ndim == 3:  # noqa PLR2004 - magic numbers are ok in this case
-            logger.debug("Averaging 3D Stokes I over axis 0", shape=si.shape)
-            si = np.mean(si, axis=0)
-        if sv.ndim == 3:  # noqa PLR2004 - magic numbers are ok in this case
-            logger.debug("Averaging 3D Stokes V over axis 0", shape=sv.shape)
-            sv = np.mean(sv, axis=0)
+        # If data is 3D (no TCU averaging), average to 2D.
+        # All four channels must be handled: reductions that skip TCU
+        # averaging store every Stokes parameter as (frames, y, x), and
+        # downstream smile correction requires 2D arrays for Q and U too
+        # (previously only I and V were averaged, crashing on Q/U).
+        averaged = {}
+        for name, channel in (("si", si), ("sq", sq), ("su", su), ("sv", sv)):
+            result = channel
+            if result.ndim == 3:  # noqa PLR2004 - magic numbers are ok in this case
+                logger.debug(
+                    f"Averaging 3D Stokes {name.upper()} over axis 0",
+                    shape=result.shape,
+                )
+                result = np.mean(result, axis=0)
+            averaged[name] = result
+        si, sq, su, sv = averaged["si"], averaged["sq"], averaged["su"], averaged["sv"]
 
         logger.trace("Loading info file into MeasurementMetadata")
         metadata = MeasurementMetadata.from_info_array(info)
