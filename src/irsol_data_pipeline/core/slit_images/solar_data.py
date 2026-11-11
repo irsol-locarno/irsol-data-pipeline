@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import tempfile
+import time
 from pathlib import Path
 
 import astropy.units as u
@@ -139,7 +140,7 @@ def fetch_sdo_maps(
         )
         time_range = f"{padded_start}-{padded_end}"
 
-        client = drms.Client(email=jsoc_email)
+        client = _build_drms_client(jsoc_email)
         results: list[tuple[str | None, sunpy.map.Map | None]] = []
 
         for series, wavelengths, segment, time_fmt in SDO_DATA_PRODUCTS:
@@ -172,6 +173,55 @@ def _log_retry(retry_state: RetryCallState) -> None:
         attempt=retry_state.attempt_number,
         error=str(retry_state.outcome.exception()),
     )
+
+
+#: Maximum attempts when constructing the DRMS client.
+_CLIENT_ATTEMPTS = 3
+#: Initial backoff between DRMS client construction attempts; doubles
+#: up to 10 seconds on consecutive failures.
+_CLIENT_BACKOFF_SECONDS = 2.0
+_CLIENT_BACKOFF_MAX_SECONDS = 10.0
+
+
+def _build_drms_client(jsoc_email: str) -> drms.Client:
+    """Create a DRMS client, retrying transient network failures.
+
+    ``drms.Client(email=...)`` validates the email against JSOC over
+    plain HTTP (urllib, ``checkAddress.sh``) at construction time.
+    That call sits outside the retries guarding ``client.query`` and
+    the FITS downloads, so a single connection timeout used to fail the
+    whole slit preview (observed on 2026-11-11 for 251111/5886_m37).
+
+    Args:
+        jsoc_email: Email registered with the JSOC DRMS service.
+
+    Returns:
+        A connected DRMS client instance.
+
+    Raises:
+        Exception: When construction keeps failing after
+            ``_CLIENT_ATTEMPTS`` attempts.
+    """
+    delay = _CLIENT_BACKOFF_SECONDS
+    for attempt in range(1, _CLIENT_ATTEMPTS + 1):
+        try:
+            return drms.Client(email=jsoc_email)
+        except OSError as exc:
+            # Transient network failure (urllib URLError/TimeoutError are
+            # OSError subclasses) — back off and retry.
+            if attempt == _CLIENT_ATTEMPTS:
+                raise
+            logger.warning(
+                "Transient error constructing DRMS client, retrying",
+                attempt=attempt,
+                error=str(exc),
+            )
+            time.sleep(delay)
+            delay = min(delay * 2, _CLIENT_BACKOFF_MAX_SECONDS)
+        except Exception:
+            # Configuration/logic errors are deterministic — fail fast.
+            raise
+    raise AssertionError("unreachable: the loop above always returns or raises")
 
 
 @retry(

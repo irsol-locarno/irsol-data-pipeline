@@ -7,7 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from irsol_data_pipeline.core.slit_images import solar_data
 from irsol_data_pipeline.core.slit_images.solar_data import (
+    _build_drms_client,
     _download_and_load_map,
     _fetch_fits_file,
 )
@@ -263,3 +265,59 @@ class TestDownloadAndLoadMap:
             )
 
         assert cached.exists(), "Cache file must not be deleted"
+
+
+class TestBuildDrmsClient:
+    """``drms.Client(email=...)`` validates the email against JSOC over the
+    network (urllib, checkAddress.sh) at construction time — outside the
+    retries that guard ``client.query``. A transient timeout there must
+    not fail the whole slit preview."""
+
+    def test_retries_transient_construction_failure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(solar_data, "_CLIENT_BACKOFF_SECONDS", 0.0)
+        calls = {"n": 0}
+
+        def flaky_client(email: str):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise OSError("timed out")
+            return "client-instance"
+
+        monkeypatch.setattr(solar_data.drms, "Client", flaky_client)
+
+        assert _build_drms_client("user@example.com") == "client-instance"
+        assert calls["n"] == 3
+
+    def test_raises_after_max_attempts(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(solar_data, "_CLIENT_BACKOFF_SECONDS", 0.0)
+        calls = {"n": 0}
+
+        def always_failing(email: str):
+            calls["n"] += 1
+            raise OSError("timed out")
+
+        monkeypatch.setattr(solar_data.drms, "Client", always_failing)
+
+        with pytest.raises(OSError, match="timed out"):
+            _build_drms_client("user@example.com")
+
+        assert calls["n"] == solar_data._CLIENT_ATTEMPTS
+
+    def test_non_transient_error_is_not_retried(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(solar_data, "_CLIENT_BACKOFF_SECONDS", 0.0)
+        calls = {"n": 0}
+
+        def bad_config(email: str):
+            calls["n"] += 1
+            raise ValueError("email is required")
+
+        monkeypatch.setattr(solar_data.drms, "Client", bad_config)
+
+        with pytest.raises(ValueError, match="email is required"):
+            _build_drms_client("")
+
+        assert calls["n"] == 1
