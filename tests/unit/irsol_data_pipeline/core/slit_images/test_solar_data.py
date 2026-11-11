@@ -270,8 +270,10 @@ class TestDownloadAndLoadMap:
 class TestBuildDrmsClient:
     """``drms.Client(email=...)`` validates the email against JSOC over the
     network (urllib, checkAddress.sh) at construction time — outside the
-    retries that guard ``client.query``. A transient timeout there must
-    not fail the whole slit preview."""
+    retries that guard ``client.query``.
+
+    A transient timeout there must not fail the whole slit preview.
+    """
 
     def test_retries_transient_construction_failure(
         self, monkeypatch: pytest.MonkeyPatch
