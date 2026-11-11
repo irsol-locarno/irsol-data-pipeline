@@ -21,7 +21,20 @@ automation = Automation(
     ),
     trigger=EventTrigger(
         after={"prefect.flow-run.Scheduled"},
-        expect={"prefect.flow-run.Started", "prefect.flow-run.Cancelled"},
+        # Flow-run events are named after the *state name*
+        # (prefect.flow-run.{state.name}); there is no "Started" state —
+        # started runs emit ".Running".  With the old expectation
+        # ("Started") the Proactive trigger never saw its expected event
+        # and fired on every armed run after 12 hours, even ones that had
+        # already completed, overwriting their terminal state with
+        # CANCELLED (observed on manually triggered runs).
+        expect={
+            "prefect.flow-run.Running",
+            "prefect.flow-run.Completed",
+            "prefect.flow-run.Failed",
+            "prefect.flow-run.Cancelled",
+            "prefect.flow-run.Crashed",
+        },
         match=ResourceSpecification({"prefect.resource.id": ["prefect.flow-run.*"]}),
         for_each={"prefect.resource.id"},
         posture=Posture.Proactive,
